@@ -1,64 +1,215 @@
 "use client";
 
-import { useState } from "react";
-import { PLANS } from "@/lib/pricing";
+import { useCallback, useRef, useState } from "react";
+import { PLANS, priceFor, isPeakDate } from "@/lib/pricing";
+import { PAYPAL_ENABLED } from "@/lib/config";
+import PaypalCheckout from "./PaypalCheckout";
 
 type State = "idle" | "sending" | "sent" | "error";
+
+interface FormValues {
+  name: string;
+  email: string;
+  phone: string;
+  planId: string;
+  tourDate: string;      // ISO date (YYYY-MM-DD) — drives peak-season pricing
+  timeOfDay: string;     // free text, e.g. "午後" (optional)
+  preferredDate: string; // combined "YYYY-MM-DD 午後" saved to the store
+  guests: number;
+  spots: string;
+  notes: string;
+}
 
 export default function BookingForm() {
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
+  const [paid, setPaid] = useState(false); // true when the request was authorized
+  // Payment step (PayPal only): holds the validated form data.
+  const [payStep, setPayStep] = useState<FormValues | null>(null);
+  // Live total + peak flag for the current plan/guest/date selection (display).
+  const [total, setTotal] = useState<number>(() => priceFor(PLANS[1], 4));
+  const [peak, setPeak] = useState(false);
+  const savedValues = useRef<FormValues | null>(null);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setState("sending");
-    setError("");
+  function recalcTotal(form: HTMLFormElement) {
+    const fd = new FormData(form);
+    const planId = String(fd.get("planId") || "");
+    const guests = Number(fd.get("guests") || 0);
+    const isPeak = isPeakDate(String(fd.get("tourDate") || ""));
+    const plan = PLANS.find((p) => p.id === planId) ?? PLANS[1];
+    setPeak(isPeak);
+    setTotal(priceFor(plan, Math.max(1, guests || 1), isPeak));
+  }
 
-    const fd = new FormData(e.currentTarget);
-    const payload = {
+  function readForm(form: HTMLFormElement): FormValues {
+    const fd = new FormData(form);
+    const tourDate = String(fd.get("tourDate") || "");
+    const timeOfDay = String(fd.get("timeOfDay") || "").trim();
+    return {
       name: String(fd.get("name") || ""),
       email: String(fd.get("email") || ""),
       phone: String(fd.get("phone") || ""),
       planId: String(fd.get("planId") || ""),
-      preferredDate: String(fd.get("preferredDate") || ""),
+      tourDate,
+      timeOfDay,
+      preferredDate: [tourDate, timeOfDay].filter(Boolean).join(" "),
       guests: Number(fd.get("guests") || 0),
       spots: String(fd.get("spots") || ""),
       notes: String(fd.get("notes") || ""),
     };
-
-    try {
-      const res = await fetch("/api/booking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "送信に失敗しました。時間をおいて再度お試しください。");
-        setState("error");
-        return;
-      }
-      setState("sent");
-    } catch {
-      setError("通信エラーが発生しました。時間をおいて再度お試しください。");
-      setState("error");
-    }
   }
 
+  // Finalize: POST to /api/booking (optionally with the PayPal order id).
+  const finalize = useCallback(
+    async (values: FormValues, paypalOrderId?: string) => {
+      setState("sending");
+      setError("");
+      try {
+        const res = await fetch("/api/booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...values, paypalOrderId }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "送信に失敗しました。時間をおいて再度お試しください。");
+          setState("error");
+          return;
+        }
+        setPaid(Boolean(data.authorized));
+        setState("sent");
+      } catch {
+        setError("通信エラーが発生しました。時間をおいて再度お試しください。");
+        setState("error");
+      }
+    },
+    [],
+  );
+
+  // Request-only submit (no PayPal): send immediately.
+  function onSubmitRequestOnly(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    finalize(readForm(e.currentTarget));
+  }
+
+  // PayPal path: validate the form, then move to the payment step.
+  function onProceedToPayment(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const values = readForm(e.currentTarget);
+    savedValues.current = values;
+    setError("");
+    setPayStep(values);
+  }
+
+  // Called by PaypalCheckout to create the AUTHORIZE order (server-priced).
+  const createOrder = useCallback(async (): Promise<string> => {
+    const v = savedValues.current;
+    if (!v) throw new Error("no form values");
+    const res = await fetch("/api/paypal/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        planId: v.planId,
+        guests: v.guests,
+        tourDate: v.tourDate,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.id) {
+      throw new Error(data.error || "order failed");
+    }
+    return data.id as string;
+  }, []);
+
+  const onApproved = useCallback(
+    (orderId: string) => {
+      if (savedValues.current) finalize(savedValues.current, orderId);
+    },
+    [finalize],
+  );
+
+  const onPaypalError = useCallback((message: string) => {
+    setError(message);
+  }, []);
+
+  // --- Confirmation ---------------------------------------------------------
   if (state === "sent") {
     return (
       <div className="rounded-2xl bg-white p-6 text-ink">
         <div className="text-lg font-bold text-brand">リクエストを受け付けました</div>
-        <p className="mt-2 text-sm text-muted">
-          ガイド・車両の空き状況を確認し、<b>7日以内</b>にご連絡します。
-          この時点ではまだ料金は発生しません。折り返しのご連絡をお待ちください。
-        </p>
+        {paid ? (
+          <p className="mt-2 text-sm text-muted">
+            お支払いは<b>仮押さえ</b>の状態です。ガイド・車両の空きを確認し、
+            <b>7日以内</b>にご連絡します。予約確定時にお支払いが確定し、お手配できない場合は
+            <b>自動で解除（返金）</b>されます。
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            ガイド・車両の空き状況を確認し、<b>7日以内</b>にご連絡します。
+            この時点ではまだ料金は発生しません。折り返しのご連絡をお待ちください。
+          </p>
+        )}
       </div>
     );
   }
 
+  // --- Payment step (PayPal only) ------------------------------------------
+  if (payStep) {
+    const plan = PLANS.find((p) => p.id === payStep.planId) ?? PLANS[1];
+    const isPeak = isPeakDate(payStep.tourDate);
+    const amount = priceFor(plan, Math.max(1, payStep.guests || 1), isPeak);
+    return (
+      <div className="rounded-2xl bg-white p-6 text-ink">
+        <div className="text-base font-bold">お支払い（全額前払い）</div>
+        <div className="mt-3 rounded-xl bg-sand p-4 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted">
+              {plan.name}／{payStep.guests}名
+              {isPeak && (
+                <span className="ml-1 rounded bg-[#fff3d6] px-1.5 py-0.5 text-[11px] font-bold text-[#9a6a00]">
+                  繁忙期料金
+                </span>
+              )}
+            </span>
+            <span className="text-lg font-bold text-brand">${amount.toFixed(2)}</span>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            お支払いはこの時点で<b>仮押さえ</b>されます。予約が確定すると決済が確定し、
+            お手配できない場合は<b>自動で解除</b>されます。
+          </p>
+        </div>
+
+        <div className="mt-4">
+          <PaypalCheckout
+            createOrder={createOrder}
+            onApproved={onApproved}
+            onError={onPaypalError}
+          />
+        </div>
+
+        {error && <p className="mt-3 text-sm font-medium text-rose-600">{error}</p>}
+        {state === "sending" && (
+          <p className="mt-3 text-center text-sm text-muted">予約を確定しています…</p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setPayStep(null)}
+          className="mt-4 w-full rounded-full border border-line px-4 py-2.5 text-sm font-medium text-muted"
+        >
+          ← 入力内容を修正する
+        </button>
+      </div>
+    );
+  }
+
+  // --- Form -----------------------------------------------------------------
   return (
-    <form onSubmit={onSubmit} className="rounded-2xl bg-white p-6 text-ink">
+    <form
+      onSubmit={PAYPAL_ENABLED ? onProceedToPayment : onSubmitRequestOnly}
+      onChange={(e) => recalcTotal(e.currentTarget)}
+      className="rounded-2xl bg-white p-6 text-ink"
+    >
       <div className="text-base font-bold">リクエスト予約フォーム</div>
 
       <Field label="お名前" name="name" placeholder="山田 太郎" required />
@@ -81,7 +232,15 @@ export default function BookingForm() {
       </select>
 
       <div className="grid gap-x-3 sm:grid-cols-2">
-        <Field label="ご希望日・時間帯" name="preferredDate" placeholder="例：7/20 午後" required />
+        <div>
+          <label className="mt-3 block text-xs font-bold">ツアー実施日</label>
+          <input
+            type="date"
+            name="tourDate"
+            required
+            className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
+          />
+        </div>
         <div>
           <label className="mt-3 block text-xs font-bold">ご参加人数</label>
           <input
@@ -95,6 +254,12 @@ export default function BookingForm() {
           />
         </div>
       </div>
+
+      <Field
+        label="ご希望の時間帯（任意）"
+        name="timeOfDay"
+        placeholder="例：午前 / 午後 / 10時〜 など"
+      />
 
       <label className="mt-3 block text-xs font-bold">行きたいスポット（自由記入）</label>
       <textarea
@@ -110,6 +275,20 @@ export default function BookingForm() {
         className="mt-1.5 min-h-[56px] w-full resize-y rounded-lg border border-line px-3 py-2.5 text-sm"
       />
 
+      {PAYPAL_ENABLED && (
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-sand px-4 py-3 text-sm">
+          <span className="text-muted">
+            お支払い予定額（全額前払い）
+            {peak && (
+              <span className="ml-1 rounded bg-[#fff3d6] px-1.5 py-0.5 text-[11px] font-bold text-[#9a6a00]">
+                繁忙期料金
+              </span>
+            )}
+          </span>
+          <span className="text-lg font-bold text-brand">${total.toFixed(2)}</span>
+        </div>
+      )}
+
       {state === "error" && (
         <p className="mt-3 text-sm font-medium text-rose-600">{error}</p>
       )}
@@ -117,12 +296,18 @@ export default function BookingForm() {
       <button
         type="submit"
         disabled={state === "sending"}
-        className="mt-4 w-full rounded-full bg-[#06c755] px-4 py-3.5 text-sm font-bold text-white transition hover:brightness-105 disabled:opacity-50"
+        className="mt-4 w-full rounded-full bg-brand px-4 py-3.5 text-sm font-bold text-white transition hover:bg-brand-dark disabled:opacity-50"
       >
-        {state === "sending" ? "送信中…" : "この内容でリクエストする"}
+        {PAYPAL_ENABLED
+          ? "お支払いに進む"
+          : state === "sending"
+            ? "送信中…"
+            : "この内容でリクエストする"}
       </button>
       <p className="mt-2 text-center text-xs text-muted">
-        送信後、7日以内に空き状況をご連絡します。この時点では料金は発生しません。
+        {PAYPAL_ENABLED
+          ? "確定時に決済が確定します。お手配できない場合は自動で解除されます。"
+          : "送信後、7日以内に空き状況をご連絡します。この時点では料金は発生しません。"}
       </p>
     </form>
   );

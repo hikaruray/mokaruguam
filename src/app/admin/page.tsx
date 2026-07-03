@@ -1,4 +1,4 @@
-import { listBookings, type BookingStatus } from "@/lib/store";
+import { listBookings, type BookingStatus, type PaymentStatus } from "@/lib/store";
 import BookingActions from "./BookingActions";
 
 // Always read the latest data so new requests show immediately.
@@ -21,6 +21,20 @@ const STATUS_STYLE: Record<BookingStatus, string> = {
   confirmed: "bg-emerald-100 text-emerald-700",
   declined: "bg-rose-100 text-rose-700",
   cancelled: "bg-slate-100 text-slate-600",
+};
+
+const PAYMENT_LABEL: Record<PaymentStatus, string> = {
+  none: "決済なし",
+  authorized: "仮押さえ",
+  captured: "決済確定",
+  refunded: "返金済み",
+};
+
+const PAYMENT_STYLE: Record<PaymentStatus, string> = {
+  none: "bg-slate-100 text-slate-500",
+  authorized: "bg-sky-100 text-sky-700",
+  captured: "bg-emerald-100 text-emerald-700",
+  refunded: "bg-violet-100 text-violet-700",
 };
 
 export default async function AdminPage() {
@@ -99,6 +113,11 @@ export default async function AdminPage() {
                     >
                       {STATUS_LABEL[b.status]}
                     </span>
+                    <span
+                      className={`mt-1 block w-fit rounded-full px-2.5 py-0.5 text-[11px] font-medium ${PAYMENT_STYLE[b.payment]}`}
+                    >
+                      {PAYMENT_LABEL[b.payment]}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <BookingActions id={b.id} status={b.status} />
@@ -111,8 +130,9 @@ export default async function AdminPage() {
       </div>
 
       <p className="mt-4 text-xs text-slate-400">
-        ※ 決済（Stripe）は将来フェーズのため未実装です。現在は確定/お断り/キャンセルの
-        状態管理のみ行います。ローカルではJSON、本番ではSupabaseに保存されます。
+        ※ 決済は PayPal（仮押さえ→確定）。「確定」で仮押さえをキャプチャ（決済確定）、「お断り」で
+        仮押さえを解除します。PayPal未設定の環境では状態管理のみ行います。返金（キャンセル）は今後対応予定です。
+        ローカルではJSON、本番ではSupabaseに保存されます。
       </p>
     </div>
   );

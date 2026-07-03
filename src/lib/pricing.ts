@@ -67,3 +67,72 @@ export function perPerson(plan: Plan, guests: number, peak = false): number {
   const g = Math.max(1, guests);
   return Math.round(priceFor(plan, g, peak) / g);
 }
+
+// ---------------------------------------------------------------------------
+// Peak-season detection (mirrors MokaruGuam/pricing.md)
+// ---------------------------------------------------------------------------
+// Ranges recur every year, so the check is month/day only (year-independent).
+// Each range is [startMonth, startDay] .. [endMonth, endDay], inclusive.
+// The year-end range wraps across the new year (Dec 20 → Jan 11).
+export const PEAK_RANGES: {
+  label: string;
+  start: [number, number];
+  end: [number, number];
+}[] = [
+  { label: "ゴールデンウィーク", start: [4, 26], end: [5, 6] },
+  { label: "夏休み", start: [7, 17], end: [8, 31] },
+  { label: "シルバーウィーク", start: [9, 19], end: [9, 23] },
+  { label: "年末年始", start: [12, 20], end: [1, 11] }, // wraps year-end
+];
+
+// Compare (month, day) pairs ignoring year. Returns <0, 0, or >0.
+function cmpMd(aM: number, aD: number, bM: number, bD: number): number {
+  return aM !== bM ? aM - bM : aD - bD;
+}
+
+// Is the given month/day inside any peak range? (year-independent)
+export function isPeakMonthDay(month: number, day: number): boolean {
+  for (const r of PEAK_RANGES) {
+    const [sM, sD] = r.start;
+    const [eM, eD] = r.end;
+    const afterStart = cmpMd(month, day, sM, sD) >= 0;
+    const beforeEnd = cmpMd(month, day, eM, eD) <= 0;
+    if (cmpMd(sM, sD, eM, eD) <= 0) {
+      // Normal range within one year.
+      if (afterStart && beforeEnd) return true;
+    } else {
+      // Wrapping range (e.g. Dec 20 → Jan 11): match either tail.
+      if (afterStart || beforeEnd) return true;
+    }
+  }
+  return false;
+}
+
+// Parse a tour date. Accepts "YYYY-MM-DD" (from <input type="date">) and a few
+// lenient forms. Returns null if it can't extract a month/day.
+export function isPeakDate(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false;
+  const m = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (m) return isPeakMonthDay(Number(m[2]), Number(m[3]));
+  // Fallback: "M/D" or "M月D日"
+  const md =
+    dateStr.match(/(?:^|\D)(\d{1,2})[/月](\d{1,2})/) ?? null;
+  if (md) return isPeakMonthDay(Number(md[1]), Number(md[2]));
+  return false;
+}
+
+// Server-side amount by plan id + guests + tour date. Returns null for an
+// unknown plan. Used by the PayPal order route so the charge amount is computed
+// and TRUSTED on the server (peak recomputed from the date), never taken from
+// the client. Guests are clamped to 1..MAX.
+export function amountForBooking(
+  planId: string,
+  guests: number,
+  tourDate?: string | null,
+): { plan: Plan; guests: number; amount: number; peak: boolean } | null {
+  const plan = PLANS.find((p) => p.id === planId);
+  if (!plan) return null;
+  const g = Math.min(MAX_GUESTS, Math.max(1, Math.floor(guests) || 1));
+  const peak = isPeakDate(tourDate);
+  return { plan, guests: g, amount: priceFor(plan, g, peak), peak };
+}

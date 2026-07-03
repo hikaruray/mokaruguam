@@ -29,3 +29,9 @@ export const LINE_URL = "https://line.me/R/ti/p/@mokaruguam";
 // VELTRA listing URL (placeholder — replace with the actual listing URL).
 export const VELTRA_URL =
   "https://www.veltra.com/jp/beach_resort/guam/a/195030";
+
+// Public PayPal client id (safe to expose to the browser). When empty, the
+// booking form runs request-only (no online payment). The secret lives only on
+// the server (see lib/paypal.ts). NEXT_PUBLIC_ vars are inlined at build time.
+export const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ?? "";
+export const PAYPAL_ENABLED = PAYPAL_CLIENT_ID.length > 0;

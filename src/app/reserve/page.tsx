@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingForm from "@/components/BookingForm";
-import { LINE_URL, VELTRA_URL } from "@/lib/config";
+import { LINE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "リクエスト予約",
@@ -33,11 +33,11 @@ export default function ReservePage() {
             <h2 className="text-lg font-bold">リクエスト予約の流れ</h2>
             <ol className="mt-4 list-decimal space-y-3 pl-5 text-[15px]">
               <li>
-                希望日時・人数・行きたいスポットを送ってリクエスト。
-                <span className="font-bold text-brand">この時点では料金は発生しません。</span>
+                希望日時・人数・行きたいスポットを送ってリクエスト。お支払いは全額前払いで、
+                <span className="font-bold text-brand">この時点では仮押さえ（まだ引き落とされません）。</span>
               </li>
               <li>ガイド・車両の空きを確認し、7日以内にお返事します。</li>
-              <li>予約が確定したら、全額前払いでお支払い（決済は準備中）。あとは当日を待つだけ。</li>
+              <li>予約が確定するとお支払いが確定します。お手配できない場合は自動で解除（返金）されます。あとは当日を待つだけ。</li>
             </ol>
 
             <div className="mt-5 rounded-2xl border border-line bg-sand p-4 text-sm text-muted">
@@ -49,7 +49,7 @@ export default function ReservePage() {
             </div>
 
             <div className="mt-5 text-sm text-muted">
-              <p className="font-bold text-ink">その他の予約方法</p>
+              <p className="font-bold text-ink">ご不明な点は</p>
               <div className="mt-2 flex flex-wrap gap-3">
                 <a
                   href={LINE_URL}
@@ -58,14 +58,6 @@ export default function ReservePage() {
                   className="rounded-full border border-[#06c755] px-4 py-2 text-sm font-medium text-[#06c755] hover:bg-[#06c755]/10"
                 >
                   質問・相談はLINEで
-                </a>
-                <a
-                  href={VELTRA_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:text-brand"
-                >
-                  VELTRAで予約する
                 </a>
               </div>
             </div>

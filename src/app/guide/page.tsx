@@ -87,13 +87,13 @@ export default function GuidePage() {
         <div className="mt-5 rounded-2xl border border-line bg-sand p-5 text-sm text-muted">
           <p>
             <span className="font-bold text-ink">お支払いについて：</span>{" "}
-            お支払いは全額前払い（予約確定時）です。
+            お支払いは全額前払いです。リクエスト時にカード等で
+            <b>仮押さえ</b>（この時点では引き落とされません）、
+            <b>予約確定時にお支払いが確定</b>します。お手配できない場合は
+            <b>自動で解除（返金）</b>されます。
           </p>
           <p className="mt-2">
-            <span className="rounded-full bg-[#fff3d6] px-2 py-0.5 text-xs font-bold text-[#9a6a00]">
-              準備中
-            </span>{" "}
-            オンライン決済（クレジットカード等）は現在準備中です。導入までは、確定後のお支払い方法を個別にご案内します。
+            クレジットカード（PayPalアカウント不要）またはPayPalでお支払いいただけます。
           </p>
         </div>
       </section>

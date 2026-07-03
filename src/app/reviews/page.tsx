@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
-import { VELTRA_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "お客様の声",
@@ -71,18 +70,6 @@ export default function ReviewsPage() {
             </div>
           ))}
         </div>
-
-        <p className="mt-8 text-center text-sm text-muted">
-          VELTRA の掲載ページでも、実際のレビューをご覧いただけます。{" "}
-          <a
-            href={VELTRA_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-bold text-brand hover:underline"
-          >
-            VELTRAで口コミを見る →
-          </a>
-        </p>
       </section>
 
       <BookingCta

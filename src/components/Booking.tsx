@@ -1,5 +1,5 @@
 import BookingForm from "./BookingForm";
-import { VELTRA_URL, LINE_URL } from "@/lib/config";
+import { LINE_URL } from "@/lib/config";
 
 export default function Booking() {
   return (
@@ -30,15 +30,7 @@ export default function Booking() {
               rel="noopener noreferrer"
               className="rounded-full bg-[#06c755] px-5 py-3 text-sm font-bold text-white"
             >
-              LINEで相談する
-            </a>
-            <a
-              href={VELTRA_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border border-white/60 bg-white/10 px-5 py-3 text-sm font-bold text-white"
-            >
-              VELTRAで予約する
+              質問・相談はLINEで
             </a>
           </div>
         </div>

@@ -41,12 +41,16 @@ npm run start
 - **写真動画リッチ×軽量**: `next/image`（AVIF/WebP自動・レスポンシブ・遅延読込、ヒーローのみ優先）、CLS対策、動画はクリック再生の軽量埋め込み枠。
 - **料金の1人あたり動的表示**: 人数スライダーで per-person を即時計算（数字は `pricing.md` 準拠）。
 - **リクエスト予約フォーム → 保存層**: 申込を保存（env未設定時はローカルJSON `.data/db.json`、本番はSupabase）。受付メールはResend、未設定時はサーバーログにフォールバック。
-- **簡易Admin**: リクエスト一覧・確定/お断り/キャンセルの状態管理。`/admin` はBasic認証で保護（env `ADMIN_PASSWORD`、本番で未設定ならロック）。
+- **PayPal決済（仮押さえ→確定）**: `booking-payment-design.md` 準拠。intent=AUTHORIZE でカード（PayPalアカウント不要のAdvanced Card Fields）または PayPalボタンで**仮押さえ**→ Admin「確定」で**capture（決済確定）**／「お断り」で**void（解除）**。金額はサーバー側で `pricing.ts` から算出・検証（クライアント供給額は信用しない）。秘密鍵はサーバーのみ。**PayPal env 未設定時は決済なしのリクエストのみ**として動作。
+  - Admin のキャンセル時 refund は枠のみ（今後対応）。
+  - ⚠️ 本番前に **`supabase-bookings-paypal.sql` の ALTER をSupabaseで実行**（`payment` / `paypal_order_id` / `paypal_authorization_id` 列を追加）。未実行だと保存でエラーになる。
+- **簡易Admin**: リクエスト一覧・確定(capture)/お断り(void)/キャンセルの状態管理＋支払い状態バッジ。`/admin` はBasic認証で保護（env `ADMIN_PASSWORD`、本番で未設定ならロック）。
 - **SEO**: title/description/OGP（日本語）、robots.ts、sitemap.ts、モバイルファースト。
 
 ## まだ実装していないもの（意図的）
 
-- **Stripe決済**（審査待ち・オーナー承認後）。予約設計 `../booking-payment-design.md` の「申込時オーソリ→確定時キャプチャ→お断り/キャンセル時 解除/返金」は未実装。store には将来用の `payment` フィールドを用意済み。
+- **PayPal 本番（Live）**: 現在は Sandbox 鍵で動作。Live鍵への切替＋DNS/デプロイはオーナー承認後。
+- **キャンセル時の返金（refund）**: `lib/paypal.ts` に `refundCapture` を用意済み。Admin操作に接続するのは今後。
 - **実写真・実動画**: いまは全て仮画像（picsum.photos）。差し替えは `src/lib/images.ts` の1ファイルで完結する設計。
 - **実メール送信**: `RESEND_API_KEY` 未設定のためコンソール記録。
 - **VELTRA実口コミ**: 掲載許諾確認までダミー文＋「※掲載許諾確認中」注記。

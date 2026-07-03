@@ -33,7 +33,9 @@ export interface BookingRequest {
   spots: string;        // free-text wishlist of places to visit
   notes: string;        // any extra requests
   status: BookingStatus;
-  payment: PaymentStatus; // reserved for future Stripe flow; "none" for now
+  payment: PaymentStatus; // "none" (request-only) | authorized | captured | refunded
+  paypalOrderId: string | null;         // PayPal order (intent=AUTHORIZE)
+  paypalAuthorizationId: string | null; // authorization to capture/void later
   createdAt: string;
 }
 
@@ -55,6 +57,8 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     notes: String(row.notes ?? ""),
     status: (row.status as BookingStatus) ?? "pending",
     payment: (row.payment as PaymentStatus) ?? "none",
+    paypalOrderId: (row.paypal_order_id as string) ?? null,
+    paypalAuthorizationId: (row.paypal_authorization_id as string) ?? null,
     createdAt: String(row.created_at),
   };
 }
@@ -93,8 +97,25 @@ function localId(): string {
 // ---------------------------------------------------------------------------
 
 export async function addBooking(
-  data: Omit<BookingRequest, "id" | "status" | "payment" | "createdAt">,
+  data: Omit<
+    BookingRequest,
+    | "id"
+    | "status"
+    | "payment"
+    | "paypalOrderId"
+    | "paypalAuthorizationId"
+    | "createdAt"
+  > & {
+    // Optional payment fields — set when the request went through PayPal.
+    payment?: PaymentStatus;
+    paypalOrderId?: string | null;
+    paypalAuthorizationId?: string | null;
+  },
 ): Promise<BookingRequest> {
+  const payment: PaymentStatus = data.payment ?? "none";
+  const paypalOrderId = data.paypalOrderId ?? null;
+  const paypalAuthorizationId = data.paypalAuthorizationId ?? null;
+
   const supabase = getSupabase();
 
   if (supabase) {
@@ -111,7 +132,9 @@ export async function addBooking(
         spots: data.spots,
         notes: data.notes,
         status: "pending",
-        payment: "none",
+        payment,
+        paypal_order_id: paypalOrderId,
+        paypal_authorization_id: paypalAuthorizationId,
       })
       .select()
       .single();
@@ -120,10 +143,20 @@ export async function addBooking(
   }
 
   const booking: BookingRequest = {
-    ...data,
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    planId: data.planId,
+    planName: data.planName,
+    preferredDate: data.preferredDate,
+    guests: data.guests,
+    spots: data.spots,
+    notes: data.notes,
     id: localId(),
     status: "pending",
-    payment: "none",
+    payment,
+    paypalOrderId,
+    paypalAuthorizationId,
     createdAt: new Date().toISOString(),
   };
   const db = await readFile();
@@ -181,5 +214,29 @@ export async function setBookingStatus(
   const db = await readFile();
   const booking = db.bookings.find((b) => b.id === id);
   if (booking) booking.status = status;
+  await writeFile(db);
+}
+
+// Update the payment status (and optionally clear/keep PayPal ids) after a
+// capture/void/refund. Kept separate from status so the admin action can set
+// both the booking status and its payment state.
+export async function setBookingPayment(
+  id: string,
+  payment: PaymentStatus,
+): Promise<void> {
+  const supabase = getSupabase();
+
+  if (supabase) {
+    const { error } = await supabase
+      .from("bookings")
+      .update({ payment })
+      .eq("id", id);
+    if (error) throw new Error(`Failed to update payment: ${error.message}`);
+    return;
+  }
+
+  const db = await readFile();
+  const booking = db.bookings.find((b) => b.id === id);
+  if (booking) booking.payment = payment;
   await writeFile(db);
 }

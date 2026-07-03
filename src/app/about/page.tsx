@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
-import { CONTACT_EMAIL, VELTRA_URL } from "@/lib/config";
+import { CONTACT_EMAIL } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "会社案内・運営者情報",
@@ -28,7 +28,7 @@ const INFO: { label: string; value: string; note?: string }[] = [
   { label: "所在地", value: TBD },
   { label: "事業内容", value: "グアムの完全貸切ガイドチャーターサービス" },
   { label: "対応エリア", value: "グアム" },
-  { label: "予約方法", value: "VELTRA（ベルトラ）／自社サイトのリクエスト予約／LINE" },
+  { label: "予約方法", value: "自社サイトのリクエスト予約（LINEでのご相談も可）" },
   { label: "お問い合わせ", value: CONTACT_EMAIL },
   { label: "ガイド言語", value: "日本語" },
   { label: "各種登録番号・許認可", value: TBD },
@@ -53,7 +53,8 @@ export default function AboutPage() {
             グアムで同種の完全貸切ガイドチャーターを提供しているのは当社のみです。定番の観光スポットから南部の自然まで、ご希望を組み合わせて、あなただけのプランをおつくりします。
           </p>
           <p>
-            ご予約は VELTRA（ベルトラ）を中心に、自社サイトのリクエスト予約や LINE でも承っています。
+            ご予約は<strong>自社サイトのリクエスト予約</strong>を中心に承っています。ご不明な点は
+            LINE でもお気軽にご相談ください。
           </p>
         </div>
       </section>
@@ -99,9 +100,9 @@ export default function AboutPage() {
           <Link href="/guide" className="rounded-full border border-line bg-white px-5 py-2.5 font-medium hover:text-brand">
             予約の流れ・キャンセル
           </Link>
-          <a href={VELTRA_URL} target="_blank" rel="noopener noreferrer" className="rounded-full border border-line bg-white px-5 py-2.5 font-medium hover:text-brand">
-            VELTRAの掲載ページ
-          </a>
+          <Link href="/reserve" className="rounded-full bg-brand px-5 py-2.5 font-bold text-white hover:bg-brand-dark">
+            リクエスト予約
+          </Link>
         </div>
       </section>
 

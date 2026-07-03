@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONTACT_EMAIL } from "@/lib/config";
+import { CONTACT_EMAIL, LINE_URL } from "@/lib/config";
 
 export default function Footer() {
   return (
@@ -30,12 +30,20 @@ export default function Footer() {
           <div>
             <p className="mb-1.5 font-bold text-white">お問い合わせ</p>
             <p>{CONTACT_EMAIL}</p>
-            <p>LINE公式アカウント</p>
-            <p>VELTRA でも予約受付中</p>
+            <p>
+              <a
+                href={LINE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white"
+              >
+                LINE公式アカウント
+              </a>
+            </p>
           </div>
         </div>
         <div className="mt-6 border-t border-[#333c3f] pt-4 text-xs text-[#8a9497]">
-          © {new Date().getFullYear()} Mokaru Guam. Next.js + Vercel。
+          © {new Date().getFullYear()} Mokaru Guam.
         </div>
       </div>
     </footer>

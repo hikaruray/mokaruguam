@@ -1,13 +1,25 @@
-import { setBookingStatus, type BookingStatus } from "@/lib/store";
+import {
+  getBooking,
+  setBookingStatus,
+  setBookingPayment,
+  type BookingStatus,
+} from "@/lib/store";
+import {
+  captureAuthorization,
+  voidAuthorization,
+  isPaypalConfigured,
+} from "@/lib/paypal";
 
-// Update a booking request's status from the Admin dashboard.
+// Update a booking request's status from the Admin dashboard, and drive the
+// matching PayPal action (booking-payment-design.md: authorize → capture/void).
 //
-// Actions map to the statuses in booking-payment-design.md:
-//   confirm → 予約確定  (future: Stripe capture)
-//   decline → お断り    (future: Stripe cancel/release of the authorization)
-//   cancel  → キャンセル (future: Stripe refund per the 3-tier policy)
+//   confirm → 予約確定  : capture the authorization (全額決済確定)
+//   decline → お断り    : void the authorization (仮押さえ解除・課金なし)
+//   cancel  → キャンセル : status only for now; refund is a future step (枠あり)
 //
-// Protected by HTTP Basic Auth in production (see src/middleware.ts).
+// PayPal actions run only when the booking actually carries an authorization
+// and PayPal is configured; otherwise this behaves as status-only (request-only
+// bookings, or local dev without PayPal). Protected by Basic Auth (src/proxy.ts).
 const ACTION_TO_STATUS: Record<string, BookingStatus> = {
   confirm: "confirmed",
   decline: "declined",
@@ -24,8 +36,37 @@ export async function POST(request: Request) {
 
   const { id, action } = body;
   const status = action ? ACTION_TO_STATUS[action] : undefined;
-  if (!id || !status) {
+  if (!id || !status || !action) {
     return Response.json({ error: "Bad parameters." }, { status: 400 });
+  }
+
+  const booking = await getBooking(id);
+  if (!booking) {
+    return Response.json({ error: "Booking not found." }, { status: 404 });
+  }
+
+  // Drive the PayPal side first — if it fails, we do NOT change the status, so
+  // the admin can retry rather than ending up with an inconsistent record.
+  const hasAuthorization =
+    isPaypalConfigured() &&
+    booking.payment === "authorized" &&
+    Boolean(booking.paypalAuthorizationId);
+
+  try {
+    if (action === "confirm" && hasAuthorization) {
+      await captureAuthorization(booking.paypalAuthorizationId!);
+      await setBookingPayment(id, "captured");
+    } else if (action === "decline" && hasAuthorization) {
+      await voidAuthorization(booking.paypalAuthorizationId!);
+      // Hold released; leave payment marker as-is (no charge occurred).
+    }
+    // action === "cancel": refund flow is future work; status-only for now.
+  } catch (err) {
+    console.error("PayPal action failed:", err);
+    return Response.json(
+      { error: "決済処理に失敗しました。もう一度お試しください。" },
+      { status: 502 },
+    );
   }
 
   try {
