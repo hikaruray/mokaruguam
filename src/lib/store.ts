@@ -19,7 +19,12 @@ import path from "path";
 import { getSupabase } from "./supabase";
 
 export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
-export type PaymentStatus = "none" | "authorized" | "captured" | "refunded";
+export type PaymentStatus =
+  | "none"       // request-only, no online payment
+  | "authorized" // held (仮押さえ)
+  | "captured"   // charged (決済確定)
+  | "voided"     // hold released without charge (お断り→解除)
+  | "refunded";  // captured then refunded (キャンセル→返金)
 
 export interface BookingRequest {
   id: string;
@@ -33,9 +38,12 @@ export interface BookingRequest {
   spots: string;        // free-text wishlist of places to visit
   notes: string;        // any extra requests
   status: BookingStatus;
-  payment: PaymentStatus; // "none" (request-only) | authorized | captured | refunded
+  payment: PaymentStatus;
   paypalOrderId: string | null;         // PayPal order (intent=AUTHORIZE)
   paypalAuthorizationId: string | null; // authorization to capture/void later
+  paypalCaptureId: string | null;       // capture id (needed to refund later)
+  refundAmount: number | null;          // USD refunded on cancellation (if any)
+  refundRate: number | null;            // 0..1 refund rate applied on cancel
   createdAt: string;
 }
 
@@ -59,6 +67,10 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     payment: (row.payment as PaymentStatus) ?? "none",
     paypalOrderId: (row.paypal_order_id as string) ?? null,
     paypalAuthorizationId: (row.paypal_authorization_id as string) ?? null,
+    paypalCaptureId: (row.paypal_capture_id as string) ?? null,
+    refundAmount:
+      row.refund_amount != null ? Number(row.refund_amount) : null,
+    refundRate: row.refund_rate != null ? Number(row.refund_rate) : null,
     createdAt: String(row.created_at),
   };
 }
@@ -104,6 +116,9 @@ export async function addBooking(
     | "payment"
     | "paypalOrderId"
     | "paypalAuthorizationId"
+    | "paypalCaptureId"
+    | "refundAmount"
+    | "refundRate"
     | "createdAt"
   > & {
     // Optional payment fields — set when the request went through PayPal.
@@ -157,6 +172,9 @@ export async function addBooking(
     payment,
     paypalOrderId,
     paypalAuthorizationId,
+    paypalCaptureId: null,
+    refundAmount: null,
+    refundRate: null,
     createdAt: new Date().toISOString(),
   };
   const db = await readFile();
@@ -217,19 +235,33 @@ export async function setBookingStatus(
   await writeFile(db);
 }
 
-// Update the payment status (and optionally clear/keep PayPal ids) after a
-// capture/void/refund. Kept separate from status so the admin action can set
-// both the booking status and its payment state.
+// Update payment state after a capture / void / refund. Accepts the new payment
+// status plus optional PayPal capture id and refund details (for the Admin
+// display). Kept separate from status so the admin action can set both.
+export interface PaymentPatch {
+  payment: PaymentStatus;
+  paypalCaptureId?: string | null;
+  refundAmount?: number | null;
+  refundRate?: number | null;
+}
+
 export async function setBookingPayment(
   id: string,
-  payment: PaymentStatus,
+  patch: PaymentPatch,
 ): Promise<void> {
   const supabase = getSupabase();
 
   if (supabase) {
+    const update: Record<string, unknown> = { payment: patch.payment };
+    if (patch.paypalCaptureId !== undefined)
+      update.paypal_capture_id = patch.paypalCaptureId;
+    if (patch.refundAmount !== undefined)
+      update.refund_amount = patch.refundAmount;
+    if (patch.refundRate !== undefined) update.refund_rate = patch.refundRate;
+
     const { error } = await supabase
       .from("bookings")
-      .update({ payment })
+      .update(update)
       .eq("id", id);
     if (error) throw new Error(`Failed to update payment: ${error.message}`);
     return;
@@ -237,6 +269,13 @@ export async function setBookingPayment(
 
   const db = await readFile();
   const booking = db.bookings.find((b) => b.id === id);
-  if (booking) booking.payment = payment;
+  if (booking) {
+    booking.payment = patch.payment;
+    if (patch.paypalCaptureId !== undefined)
+      booking.paypalCaptureId = patch.paypalCaptureId;
+    if (patch.refundAmount !== undefined)
+      booking.refundAmount = patch.refundAmount;
+    if (patch.refundRate !== undefined) booking.refundRate = patch.refundRate;
+  }
   await writeFile(db);
 }

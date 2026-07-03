@@ -3,19 +3,33 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { BookingStatus } from "@/lib/store";
+import { refundRateForDate } from "@/lib/pricing";
 
 export default function BookingActions({
   id,
   status,
+  tourDate,
 }: {
   id: string;
   status: BookingStatus;
+  tourDate: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
-  async function act(action: "confirm" | "decline" | "cancel") {
-    if (action === "cancel" && !confirm("この予約をキャンセルにしますか？")) return;
+  async function act(action: "confirm" | "decline" | "cancel" | "cancel-full") {
+    if (action === "cancel") {
+      const { rate, tier } = refundRateForDate(tourDate);
+      const msg =
+        `この予約をキャンセルします。\n` +
+        `キャンセルポリシー：${tier}\n` +
+        `返金率：${Math.round(rate * 100)}%\n\n` +
+        `実行しますか？`;
+      if (!confirm(msg)) return;
+    }
+    if (action === "cancel-full") {
+      if (!confirm("全額返金してキャンセルします（天候・自社都合）。実行しますか？")) return;
+    }
     setBusy(true);
     try {
       await fetch("/api/admin/booking", {
@@ -51,14 +65,24 @@ export default function BookingActions({
   }
 
   if (status === "confirmed") {
+    const { rate } = refundRateForDate(tourDate);
     return (
-      <button
-        onClick={() => act("cancel")}
-        disabled={busy}
-        className="rounded-md bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100 disabled:opacity-50"
-      >
-        キャンセル
-      </button>
+      <span className="inline-flex flex-col items-end gap-1.5">
+        <button
+          onClick={() => act("cancel")}
+          disabled={busy}
+          className="rounded-md bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100 disabled:opacity-50"
+        >
+          キャンセル（返金 {Math.round(rate * 100)}%）
+        </button>
+        <button
+          onClick={() => act("cancel-full")}
+          disabled={busy}
+          className="rounded-md px-3 py-1 text-[11px] font-medium text-slate-400 underline underline-offset-2 transition hover:text-slate-600 disabled:opacity-50"
+        >
+          全額返金でキャンセル
+        </button>
+      </span>
     );
   }
 

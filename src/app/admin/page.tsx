@@ -27,6 +27,7 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   none: "決済なし",
   authorized: "仮押さえ",
   captured: "決済確定",
+  voided: "解除済み",
   refunded: "返金済み",
 };
 
@@ -34,6 +35,7 @@ const PAYMENT_STYLE: Record<PaymentStatus, string> = {
   none: "bg-slate-100 text-slate-500",
   authorized: "bg-sky-100 text-sky-700",
   captured: "bg-emerald-100 text-emerald-700",
+  voided: "bg-slate-200 text-slate-600",
   refunded: "bg-violet-100 text-violet-700",
 };
 
@@ -118,9 +120,19 @@ export default async function AdminPage() {
                     >
                       {PAYMENT_LABEL[b.payment]}
                     </span>
+                    {b.payment === "refunded" && b.refundAmount != null && (
+                      <span className="mt-1 block text-[11px] text-slate-500">
+                        返金 ${b.refundAmount.toFixed(2)}
+                        {b.refundRate != null && `（${Math.round(b.refundRate * 100)}%）`}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <BookingActions id={b.id} status={b.status} />
+                    <BookingActions
+                      id={b.id}
+                      status={b.status}
+                      tourDate={b.preferredDate}
+                    />
                   </td>
                 </tr>
               ))
@@ -131,7 +143,9 @@ export default async function AdminPage() {
 
       <p className="mt-4 text-xs text-slate-400">
         ※ 決済は PayPal（仮押さえ→確定）。「確定」で仮押さえをキャプチャ（決済確定）、「お断り」で
-        仮押さえを解除します。PayPal未設定の環境では状態管理のみ行います。返金（キャンセル）は今後対応予定です。
+        仮押さえを解除（voided）。確定済みの「キャンセル」は実施日基準のキャンセルポリシー
+        （8日以上前=全額／7〜4日前=50%／3日前以降=返金なし）で自動返金します。「全額返金でキャンセル」は
+        天候・自社都合の中止用（日付に関わらず全額返金）。PayPal未設定の環境では状態管理のみ行います。
         ローカルではJSON、本番ではSupabaseに保存されます。
       </p>
     </div>

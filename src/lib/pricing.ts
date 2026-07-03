@@ -136,3 +136,52 @@ export function amountForBooking(
   const peak = isPeakDate(tourDate);
   return { plan, guests: g, amount: priceFor(plan, g, peak), peak };
 }
+
+// ---------------------------------------------------------------------------
+// Cancellation refund policy (mirrors booking-payment-design.md and /guide)
+// ---------------------------------------------------------------------------
+// Basis: the TOUR DATE in Guam time (UTC+10). Days = tour date minus today,
+// both taken as Guam-local calendar dates.
+//   8+ days before  → 100% refund (rate 1.0)
+//   7–4 days before →  50% refund (rate 0.5)
+//   3 days or fewer (incl. same day / no-show) → no refund (rate 0)
+export const GUAM_UTC_OFFSET_HOURS = 10;
+
+// Guam-local calendar date (year, month, day) for a given instant.
+function guamYmd(instant: Date): { y: number; m: number; d: number } {
+  const guam = new Date(instant.getTime() + GUAM_UTC_OFFSET_HOURS * 3600_000);
+  return {
+    y: guam.getUTCFullYear(),
+    m: guam.getUTCMonth() + 1,
+    d: guam.getUTCDate(),
+  };
+}
+
+// Whole days from "now" until the tour date, by Guam calendar date (date-only,
+// so time of day doesn't shift the tier). Returns null if the date can't parse.
+export function daysUntilTour(
+  tourDate: string | null | undefined,
+  now: Date = new Date(),
+): number | null {
+  if (!tourDate) return null;
+  const m = tourDate.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (!m) return null;
+  const tourUTC = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const today = guamYmd(now);
+  const todayUTC = Date.UTC(today.y, today.m - 1, today.d);
+  return Math.round((tourUTC - todayUTC) / 86_400_000);
+}
+
+// Refund rate (0..1) for a policy-based cancellation on `tourDate`.
+// When the date can't be parsed, defaults to the safest tier for the business
+// (no refund) — the admin can still choose an explicit full refund.
+export function refundRateForDate(
+  tourDate: string | null | undefined,
+  now: Date = new Date(),
+): { rate: number; days: number | null; tier: string } {
+  const days = daysUntilTour(tourDate, now);
+  if (days == null) return { rate: 0, days: null, tier: "日付不明（返金なし）" };
+  if (days >= 8) return { rate: 1, days, tier: "8日以上前（全額返金）" };
+  if (days >= 4) return { rate: 0.5, days, tier: "7〜4日前（50%返金）" };
+  return { rate: 0, days, tier: "3日前以降（返金なし）" };
+}

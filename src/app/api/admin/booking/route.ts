@@ -7,23 +7,27 @@ import {
 import {
   captureAuthorization,
   voidAuthorization,
+  refundCapture,
   isPaypalConfigured,
 } from "@/lib/paypal";
+import { amountForBooking, refundRateForDate } from "@/lib/pricing";
 
-// Update a booking request's status from the Admin dashboard, and drive the
-// matching PayPal action (booking-payment-design.md: authorize → capture/void).
+// Update a booking's status from the Admin dashboard, and drive the matching
+// PayPal action (booking-payment-design.md: authorize → capture/void/refund).
 //
-//   confirm → 予約確定  : capture the authorization (全額決済確定)
-//   decline → お断り    : void the authorization (仮押さえ解除・課金なし)
-//   cancel  → キャンセル : status only for now; refund is a future step (枠あり)
+//   confirm     → 予約確定   : capture the authorization (決済確定)
+//   decline     → お断り     : void the authorization (仮押さえ解除・課金なし)
+//   cancel      → キャンセル : refund per the 3-tier policy (実施日基準)
+//   cancel-full → キャンセル : full refund (天候不良・自社都合の中止)
 //
-// PayPal actions run only when the booking actually carries an authorization
-// and PayPal is configured; otherwise this behaves as status-only (request-only
+// PayPal actions run only when the booking carries the relevant PayPal id and
+// PayPal is configured; otherwise this behaves as status-only (request-only
 // bookings, or local dev without PayPal). Protected by Basic Auth (src/proxy.ts).
 const ACTION_TO_STATUS: Record<string, BookingStatus> = {
   confirm: "confirmed",
   decline: "declined",
   cancel: "cancelled",
+  "cancel-full": "cancelled",
 };
 
 export async function POST(request: Request) {
@@ -45,22 +49,77 @@ export async function POST(request: Request) {
     return Response.json({ error: "Booking not found." }, { status: 404 });
   }
 
-  // Drive the PayPal side first — if it fails, we do NOT change the status, so
-  // the admin can retry rather than ending up with an inconsistent record.
+  const paypalReady = isPaypalConfigured();
   const hasAuthorization =
-    isPaypalConfigured() &&
+    paypalReady &&
     booking.payment === "authorized" &&
     Boolean(booking.paypalAuthorizationId);
+  const hasCapture =
+    paypalReady &&
+    booking.payment === "captured" &&
+    Boolean(booking.paypalCaptureId);
 
+  // Recompute the charged amount server-side (never trust stored/client amount)
+  // from plan + guests + tour date, so refunds use the correct figure.
+  const calc = amountForBooking(
+    booking.planId,
+    booking.guests,
+    booking.preferredDate,
+  );
+  const chargedAmount = calc?.amount ?? 0;
+
+  // Extra info surfaced to the admin UI (refund rate/amount actually applied).
+  let refundResult: { rate: number; amount: number; tier: string } | null = null;
+
+  // Drive the PayPal side first — if it fails, we do NOT change the status, so
+  // the admin can retry rather than ending up with an inconsistent record.
   try {
     if (action === "confirm" && hasAuthorization) {
-      await captureAuthorization(booking.paypalAuthorizationId!);
-      await setBookingPayment(id, "captured");
+      const { captureId } = await captureAuthorization(
+        booking.paypalAuthorizationId!,
+      );
+      await setBookingPayment(id, {
+        payment: "captured",
+        paypalCaptureId: captureId,
+      });
     } else if (action === "decline" && hasAuthorization) {
       await voidAuthorization(booking.paypalAuthorizationId!);
-      // Hold released; leave payment marker as-is (no charge occurred).
+      await setBookingPayment(id, { payment: "voided" });
+    } else if (action === "cancel") {
+      // Policy-based refund from the tour date (実施日基準・グアム時間).
+      const { rate, tier } = refundRateForDate(booking.preferredDate);
+      const refundAmount = Math.round(chargedAmount * rate * 100) / 100;
+      if (hasCapture && rate > 0) {
+        await refundCapture(
+          booking.paypalCaptureId!,
+          rate >= 1 ? undefined : refundAmount, // omit amount = full refund
+        );
+        await setBookingPayment(id, {
+          payment: "refunded",
+          refundAmount,
+          refundRate: rate,
+        });
+      } else if (hasCapture && rate === 0) {
+        // No refund per policy; keep the money, just record the 0% rate.
+        await setBookingPayment(id, {
+          payment: "captured",
+          refundAmount: 0,
+          refundRate: 0,
+        });
+      }
+      refundResult = { rate, amount: hasCapture ? refundAmount : 0, tier };
+    } else if (action === "cancel-full") {
+      // Full refund regardless of date (weather / business-side cancellation).
+      if (hasCapture) {
+        await refundCapture(booking.paypalCaptureId!); // no amount = full
+        await setBookingPayment(id, {
+          payment: "refunded",
+          refundAmount: chargedAmount,
+          refundRate: 1,
+        });
+      }
+      refundResult = { rate: 1, amount: hasCapture ? chargedAmount : 0, tier: "全額返金（天候・自社都合）" };
     }
-    // action === "cancel": refund flow is future work; status-only for now.
   } catch (err) {
     console.error("PayPal action failed:", err);
     return Response.json(
@@ -78,5 +137,5 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, refund: refundResult });
 }

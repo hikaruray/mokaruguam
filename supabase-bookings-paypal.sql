@@ -22,9 +22,12 @@ create table if not exists public.bookings (
   spots                    text,
   notes                    text,
   status                   text not null default 'pending',   -- pending|confirmed|declined|cancelled
-  payment                  text not null default 'none',      -- none|authorized|captured|refunded
+  payment                  text not null default 'none',      -- none|authorized|captured|voided|refunded
   paypal_order_id          text,
   paypal_authorization_id  text,
+  paypal_capture_id        text,       -- capture id (needed to refund later)
+  refund_amount            numeric,    -- USD refunded on cancellation (if any)
+  refund_rate              numeric,    -- 0..1 refund rate applied on cancel
   created_at               timestamptz not null default now()
 );
 
@@ -32,6 +35,10 @@ create table if not exists public.bookings (
 alter table public.bookings add column if not exists payment                 text not null default 'none';
 alter table public.bookings add column if not exists paypal_order_id         text;
 alter table public.bookings add column if not exists paypal_authorization_id text;
+-- New columns for capture/refund (お断り=voided、キャンセル=返金):
+alter table public.bookings add column if not exists paypal_capture_id       text;
+alter table public.bookings add column if not exists refund_amount           numeric;
+alter table public.bookings add column if not exists refund_rate             numeric;
 
 -- Optional: index for the Admin list ordering.
 create index if not exists bookings_created_at_idx on public.bookings (created_at desc);
