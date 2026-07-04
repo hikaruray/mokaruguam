@@ -6,12 +6,13 @@
 
 export interface Plan {
   id: string;
-  name: string;      // Japanese display name
-  hours: string;     // display label for duration
-  base: number;      // regular price, 1–4 guests, USD, per vehicle
-  peak: number;      // peak-season price, 1–4 guests, USD, per vehicle
-  popular?: boolean; // highlight the most popular plan
-  blurb: string[];   // short selling points
+  name: string;         // Japanese display name
+  hours: string;        // display label for duration
+  durationHours: number; // tour length in hours (for end-time display)
+  base: number;         // regular price, 1–4 guests, USD, per vehicle
+  peak: number;         // peak-season price, 1–4 guests, USD, per vehicle
+  popular?: boolean;    // highlight the most popular plan
+  blurb: string[];      // short selling points
 }
 
 // +$20 for groups of 5–7 guests (applies to every plan, regular and peak).
@@ -25,6 +26,7 @@ export const PLANS: Plan[] = [
     id: "short",
     name: "3時間プラン",
     hours: "3時間",
+    durationHours: 3,
     base: 170,
     peak: 205,
     blurb: ["短時間でも主要スポット", "初めての方に人気"],
@@ -33,6 +35,7 @@ export const PLANS: Plan[] = [
     id: "middle",
     name: "5時間プラン",
     hours: "5時間",
+    durationHours: 5,
     base: 250,
     peak: 300,
     popular: true,
@@ -42,6 +45,7 @@ export const PLANS: Plan[] = [
     id: "long",
     name: "8時間プラン",
     hours: "8時間",
+    durationHours: 8,
     base: 345,
     peak: 420,
     blurb: ["島をたっぷり満喫", "ビーチ＋観光＋買い物"],
@@ -50,11 +54,58 @@ export const PLANS: Plan[] = [
     id: "total",
     name: "ワンデープラン",
     hours: "12時間",
+    durationHours: 12,
     base: 500,
     peak: 600,
     blurb: ["朝から夜まで完全満喫", "特別な1日に"],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Tour start times (single source of truth) — mirrors the owner's matrix.
+// ---------------------------------------------------------------------------
+// Per plan id, start times grouped by part of day. Times are "HH:MM" (24h).
+// The end time shown to the guest is start + plan.durationHours.
+export type TimeBand = "午前" | "午後" | "夕方";
+
+export const START_TIMES: Record<string, Record<TimeBand, string[]>> = {
+  short: {
+    午前: ["8:30", "9:00", "9:30"],
+    午後: ["12:30", "13:00", "13:30"],
+    夕方: ["16:30", "17:00", "17:30"],
+  },
+  middle: {
+    午前: ["8:30", "9:00", "9:30"],
+    午後: ["14:00", "14:30", "15:00"],
+    夕方: [],
+  },
+  long: {
+    午前: ["8:30", "9:00", "9:30"],
+    午後: [],
+    夕方: [],
+  },
+  total: {
+    午前: ["8:30", "9:00", "9:30"],
+    午後: [],
+    夕方: [],
+  },
+};
+
+export const TIME_BANDS: TimeBand[] = ["午前", "午後", "夕方"];
+
+// Add durationHours to a "H:MM" start time and format as "H:MM" (24h).
+export function endTimeFor(start: string, durationHours: number): string {
+  const [h, m] = start.split(":").map(Number);
+  const endH = h + durationHours;
+  return `${endH}:${String(m).padStart(2, "0")}`;
+}
+
+// Flat list of valid start times for a plan (for validation / reset checks).
+export function startTimesForPlan(planId: string): string[] {
+  const bands = START_TIMES[planId];
+  if (!bands) return [];
+  return TIME_BANDS.flatMap((b) => bands[b]);
+}
 
 // Price for a plan given guest count and season. Adds the surcharge for 5–7.
 export function priceFor(plan: Plan, guests: number, peak = false): number {

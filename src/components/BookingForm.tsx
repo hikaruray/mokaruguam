@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { PLANS, priceFor, isPeakDate } from "@/lib/pricing";
+import {
+  PLANS,
+  priceFor,
+  isPeakDate,
+  START_TIMES,
+  TIME_BANDS,
+  endTimeFor,
+  startTimesForPlan,
+} from "@/lib/pricing";
 import { PAYPAL_ENABLED } from "@/lib/config";
 import PaypalCheckout from "./PaypalCheckout";
 
@@ -13,12 +21,14 @@ interface FormValues {
   phone: string;
   planId: string;
   tourDate: string;      // ISO date (YYYY-MM-DD) — drives peak-season pricing
-  timeOfDay: string;     // free text, e.g. "午後" (optional)
-  preferredDate: string; // combined "YYYY-MM-DD 午後" saved to the store
+  startTime: string;     // e.g. "9:00" (plan-linked, from START_TIMES)
+  preferredDate: string; // combined "YYYY-MM-DD 9:00" saved to the store
   guests: number;
   spots: string;
   notes: string;
 }
+
+const DEFAULT_PLAN = "middle";
 
 export default function BookingForm() {
   const [state, setState] = useState<State>("idle");
@@ -29,30 +39,41 @@ export default function BookingForm() {
   // Live total + peak flag for the current plan/guest/date selection (display).
   const [total, setTotal] = useState<number>(() => priceFor(PLANS[1], 4));
   const [peak, setPeak] = useState(false);
+  // Controlled: plan drives the start-time options; start time resets if the
+  // new plan doesn't offer the currently-selected time.
+  const [planId, setPlanId] = useState<string>(DEFAULT_PLAN);
+  const [startTime, setStartTime] = useState<string>("");
   const savedValues = useRef<FormValues | null>(null);
+
+  const selectedPlan = PLANS.find((p) => p.id === planId) ?? PLANS[1];
+
+  function onPlanChange(newPlanId: string) {
+    setPlanId(newPlanId);
+    // Reset the start time if it isn't valid for the new plan.
+    if (startTime && !startTimesForPlan(newPlanId).includes(startTime)) {
+      setStartTime("");
+    }
+  }
 
   function recalcTotal(form: HTMLFormElement) {
     const fd = new FormData(form);
-    const planId = String(fd.get("planId") || "");
     const guests = Number(fd.get("guests") || 0);
     const isPeak = isPeakDate(String(fd.get("tourDate") || ""));
-    const plan = PLANS.find((p) => p.id === planId) ?? PLANS[1];
     setPeak(isPeak);
-    setTotal(priceFor(plan, Math.max(1, guests || 1), isPeak));
+    setTotal(priceFor(selectedPlan, Math.max(1, guests || 1), isPeak));
   }
 
   function readForm(form: HTMLFormElement): FormValues {
     const fd = new FormData(form);
     const tourDate = String(fd.get("tourDate") || "");
-    const timeOfDay = String(fd.get("timeOfDay") || "").trim();
     return {
       name: String(fd.get("name") || ""),
       email: String(fd.get("email") || ""),
       phone: String(fd.get("phone") || ""),
-      planId: String(fd.get("planId") || ""),
+      planId,
       tourDate,
-      timeOfDay,
-      preferredDate: [tourDate, timeOfDay].filter(Boolean).join(" "),
+      startTime,
+      preferredDate: [tourDate, startTime].filter(Boolean).join(" "),
       guests: Number(fd.get("guests") || 0),
       spots: String(fd.get("spots") || ""),
       notes: String(fd.get("notes") || ""),
@@ -173,6 +194,13 @@ export default function BookingForm() {
             </span>
             <span className="text-lg font-bold text-brand">${amount.toFixed(2)}</span>
           </div>
+          {(payStep.tourDate || payStep.startTime) && (
+            <p className="mt-1 text-xs text-muted">
+              {payStep.tourDate}
+              {payStep.startTime &&
+                ` ${payStep.startTime} 開始（〜${endTimeFor(payStep.startTime, plan.durationHours)}）`}
+            </p>
+          )}
           <p className="mt-2 text-xs text-muted">
             お支払いはこの時点で<b>仮押さえ</b>されます。予約が確定すると決済が確定し、
             お手配できない場合は<b>自動で解除</b>されます。
@@ -221,7 +249,8 @@ export default function BookingForm() {
       <label className="mt-3 block text-xs font-bold">ご希望プラン</label>
       <select
         name="planId"
-        defaultValue="middle"
+        value={planId}
+        onChange={(e) => onPlanChange(e.target.value)}
         className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
       >
         {PLANS.map((p) => (
@@ -255,11 +284,35 @@ export default function BookingForm() {
         </div>
       </div>
 
-      <Field
-        label="ご希望の時間帯（任意）"
-        name="timeOfDay"
-        placeholder="例：午前 / 午後 / 10時〜 など"
-      />
+      {/* Plan-linked start time. Options switch with the plan; end time shown. */}
+      <label className="mt-3 block text-xs font-bold">ご希望の開始時間</label>
+      <select
+        name="startTime"
+        required
+        value={startTime}
+        onChange={(e) => setStartTime(e.target.value)}
+        className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
+      >
+        <option value="" disabled>
+          開始時間をお選びください
+        </option>
+        {TIME_BANDS.map((band) => {
+          const times = START_TIMES[planId]?.[band] ?? [];
+          if (times.length === 0) return null;
+          return (
+            <optgroup key={band} label={band}>
+              {times.map((t) => (
+                <option key={t} value={t}>
+                  {t} 開始（〜{endTimeFor(t, selectedPlan.durationHours)}）
+                </option>
+              ))}
+            </optgroup>
+          );
+        })}
+      </select>
+      <p className="mt-1.5 text-xs text-muted">
+        選択された時間はご希望です。空き状況により前後をご提案する場合があります。
+      </p>
 
       <label className="mt-3 block text-xs font-bold">行きたいスポット（自由記入）</label>
       <textarea
