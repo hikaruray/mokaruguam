@@ -5,7 +5,7 @@ import { LINE_URL } from "@/lib/config";
 // Primary = booking request (brand orange). Secondary = LINE question channel.
 export default function BookingCta({
   heading = "気になったら、まずはリクエスト予約から。",
-  sub = "希望日時・人数・行きたいスポットを送るだけ。空き状況を確認してご連絡します（7日以内）。この時点では料金は発生しません。",
+  sub = "希望日時・人数・行きたいスポットを送るだけ。空き状況を確認してご連絡します（48時間以内）。この時点では料金は発生しません。",
 }: {
   heading?: string;
   sub?: string;

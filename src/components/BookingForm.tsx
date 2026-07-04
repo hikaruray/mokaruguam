@@ -10,7 +10,7 @@ import {
   endTimeFor,
   startTimesForPlan,
 } from "@/lib/pricing";
-import { PAYPAL_ENABLED } from "@/lib/config";
+import { PAYPAL_ENABLED, LINE_URL } from "@/lib/config";
 import PaypalCheckout from "./PaypalCheckout";
 
 type State = "idle" | "sending" | "sent" | "error";
@@ -153,23 +153,42 @@ export default function BookingForm() {
     setError(message);
   }, []);
 
-  // --- Confirmation ---------------------------------------------------------
+  // --- Confirmation (reassuring, anti-drop-off) -----------------------------
   if (state === "sent") {
     return (
       <div className="rounded-2xl bg-white p-6 text-ink">
-        <div className="text-lg font-bold text-brand">リクエストを受け付けました</div>
-        {paid ? (
-          <p className="mt-2 text-sm text-muted">
-            お支払いは<b>仮押さえ</b>の状態です。ガイド・車両の空きを確認し、
-            <b>7日以内</b>にご連絡します。予約確定時にお支払いが確定し、お手配できない場合は
-            <b>自動で解除（返金）</b>されます。
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-muted">
-            ガイド・車両の空き状況を確認し、<b>7日以内</b>にご連絡します。
-            この時点ではまだ料金は発生しません。折り返しのご連絡をお待ちください。
-          </p>
-        )}
+        <div className="text-lg font-bold text-brand">
+          ✅ リクエストを受け付けました
+        </div>
+        <p className="mt-1 text-sm font-medium text-ink">
+          {paid
+            ? "この時点ではお支払いは仮押さえのみで、まだ請求されていません。"
+            : "この時点ではまだ料金は発生していません。"}
+        </p>
+        <ul className="mt-4 space-y-2.5 text-sm text-muted">
+          <li>
+            📩 <b className="text-ink">48時間以内</b>に、ガイド・車両の空き状況をご連絡します。
+          </li>
+          <li>
+            💳 予約が確定すると同時にお支払いが確定します。お手配できない場合は
+            <b className="text-ink">自動で解除・返金</b>されますのでご安心ください。
+          </li>
+          <li>
+            💬 ご不明な点は{" "}
+            <a
+              href={LINE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-brand hover:underline"
+            >
+              LINE
+            </a>{" "}
+            でお気軽にご相談ください。
+          </li>
+          <li>
+            🧾 確認メールをお送りしました。メール内の<b className="text-ink">キャンセルリンク</b>から、いつでもキャンセルいただけます。
+          </li>
+        </ul>
       </div>
     );
   }
@@ -360,7 +379,7 @@ export default function BookingForm() {
       <p className="mt-2 text-center text-xs text-muted">
         {PAYPAL_ENABLED
           ? "確定時に決済が確定します。お手配できない場合は自動で解除されます。"
-          : "送信後、7日以内に空き状況をご連絡します。この時点では料金は発生しません。"}
+          : "送信後、48時間以内に空き状況をご連絡します。この時点では料金は発生しません。"}
       </p>
     </form>
   );

@@ -7,11 +7,11 @@ import { LINE_URL } from "@/lib/config";
 export const metadata: Metadata = {
   title: "リクエスト予約",
   description:
-    "グアム完全貸切ガイドチャーターのリクエスト予約ページ。希望日時・人数・行きたいスポットを送るだけ。空き状況を確認して7日以内にご連絡します。この時点では料金は発生しません。",
+    "グアム完全貸切ガイドチャーターのリクエスト予約ページ。希望日時・人数・行きたいスポットを送るだけ。空き状況を確認して48時間以内にご連絡します。この時点では料金は発生しません。",
   alternates: { canonical: "/reserve" },
   openGraph: {
     title: "リクエスト予約｜Mokaru Guam",
-    description: "行きたいスポットを送るだけ。空き状況を確認してご連絡します（7日以内）。",
+    description: "行きたいスポットを送るだけ。空き状況を確認してご連絡します（48時間以内）。",
     url: "/reserve",
     type: "website",
   },
@@ -36,7 +36,7 @@ export default function ReservePage() {
                 希望日時・人数・行きたいスポットを送ってリクエスト。お支払いは全額前払いで、
                 <span className="font-bold text-brand">この時点では仮押さえ（まだ引き落とされません）。</span>
               </li>
-              <li>ガイド・車両の空きを確認し、7日以内にお返事します。</li>
+              <li>ガイド・車両の空きを確認し、48時間以内にお返事します。</li>
               <li>予約が確定するとお支払いが確定します。お手配できない場合は自動で解除（返金）されます。あとは当日を待つだけ。</li>
             </ol>
 

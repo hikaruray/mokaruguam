@@ -12,7 +12,7 @@ export default function Booking() {
           <ol className="mt-4 list-decimal space-y-2 pl-5 text-[15px]">
             <li>希望日時・人数・行きたいスポットを送ってリクエスト</li>
             <li>
-              ガイド・車両の空きを確認してお返事（7日以内）。
+              ガイド・車両の空きを確認してお返事（48時間以内）。
               <b>この時点ではまだ請求されません</b>
             </li>
             <li>

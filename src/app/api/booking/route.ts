@@ -1,5 +1,11 @@
 import { Resend } from "resend";
-import { FROM_EMAIL, CONTACT_EMAIL, OWNER_COPY_EMAIL } from "@/lib/config";
+import {
+  FROM_EMAIL,
+  CONTACT_EMAIL,
+  OWNER_COPY_EMAIL,
+  LINE_URL,
+  SITE_URL,
+} from "@/lib/config";
 import { addBooking } from "@/lib/store";
 import { PLANS, amountForBooking } from "@/lib/pricing";
 import {
@@ -8,6 +14,7 @@ import {
   isPaypalConfigured,
   type PaypalOrder,
 } from "@/lib/paypal";
+import { cancelUrl } from "@/lib/cancel-token";
 
 // Receives a booking REQUEST.
 //
@@ -115,8 +122,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const subject = `【リクエスト予約】${name} 様／${planName}`;
-  const text = [
+  const authorized = authorizedAmount != null;
+  const amountStr = authorizedAmount != null ? authorizedAmount.toFixed(2) : "";
+
+  // --- Business notification (to tour@ / owner) -------------------------
+  const bizSubject = `【リクエスト予約】${name} 様／${planName}`;
+  const bizText = [
     `新しいリクエスト予約が入りました。`,
     ``,
     `お名前:   ${name}`,
@@ -130,33 +141,80 @@ export async function POST(request: Request) {
     `その他ご要望:`,
     notes?.trim() || "（なし）",
     ``,
-    authorizedAmount != null
-      ? `お支払い: PayPalで $${authorizedAmount.toFixed(2)} を仮押さえ済み（確定時に自動決済／お断り時に自動解除）`
+    authorized
+      ? `お支払い: PayPalで $${amountStr} を仮押さえ済み（確定時に自動決済／お断り時に自動解除）`
       : `お支払い: 未設定（リクエストのみ）`,
     `受付ID: ${saved.id}`,
     `— Mokaru Guam サイトのリクエストフォームより`,
   ].join("\n");
 
+  // --- Customer confirmation (reassuring; includes the cancel link) -----
+  const cancel = cancelUrl(saved.id, SITE_URL);
+  const custSubject = `【Mokaru Guam】リクエストを受け付けました（まだ請求されていません）`;
+  const custText = [
+    `${name} 様`,
+    ``,
+    `この度はリクエスト予約をありがとうございます。`,
+    `内容を受け付けました。${authorized ? "現時点ではお支払いは仮押さえのみで、まだ請求されていません。" : "この時点ではまだ料金は発生していません。"}`,
+    ``,
+    `▼ ご予約内容`,
+    `プラン:   ${planName}`,
+    `ご希望日時: ${preferredDate}`,
+    `人数:     ${guests}名`,
+    authorized ? `お支払い（予定）: $${amountStr}（仮押さえ中）` : ``,
+    ``,
+    `▼ このあとの流れ`,
+    `1. 48時間以内に、ガイド・車両の空き状況をご連絡します。`,
+    `2. 予約が確定すると同時にお支払いが確定します。お手配できない場合は自動で解除・返金されますのでご安心ください。`,
+    `3. ご不明な点は LINE でお気軽に：${LINE_URL}`,
+    ``,
+    `▼ キャンセルについて`,
+    `下記リンクからいつでもキャンセルいただけます：`,
+    cancel,
+    `キャンセルポリシー：実施日の8日以上前=全額返金／7〜4日前=50%／3日前以降=返金なし。`,
+    ``,
+    `受付ID: ${saved.id}`,
+    `— Mokaru Guam`,
+  ]
+    .filter((l) => l !== ``)
+    .join("\n");
+
   const apiKey = process.env.RESEND_API_KEY;
 
   // Until the sending key is configured at launch, log so nothing is lost.
-  const authorized = authorizedAmount != null;
-
   if (!apiKey) {
-    console.log("[BOOKING REQUEST — email sending not configured yet]\n" + text);
+    console.log(
+      "[BOOKING — email not configured]\n--- BUSINESS ---\n" +
+        bizText +
+        "\n--- CUSTOMER ---\n" +
+        custText,
+    );
     return Response.json({ ok: true, delivered: false, authorized });
   }
 
   try {
     const resend = new Resend(apiKey);
+    // Business notification.
     await resend.emails.send({
       from: FROM_EMAIL,
       to: CONTACT_EMAIL,
       bcc: OWNER_COPY_EMAIL,
       replyTo: email,
-      subject,
-      text,
+      subject: bizSubject,
+      text: bizText,
     });
+    // Customer confirmation (best-effort; a failure here shouldn't fail the request).
+    try {
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: email,
+        replyTo: CONTACT_EMAIL,
+        subject: custSubject,
+        text: custText,
+      });
+    } catch (custErr) {
+      console.error("Failed to send customer confirmation:", custErr);
+    }
     return Response.json({ ok: true, delivered: true, authorized });
   } catch (err) {
     console.error("Failed to send booking email:", err);
