@@ -93,6 +93,38 @@ async function getAccessToken(): Promise<string> {
   return tokenCache.token;
 }
 
+// Error carrying the PayPal HTTP status and issue names, so callers can make
+// "already in target state" outcomes idempotent (e.g. PREVIOUSLY_VOIDED).
+export class PaypalApiError extends Error {
+  status: number;
+  issues: string[];
+  constructor(message: string, status: number, issues: string[]) {
+    super(message);
+    this.name = "PaypalApiError";
+    this.status = status;
+    this.issues = issues;
+  }
+  hasIssue(...names: string[]): boolean {
+    return this.issues.some((i) => names.includes(i));
+  }
+}
+
+function extractIssues(text: string): string[] {
+  try {
+    const body = JSON.parse(text) as {
+      name?: string;
+      details?: { issue?: string }[];
+    };
+    const issues = (body.details ?? [])
+      .map((d) => d.issue)
+      .filter((x): x is string => Boolean(x));
+    if (body.name) issues.push(body.name);
+    return issues;
+  } catch {
+    return [];
+  }
+}
+
 async function api<T>(
   path: string,
   method: "POST" | "GET",
@@ -114,7 +146,11 @@ async function api<T>(
   );
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`PayPal ${method} ${path} → ${res.status}: ${text}`);
+    throw new PaypalApiError(
+      `PayPal ${method} ${path} → ${res.status}: ${text}`,
+      res.status,
+      extractIssues(text),
+    );
   }
   return (text ? JSON.parse(text) : {}) as T;
 }
@@ -171,38 +207,105 @@ export async function authorizeOrder(
   return { authorizationId: authorization.id, status: authorization.status };
 }
 
+// Read an authorization back (used to recover an existing capture id when a
+// capture call reports the authorization was already captured).
+async function getAuthorization(authorizationId: string): Promise<{
+  status: string;
+  captureId: string | null;
+}> {
+  const data = await api<{
+    status: string;
+    supplementary_data?: {
+      related_ids?: { capture_ids?: string[] };
+    };
+  }>(`/v2/payments/authorizations/${authorizationId}`, "GET", undefined, 2);
+  const captureId =
+    data.supplementary_data?.related_ids?.capture_ids?.[0] ?? null;
+  return { status: data.status, captureId };
+}
+
 // Capture a previously created authorization (予約確定 → 課金確定).
+// IDEMPOTENT: if PayPal reports it was already captured, we look the existing
+// capture up and return it as success, so a retry reconciles the DB instead of
+// erroring.
 export async function captureAuthorization(
   authorizationId: string,
-): Promise<{ captureId: string; status: string }> {
-  const data = await api<{ id: string; status: string }>(
-    `/v2/payments/authorizations/${authorizationId}/capture`,
-    "POST",
-    {},
-    0,
-  );
-  return { captureId: data.id, status: data.status };
+): Promise<{ captureId: string; status: string; alreadyDone: boolean }> {
+  try {
+    const data = await api<{ id: string; status: string }>(
+      `/v2/payments/authorizations/${authorizationId}/capture`,
+      "POST",
+      {},
+      0,
+    );
+    return { captureId: data.id, status: data.status, alreadyDone: false };
+  } catch (err) {
+    if (
+      err instanceof PaypalApiError &&
+      err.hasIssue("AUTHORIZATION_ALREADY_CAPTURED")
+    ) {
+      const existing = await getAuthorization(authorizationId);
+      if (existing.captureId) {
+        return {
+          captureId: existing.captureId,
+          status: existing.status,
+          alreadyDone: true,
+        };
+      }
+    }
+    throw err;
+  }
 }
 
 // Void an authorization (お断り → 仮押さえ解除・課金なし).
-export async function voidAuthorization(authorizationId: string): Promise<void> {
-  await api(`/v2/payments/authorizations/${authorizationId}/void`, "POST", {}, 0);
+// IDEMPOTENT: if PayPal reports it was already voided, treat as success.
+export async function voidAuthorization(
+  authorizationId: string,
+): Promise<{ alreadyDone: boolean }> {
+  try {
+    await api(
+      `/v2/payments/authorizations/${authorizationId}/void`,
+      "POST",
+      {},
+      0,
+    );
+    return { alreadyDone: false };
+  } catch (err) {
+    if (
+      err instanceof PaypalApiError &&
+      err.hasIssue("PREVIOUSLY_VOIDED", "AUTHORIZATION_VOIDED")
+    ) {
+      return { alreadyDone: true };
+    }
+    throw err;
+  }
 }
 
-// Refund a capture — reserved for future cancellation refunds (枠のみ).
+// Refund a capture (キャンセル → 返金).
+// IDEMPOTENT: if the capture is already fully refunded, treat as success.
 export async function refundCapture(
   captureId: string,
   amount?: number,
-): Promise<{ refundId: string; status: string }> {
+): Promise<{ refundId: string | null; status: string; alreadyDone: boolean }> {
   const body =
     amount != null
       ? { amount: { currency_code: "USD", value: amount.toFixed(2) } }
       : {};
-  const data = await api<{ id: string; status: string }>(
-    `/v2/payments/captures/${captureId}/refund`,
-    "POST",
-    body,
-    0,
-  );
-  return { refundId: data.id, status: data.status };
+  try {
+    const data = await api<{ id: string; status: string }>(
+      `/v2/payments/captures/${captureId}/refund`,
+      "POST",
+      body,
+      0,
+    );
+    return { refundId: data.id, status: data.status, alreadyDone: false };
+  } catch (err) {
+    if (
+      err instanceof PaypalApiError &&
+      err.hasIssue("CAPTURE_FULLY_REFUNDED", "REFUND_AMOUNT_EXCEEDED")
+    ) {
+      return { refundId: null, status: "COMPLETED", alreadyDone: true };
+    }
+    throw err;
+  }
 }

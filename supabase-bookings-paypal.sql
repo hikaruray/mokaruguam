@@ -40,5 +40,16 @@ alter table public.bookings add column if not exists paypal_capture_id       tex
 alter table public.bookings add column if not exists refund_amount           numeric;
 alter table public.bookings add column if not exists refund_rate             numeric;
 
+-- C) FIX: allow 'voided' in the payment CHECK constraint --------------------
+-- The original table constraint only permitted none/authorized/captured/
+-- refunded, so writing payment='voided' (お断り時) failed with 23514 and the
+-- decline appeared to "do nothing". Drop and re-add the constraint with
+-- 'voided' included. (The default constraint name is bookings_payment_check;
+-- adjust if yours differs.)
+alter table public.bookings drop constraint if exists bookings_payment_check;
+alter table public.bookings
+  add constraint bookings_payment_check
+  check (payment in ('none', 'authorized', 'captured', 'voided', 'refunded'));
+
 -- Optional: index for the Admin list ordering.
 create index if not exists bookings_created_at_idx on public.bookings (created_at desc);

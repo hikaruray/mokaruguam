@@ -17,9 +17,16 @@ create table if not exists public.bookings (
   notes          text not null default '',
   status         text not null default 'pending'
                  check (status in ('pending', 'confirmed', 'declined', 'cancelled')),
-  -- Reserved for the future Stripe authorize→capture flow (booking-payment-design.md).
+  -- PayPal authorize→capture flow (booking-payment-design.md):
+  --   none=request-only, authorized=hold, captured=charged,
+  --   voided=hold released (お断り), refunded=charged then refunded (キャンセル)
   payment        text not null default 'none'
-                 check (payment in ('none', 'authorized', 'captured', 'refunded')),
+                 check (payment in ('none', 'authorized', 'captured', 'voided', 'refunded')),
+  paypal_order_id         text,
+  paypal_authorization_id text,
+  paypal_capture_id       text,     -- capture id (needed to refund later)
+  refund_amount           numeric,  -- USD refunded on cancellation (if any)
+  refund_rate             numeric,  -- 0..1 refund rate applied on cancel
   created_at     timestamptz not null default now()
 );
 
