@@ -26,6 +26,7 @@ export default function Footer() {
             <p><Link href="/reserve" className="hover:text-white">リクエスト予約</Link></p>
             <p><Link href="/guide" className="hover:text-white">予約の流れ・キャンセル</Link></p>
             <p><Link href="/about" className="hover:text-white">会社案内</Link></p>
+            <p><Link href="/legal" className="hover:text-white">特定商取引法に基づく表記</Link></p>
           </div>
           <div>
             <p className="mb-1.5 font-bold text-white">お問い合わせ</p>

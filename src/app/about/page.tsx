@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
-import { CONTACT_EMAIL } from "@/lib/config";
+import { CONTACT_EMAIL, COMPANY } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "会社案内・運営者情報",
   description:
-    "Mokaru Guam は、グアム唯一の完全貸切ガイドチャーターサービス。日本語ガイド＋専用車で、行きたい場所を自由に。VELTRAおよび自社サイトで予約を承っています。お問い合わせは tour@mokaruguam.com。",
+    "Mokaru Guam は、グアム唯一の完全貸切ガイドチャーターサービス。日本語ガイド＋専用車で、行きたい場所を自由に。運営: Mokaru Guam LLC。お問い合わせは tour@mokaruguam.com。",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "会社案内・運営者情報｜Mokaru Guam",
@@ -17,21 +17,19 @@ export const metadata: Metadata = {
   },
 };
 
-// PLACEHOLDER marker for facts we must not invent. Owner fills these in.
-const TBD = "（オーナー確認）";
-
-// Company info table. Known values come from overview.md / project memory.
-// Unknown values use TBD so nothing is fabricated.
-const INFO: { label: string; value: string; note?: string }[] = [
+// Company info table — real values from the owner. Rows that are still unknown
+// (e.g. registration/licence numbers) are simply omitted rather than fabricated.
+const INFO: { label: string; value: string }[] = [
   { label: "サービス名", value: "Mokaru Guam（モカルグアム）" },
-  { label: "正式社名 / 屋号", value: TBD },
-  { label: "所在地", value: TBD },
+  { label: "正式社名", value: COMPANY.legalName },
+  { label: "運営責任者", value: COMPANY.operator },
+  { label: "所在地", value: COMPANY.address },
+  { label: "電話番号", value: `${COMPANY.phone}（緊急時のみ）` },
   { label: "事業内容", value: "グアムの完全貸切ガイドチャーターサービス" },
   { label: "対応エリア", value: "グアム" },
   { label: "予約方法", value: "自社サイトのリクエスト予約（LINEでのご相談も可）" },
   { label: "お問い合わせ", value: CONTACT_EMAIL },
   { label: "ガイド言語", value: "日本語" },
-  { label: "各種登録番号・許認可", value: TBD },
 ];
 
 export default function AboutPage() {
@@ -71,22 +69,18 @@ export default function AboutPage() {
                     <th className="w-40 bg-sand px-4 py-3 text-left font-medium text-muted">
                       {row.label}
                     </th>
-                    <td className="px-4 py-3">
-                      {row.value === TBD ? (
-                        <span className="rounded bg-[#fff3d6] px-2 py-0.5 text-xs font-bold text-[#9a6a00]">
-                          {TBD}
-                        </span>
-                      ) : (
-                        row.value
-                      )}
-                    </td>
+                    <td className="px-4 py-3">{row.value}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <p className="mt-3 text-xs text-muted">
-            ※「{TBD}」の項目は、正式な情報をオーナーに確認のうえ掲載します（正式社名・住所・各種登録番号・特定商取引法に基づく表記など）。現時点では未確定のため、事実の断定を避けています。
+            取引条件の詳細は{" "}
+            <Link href="/legal" className="font-bold text-brand hover:underline">
+              特定商取引法に基づく表記
+            </Link>{" "}
+            をご覧ください。
           </p>
         </div>
       </section>
@@ -99,6 +93,9 @@ export default function AboutPage() {
           </Link>
           <Link href="/guide" className="rounded-full border border-line bg-white px-5 py-2.5 font-medium hover:text-brand">
             予約の流れ・キャンセル
+          </Link>
+          <Link href="/legal" className="rounded-full border border-line bg-white px-5 py-2.5 font-medium hover:text-brand">
+            特定商取引法に基づく表記
           </Link>
           <Link href="/reserve" className="rounded-full bg-brand px-5 py-2.5 font-bold text-white hover:bg-brand-dark">
             リクエスト予約

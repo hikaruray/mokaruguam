@@ -17,6 +17,17 @@ export const SITE_URL =
 // Business contact — where booking requests are delivered.
 export const CONTACT_EMAIL = "tour@mokaruguam.com";
 
+// ---------------------------------------------------------------------------
+// Company / legal details (single source of truth for /about and /legal).
+// ---------------------------------------------------------------------------
+export const COMPANY = {
+  legalName: "Mokaru Guam LLC",
+  operator: "Yasushi Nishihira",
+  address: "176-16 Perez Way, Tamuning, Guam 96913",
+  phone: "+1 671-777-1019",
+  phoneNote: "お問い合わせはメール／LINEにて承ります。電話は緊急時のみ対応。",
+};
+
 // Owner always receives a copy (BCC) for record-keeping.
 export const OWNER_COPY_EMAIL = "ynishihira@gmail.com";
 
