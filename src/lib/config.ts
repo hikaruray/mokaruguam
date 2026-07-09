@@ -23,10 +23,10 @@ export const OWNER_COPY_EMAIL = "ynishihira@gmail.com";
 // Verified sending address (set up at launch with the domain's DNS records).
 export const FROM_EMAIL = "Mokaru Guam <tour@mokaruguam.com>";
 
-// LINE official account URL (placeholder — replace with the real @id link).
-export const LINE_URL = "https://line.me/R/ti/p/@mokaruguam";
+// LINE official account URL.
+export const LINE_URL = "https://lin.ee/OfniH2h";
 
-// VELTRA listing URL (placeholder — replace with the actual listing URL).
+// VELTRA listing URL.
 export const VELTRA_URL =
   "https://www.veltra.com/jp/beach_resort/guam/a/195030";
 
