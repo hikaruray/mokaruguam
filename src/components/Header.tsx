@@ -16,16 +16,20 @@ export default function Header() {
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
         <Link href="/" className="flex items-center" aria-label="Mokaru Guam ホーム">
-          {/* Dark transparent logo on the light header. Height-fixed for CLS. */}
-          <Image
-            src="/logo-dark.png"
-            alt="Mokaru Guam"
-            width={1563}
-            height={1563}
-            priority
-            className="w-auto"
-            style={{ height: 48, width: "auto" }}
-          />
+          {/* Same horizontal logo as the footer (turtle + white MOKARU GUAM
+              wordmark). The logo art has a dark background, so it sits on a small
+              dark "chip" to stay legible on the light header. Height-fixed for CLS. */}
+          <span className="inline-flex items-center rounded-lg bg-ink px-3 py-1.5">
+            <Image
+              src="/logo-horizontal.png"
+              alt="Mokaru Guam"
+              width={500}
+              height={120}
+              priority
+              className="w-auto"
+              style={{ height: 32, width: "auto" }}
+            />
+          </span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
           {NAV.map((n) => (
