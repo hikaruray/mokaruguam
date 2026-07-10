@@ -7,6 +7,8 @@
 // facts (opening hours, exact prices, history claims). They set the scene and
 // steer the reader toward a booking request. Refine with the owner's input later.
 
+import { photoFor } from "./images";
+
 export interface Spot {
   slug: string;
   name: string;        // display name
@@ -15,10 +17,6 @@ export interface Spot {
   tagline: string;     // one-line hook
   body: string[];      // short paragraphs
   tips: string[];      // "こんな方に" bullets
-}
-
-function img(seed: string, w: number, h: number): string {
-  return `https://picsum.photos/seed/${seed}/${w}/${h}`;
 }
 
 export const SPOTS: Spot[] = [
@@ -112,10 +110,10 @@ export function getSpot(slug: string): Spot | undefined {
   return SPOTS.find((s) => s.slug === slug);
 }
 
-// List-thumbnail and hero image helpers (placeholder sizes).
+// List-thumbnail and hero image helpers. Real photo if available, else placeholder.
 export function spotThumb(spot: Spot): string {
-  return img(spot.seed, 500, 380);
+  return photoFor(spot.seed, 500, 380);
 }
 export function spotHero(spot: Spot): string {
-  return img(spot.seed, 1200, 675);
+  return photoFor(spot.seed, 1200, 675);
 }
