@@ -16,15 +16,15 @@ export default function Header() {
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
         <Link href="/" className="flex items-center" aria-label="Mokaru Guam ホーム">
-          {/* Black/gray logo on the light header. Height-fixed for CLS safety. */}
+          {/* Dark transparent logo on the light header. Height-fixed for CLS. */}
           <Image
-            src="/mokaru-logo.png"
+            src="/logo-dark.png"
             alt="Mokaru Guam"
-            width={52}
-            height={52}
+            width={1563}
+            height={1563}
             priority
-            className="h-13 w-auto"
-            style={{ height: 52, width: "auto" }}
+            className="w-auto"
+            style={{ height: 48, width: "auto" }}
           />
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium md:flex">

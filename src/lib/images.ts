@@ -16,7 +16,8 @@ export const REAL_PHOTOS: Record<string, string> = {
   "spot-spain": "/photos/spain.webp",
   "spot-fort": "/photos/fort.webp",
   "spot-emerald": "/photos/emerald.webp",
-  // spot-coffee / spot-asan / spot-visitor: awaiting owner photos (placeholder).
+  "spot-coffee": "/photos/coffee.webp",
+  // spot-asan / spot-visitor: awaiting owner photos (placeholder).
 };
 
 // Returns the real photo for a seed if present, else a placeholder. next/image

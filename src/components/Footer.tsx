@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { CONTACT_EMAIL, LINE_URL } from "@/lib/config";
 
 export default function Footer() {
@@ -7,9 +8,14 @@ export default function Footer() {
       <div className="mx-auto max-w-5xl px-5 py-11 text-sm">
         <div className="flex flex-wrap justify-between gap-5">
           <div>
-            <div className="text-xl font-bold text-white">
-              Mokaru<span className="text-brand"> Guam</span>
-            </div>
+            <Image
+              src="/logo-horizontal.png"
+              alt="Mokaru Guam"
+              width={500}
+              height={120}
+              className="w-auto"
+              style={{ height: 44, width: "auto" }}
+            />
             <p className="mt-2 max-w-xs">
               グアム唯一の完全貸切ガイドチャーター。あなただけの1日を、日本語ガイドと専用車で。
             </p>
