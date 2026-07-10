@@ -26,6 +26,7 @@ interface FormValues {
   guests: number;
   spots: string;
   notes: string;
+  company: string;      // honeypot — hidden; real users leave it empty
 }
 
 const DEFAULT_PLAN = "middle";
@@ -77,6 +78,7 @@ export default function BookingForm() {
       guests: Number(fd.get("guests") || 0),
       spots: String(fd.get("spots") || ""),
       notes: String(fd.get("notes") || ""),
+      company: String(fd.get("company") || ""),
     };
   }
 
@@ -259,10 +261,20 @@ export default function BookingForm() {
     >
       <div className="text-base font-bold">リクエスト予約フォーム</div>
 
-      <Field label="お名前" name="name" placeholder="山田 太郎" required />
+      {/* Honeypot: hidden from real users; bots that fill every field trip it
+          and are dropped server-side. Not display:none so headless bots that
+          skip hidden inputs still see it; kept out of the layout + a11y tree. */}
+      <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
+        <label>
+          会社名（入力しないでください）
+          <input type="text" name="company" tabIndex={-1} autoComplete="off" />
+        </label>
+      </div>
+
+      <Field label="お名前" name="name" placeholder="山田 太郎" required maxLength={100} />
       <div className="grid gap-x-3 sm:grid-cols-2">
-        <Field label="メールアドレス" name="email" type="email" placeholder="you@example.com" required />
-        <Field label="電話 / LINE ID" name="phone" placeholder="連絡のつく番号など" required />
+        <Field label="メールアドレス" name="email" type="email" placeholder="you@example.com" required maxLength={200} />
+        <Field label="電話 / LINE ID" name="phone" placeholder="連絡のつく番号など" required maxLength={60} />
       </div>
 
       <label className="mt-3 block text-xs font-bold">ご希望プラン</label>
@@ -336,6 +348,7 @@ export default function BookingForm() {
       <label className="mt-3 block text-xs font-bold">行きたいスポット（自由記入）</label>
       <textarea
         name="spots"
+        maxLength={1000}
         placeholder="例：恋人岬、スペイン広場、エメラルドバレー…"
         className="mt-1.5 min-h-[78px] w-full resize-y rounded-lg border border-line px-3 py-2.5 text-sm"
       />
@@ -343,6 +356,7 @@ export default function BookingForm() {
       <label className="mt-3 block text-xs font-bold">その他ご要望（任意）</label>
       <textarea
         name="notes"
+        maxLength={1000}
         placeholder="お子様連れ・記念日・食事の希望など"
         className="mt-1.5 min-h-[56px] w-full resize-y rounded-lg border border-line px-3 py-2.5 text-sm"
       />
@@ -391,12 +405,14 @@ function Field({
   type = "text",
   placeholder,
   required,
+  maxLength,
 }: {
   label: string;
   name: string;
   type?: string;
   placeholder?: string;
   required?: boolean;
+  maxLength?: number;
 }) {
   return (
     <div>
@@ -406,6 +422,7 @@ function Field({
         name={name}
         placeholder={placeholder}
         required={required}
+        maxLength={maxLength}
         className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
       />
     </div>

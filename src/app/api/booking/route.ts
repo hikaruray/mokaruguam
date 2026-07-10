@@ -15,6 +15,7 @@ import {
   type PaypalOrder,
 } from "@/lib/paypal";
 import { cancelUrl } from "@/lib/cancel-token";
+import { isBot, validateBooking, rateLimit, clientIp } from "@/lib/spam";
 
 // Receives a booking REQUEST.
 //
@@ -36,12 +37,27 @@ export async function POST(request: Request) {
     spots?: string;
     notes?: string;
     paypalOrderId?: string;
+    company?: string; // honeypot
   };
 
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "リクエストが不正です。" }, { status: 400 });
+  }
+
+  // Honeypot: a bot filled the hidden field. Pretend success so it doesn't
+  // retry, but save nothing and send nothing.
+  if (isBot(body)) {
+    return Response.json({ ok: true, delivered: false, authorized: false });
+  }
+
+  // Best-effort per-IP throttle against rapid spam submissions.
+  if (!rateLimit(`booking:${clientIp(request)}`)) {
+    return Response.json(
+      { error: "送信が続けて行われました。しばらくおいて再度お試しください。" },
+      { status: 429 },
+    );
   }
 
   const { name, email, phone, planId, preferredDate, guests, spots, notes } = body;
@@ -51,6 +67,12 @@ export async function POST(request: Request) {
       { error: "必須項目（お名前・連絡先・希望日・人数）をご入力ください。" },
       { status: 400 },
     );
+  }
+
+  // Length / format guards (mirrors the client maxLength attributes).
+  const invalid = validateBooking(body);
+  if (invalid) {
+    return Response.json({ error: invalid }, { status: 400 });
   }
 
   const plan = PLANS.find((p) => p.id === planId);

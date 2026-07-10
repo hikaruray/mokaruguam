@@ -1,5 +1,6 @@
 import { amountForBooking } from "@/lib/pricing";
 import { createAuthorizeOrder, isPaypalConfigured } from "@/lib/paypal";
+import { rateLimit, clientIp } from "@/lib/spam";
 
 // Creates a PayPal order (intent=AUTHORIZE) for the chosen plan + guests + date.
 //
@@ -12,6 +13,14 @@ export async function POST(request: Request) {
     return Response.json(
       { error: "オンライン決済は現在ご利用いただけません。" },
       { status: 503 },
+    );
+  }
+
+  // Throttle order creation per IP (each order is a PayPal API call).
+  if (!rateLimit(`create-order:${clientIp(request)}`)) {
+    return Response.json(
+      { error: "しばらくおいて再度お試しください。" },
+      { status: 429 },
     );
   }
 

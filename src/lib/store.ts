@@ -9,9 +9,10 @@
 // The exported function SIGNATURES are identical in both modes, so the rest of
 // the app (API routes, Admin) is backend-agnostic.
 //
-// FUTURE (Stripe): the `payment` field is reserved so the "authorize on request
-// → capture on confirm / cancel on reject" flow from booking-payment-design.md
-// can be added without changing this interface. It stays "none" until then.
+// Payment (PayPal): the `payment` field tracks the "authorize on request →
+// capture on confirm / void on reject → refund on cancel" flow (see
+// booking-payment-design.md). It stays "none" for request-only submissions
+// (when PayPal env vars are unset).
 
 import "server-only";
 import { promises as fs } from "fs";
