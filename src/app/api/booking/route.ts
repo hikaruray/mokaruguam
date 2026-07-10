@@ -10,6 +10,7 @@ import { addBooking } from "@/lib/store";
 import { PLANS, amountForBooking } from "@/lib/pricing";
 import {
   authorizeOrder,
+  voidAuthorization,
   getOrder,
   isPaypalConfigured,
   type PaypalOrder,
@@ -150,6 +151,22 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("Failed to save booking:", err);
+    // Compensating action: if we already placed a hold on the card above but
+    // couldn't save the booking, release the hold so the customer isn't left
+    // with an orphaned authorization (money held with no booking on record).
+    if (paymentFields.paypalAuthorizationId) {
+      try {
+        await voidAuthorization(paymentFields.paypalAuthorizationId);
+        console.error(
+          "Voided orphaned authorization after save failure:",
+          paymentFields.paypalAuthorizationId,
+        );
+      } catch (voidErr) {
+        // Best-effort. If this also fails, the hold expires on its own; log so
+        // it can be reconciled manually.
+        console.error("Failed to void orphaned authorization:", voidErr);
+      }
+    }
     return Response.json(
       { error: "送信できませんでした。時間をおいて再度お試しください。" },
       { status: 503 },
