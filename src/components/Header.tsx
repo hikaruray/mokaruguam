@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { LINE_URL } from "@/lib/config";
 
 // Nav targets. Section anchors use "/#id" so they work from any subpage
@@ -14,8 +15,17 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-        <Link href="/" className="text-xl font-bold tracking-tight">
-          Mokaru<span className="text-brand"> Guam</span>
+        <Link href="/" className="flex items-center" aria-label="Mokaru Guam ホーム">
+          {/* Black/gray logo on the light header. Height-fixed for CLS safety. */}
+          <Image
+            src="/mokaru-logo.png"
+            alt="Mokaru Guam"
+            width={52}
+            height={52}
+            priority
+            className="h-13 w-auto"
+            style={{ height: 52, width: "auto" }}
+          />
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
           {NAV.map((n) => (
