@@ -7,7 +7,6 @@ import {
   captureAuthorization,
   voidAuthorization,
   isPaypalConfigured,
-  getAuthorization,
 } from "@/lib/paypal";
 import { cancelBooking } from "@/lib/booking-actions";
 
@@ -62,18 +61,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "Booking not found." }, { status: 404 });
   }
 
-  // TEMP DIAGNOSTIC: report the live authorization status so we can see why void
-  // is refused. Triggered by action "confirm" with a special marker id would be
-  // messy; instead we expose it whenever action === "decline" via a query flag.
-  if (action === "decline" && new URL(request.url).searchParams.get("diag") === "1") {
-    try {
-      const info = await getAuthorization(booking.paypalAuthorizationId!);
-      return Response.json({ diag: true, authorization: info });
-    } catch (err) {
-      return Response.json({ diag: true, error: String(err) }, { status: 502 });
-    }
-  }
-
   const hasAuthorization =
     isPaypalConfigured() &&
     booking.payment === "authorized" &&
@@ -102,8 +89,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("PayPal action failed:", err);
     return Response.json(
-      // TEMP DIAGNOSTIC: surface the PayPal error detail (admin-only endpoint).
-      { error: "決済処理に失敗しました。もう一度お試しください。", detail: String(err) },
+      { error: "決済処理に失敗しました。もう一度お試しください。" },
       { status: 502 },
     );
   }

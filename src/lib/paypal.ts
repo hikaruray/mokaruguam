@@ -209,7 +209,7 @@ export async function authorizeOrder(
 
 // Read an authorization back (used to recover an existing capture id when a
 // capture call reports the authorization was already captured).
-export async function getAuthorization(authorizationId: string): Promise<{
+async function getAuthorization(authorizationId: string): Promise<{
   status: string;
   captureId: string | null;
 }> {

@@ -106,7 +106,19 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const { authorizationId } = await authorizeOrder(body.paypalOrderId);
+      const { authorizationId, status } = await authorizeOrder(body.paypalOrderId);
+      // Only a CREATED authorization is a real hold. PayPal can return DENIED
+      // (card/risk declined — including self-payments) or other non-hold states;
+      // in that case do NOT save a "held" booking or tell the customer it's held.
+      if (status !== "CREATED") {
+        return Response.json(
+          {
+            error:
+              "カードの承認が完了しませんでした。別のカードでお試しいただくか、カード発行会社へご確認ください。",
+          },
+          { status: 402 },
+        );
+      }
       paymentFields = {
         payment: "authorized",
         paypalOrderId: body.paypalOrderId,
