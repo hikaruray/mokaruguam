@@ -89,7 +89,8 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("PayPal action failed:", err);
     return Response.json(
-      { error: "決済処理に失敗しました。もう一度お試しください。" },
+      // TEMP DIAGNOSTIC: surface the PayPal error detail (admin-only endpoint).
+      { error: "決済処理に失敗しました。もう一度お試しください。", detail: String(err) },
       { status: 502 },
     );
   }
