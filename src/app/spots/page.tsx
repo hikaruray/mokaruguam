@@ -8,7 +8,7 @@ import { SPOTS, spotThumb } from "@/lib/spots";
 export const metadata: Metadata = {
   title: "人気スポット",
   description:
-    "グアムの人気スポットを日本語ガイドがご案内。恋人岬・スペイン広場・アプガン砦・エメラルドバレー・スロウウォークコーヒー・アサン戦争記念公園・ビジターセンター。完全貸切だから行きたい場所を自由に組み合わせられます。",
+    "グアムの人気スポットを日本語ガイドがご案内。恋人岬・スペイン広場・アプガン砦・エメラルドバレー・スロウウォークコーヒー。完全貸切だから行きたい場所を自由に組み合わせられます。",
   alternates: { canonical: "/spots" },
   openGraph: {
     title: "人気スポット｜Mokaru Guam",

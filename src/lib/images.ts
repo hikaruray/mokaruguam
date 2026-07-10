@@ -17,7 +17,6 @@ export const REAL_PHOTOS: Record<string, string> = {
   "spot-fort": "/photos/fort.webp",
   "spot-emerald": "/photos/emerald.webp",
   "spot-coffee": "/photos/coffee.webp",
-  // spot-asan / spot-visitor: awaiting owner photos (placeholder).
 };
 
 // Returns the real photo for a seed if present, else a placeholder. next/image
@@ -35,7 +34,6 @@ export const IMAGES = {
     { seed: "spot-emerald", label: "エメラルドバレー" },
     { seed: "spot-fort", label: "アプガン砦" },
     { seed: "spot-coffee", label: "スロウウォークコーヒー" },
-    { seed: "spot-asan", label: "アサン記念公園" },
   ].map((s) => ({ ...s, src: photoFor(s.seed, 500, 380) })),
 };
 
