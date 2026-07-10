@@ -22,6 +22,8 @@ import {
   isPaypalConfigured,
 } from "./paypal";
 import { amountForBooking, refundRateForDate } from "./pricing";
+import { sendMail } from "./email";
+import { cancelledEmail } from "./booking-emails";
 
 export interface CancelResult {
   ok: boolean;
@@ -111,6 +113,17 @@ export async function cancelBooking(
 
   await setBookingStatus(id, "cancelled");
   const updated = (await getBooking(id)) ?? booking;
+
+  // Notify the customer (and copy the owner) so the cancellation/refund outcome
+  // is confirmed in writing, not just on-screen. Best-effort — a mail failure
+  // must not fail the cancellation itself.
+  const mail = cancelledEmail(updated, refund);
+  await sendMail({
+    to: updated.email,
+    subject: mail.subject,
+    text: mail.text,
+    bccOwner: true,
+  });
 
   return { ok: true, alreadyCancelled: false, refund, booking: updated };
 }

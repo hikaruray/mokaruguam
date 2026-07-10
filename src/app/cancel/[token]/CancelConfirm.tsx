@@ -10,6 +10,7 @@ export default function CancelConfirm({ token }: { token: string }) {
   const [refund, setRefund] = useState<{ rate: number; amount: number } | null>(
     null,
   );
+  const [payment, setPayment] = useState<string | null>(null);
   const [alreadyCancelled, setAlreadyCancelled] = useState(false);
 
   async function onCancel() {
@@ -28,6 +29,7 @@ export default function CancelConfirm({ token }: { token: string }) {
         return;
       }
       setRefund(data.refund ?? null);
+      setPayment(data.payment ?? null);
       setAlreadyCancelled(Boolean(data.alreadyCancelled));
       setState("done");
     } catch {
@@ -47,13 +49,19 @@ export default function CancelConfirm({ token }: { token: string }) {
         {refund && refund.rate > 0 ? (
           <p className="mt-2 text-emerald-800">
             返金率 {Math.round(refund.rate * 100)}%（$
-            {refund.amount.toFixed(2)}）で返金手続きを行いました。ご利用の決済方法に反映されます。
+            {refund.amount.toFixed(2)}）で返金手続きを行いました。ご利用の決済方法に、数営業日で反映されます。
+          </p>
+        ) : alreadyCancelled ? (
+          <p className="mt-2 text-emerald-800">
+            新たな請求や返金はありません。
+          </p>
+        ) : payment === "captured" ? (
+          <p className="mt-2 text-emerald-800">
+            キャンセルポリシーにより、今回はご返金の対象外です。お支払い済みの料金はそのままとなります。
           </p>
         ) : (
           <p className="mt-2 text-emerald-800">
-            {alreadyCancelled
-              ? "新たな請求や返金はありません。"
-              : "手続きが完了しました。規定により返金対象がない場合、請求はそのままとなります。"}
+            ご請求は発生していません（カードの仮押さえがあった場合も解除済みです）。ご安心ください。
           </p>
         )}
       </div>

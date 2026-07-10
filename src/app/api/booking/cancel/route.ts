@@ -32,6 +32,9 @@ export async function POST(request: Request) {
       ok: true,
       alreadyCancelled: result.alreadyCancelled,
       refund: result.refund,
+      // Post-cancel payment state, so the UI can tell "no charge" (voided/none)
+      // apart from "charged, no refund" (captured) and word it clearly.
+      payment: result.booking.payment,
     });
   } catch (err) {
     console.error("Self-cancel failed:", err);

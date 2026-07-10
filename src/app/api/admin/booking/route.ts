@@ -9,6 +9,9 @@ import {
   isPaypalConfigured,
 } from "@/lib/paypal";
 import { cancelBooking } from "@/lib/booking-actions";
+import { amountForBooking } from "@/lib/pricing";
+import { sendMail } from "@/lib/email";
+import { confirmedEmail, declinedEmail } from "@/lib/booking-emails";
 
 // Update a booking's status from the Admin dashboard, and drive the matching
 // PayPal action (booking-payment-design.md: authorize → capture/void/refund).
@@ -92,6 +95,20 @@ export async function POST(request: Request) {
       { error: "決済処理に失敗しました。もう一度お試しください。" },
       { status: 502 },
     );
+  }
+
+  // Notify the customer of the outcome (best-effort; sendMail never throws).
+  if (action === "confirm") {
+    const amt = amountForBooking(
+      booking.planId,
+      booking.guests,
+      booking.preferredDate,
+    );
+    const mail = confirmedEmail(booking, amt?.amount ?? 0);
+    await sendMail({ to: booking.email, subject: mail.subject, text: mail.text });
+  } else {
+    const mail = declinedEmail(booking);
+    await sendMail({ to: booking.email, subject: mail.subject, text: mail.text });
   }
 
   return Response.json({ ok: true });
