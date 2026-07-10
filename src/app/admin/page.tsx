@@ -1,6 +1,7 @@
 import { listBookings, type BookingStatus, type PaymentStatus } from "@/lib/store";
 import { amountForBooking } from "@/lib/pricing";
 import BookingActions from "./BookingActions";
+import TourSchedule, { type ScheduleRow } from "./TourSchedule";
 
 // Always read the latest data so new requests show immediately.
 export const dynamic = "force-dynamic";
@@ -55,6 +56,17 @@ export default async function AdminPage() {
   const refundedTotal = bookings
     .filter((b) => b.payment === "refunded")
     .reduce((sum, b) => sum + (b.refundAmount ?? 0), 0);
+  // Rows for the monthly tour-schedule table (past / upcoming tabs).
+  const scheduleRows: ScheduleRow[] = bookings.map((b) => ({
+    id: b.id,
+    name: b.name,
+    planName: b.planName,
+    preferredDate: b.preferredDate,
+    amount: amountOf(b),
+    status: b.status,
+    payment: b.payment,
+    refundAmount: b.refundAmount,
+  }));
 
   return (
     <div className="mx-auto min-h-screen max-w-6xl bg-slate-50 px-4 py-10 text-slate-800">
@@ -175,6 +187,8 @@ export default async function AdminPage() {
         天候・自社都合の中止用（日付に関わらず全額返金）。PayPal未設定の環境では状態管理のみ行います。
         ローカルではJSON、本番ではSupabaseに保存されます。
       </p>
+
+      <TourSchedule rows={scheduleRows} />
     </div>
   );
 }
