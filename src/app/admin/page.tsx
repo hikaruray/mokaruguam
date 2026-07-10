@@ -1,4 +1,5 @@
 import { listBookings, type BookingStatus, type PaymentStatus } from "@/lib/store";
+import { amountForBooking } from "@/lib/pricing";
 import BookingActions from "./BookingActions";
 
 // Always read the latest data so new requests show immediately.
@@ -43,6 +44,17 @@ export default async function AdminPage() {
   const bookings = await listBookings();
   const pending = bookings.filter((b) => b.status === "pending").length;
   const confirmed = bookings.filter((b) => b.status === "confirmed").length;
+  // The amount charged for a booking = server price for its plan/guests/date.
+  const amountOf = (b: (typeof bookings)[number]) =>
+    amountForBooking(b.planId, b.guests, b.preferredDate)?.amount ?? 0;
+  // Money actually received (captured and not refunded).
+  const receivedTotal = bookings
+    .filter((b) => b.payment === "captured")
+    .reduce((sum, b) => sum + amountOf(b), 0);
+  // Money refunded back to customers.
+  const refundedTotal = bookings
+    .filter((b) => b.payment === "refunded")
+    .reduce((sum, b) => sum + (b.refundAmount ?? 0), 0);
 
   return (
     <div className="mx-auto min-h-screen max-w-6xl bg-slate-50 px-4 py-10 text-slate-800">
@@ -53,7 +65,7 @@ export default async function AdminPage() {
         リクエスト予約の確認・確定/お断り・キャンセルを行います。
       </p>
 
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="リクエスト総数" value={bookings.length} />
         <Stat label="確認待ち" value={pending} highlight={pending > 0} />
         <Stat label="確定済み" value={confirmed} />
@@ -61,6 +73,8 @@ export default async function AdminPage() {
           label="お断り/キャンセル"
           value={bookings.filter((b) => b.status === "declined" || b.status === "cancelled").length}
         />
+        <Stat label="入金合計（確定分）" value={`$${receivedTotal.toFixed(2)}`} money />
+        <Stat label="返金合計" value={`$${refundedTotal.toFixed(2)}`} muted />
       </div>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -82,7 +96,9 @@ export default async function AdminPage() {
                 </td>
               </tr>
             ) : (
-              bookings.map((b) => (
+              bookings.map((b) => {
+                const amount = amountOf(b);
+                return (
                 <tr key={b.id} className="align-top hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-900">{b.name}</p>
@@ -120,9 +136,19 @@ export default async function AdminPage() {
                     >
                       {PAYMENT_LABEL[b.payment]}
                     </span>
+                    {b.payment === "authorized" && (
+                      <span className="mt-1 block text-[11px] font-semibold text-sky-700">
+                        仮押さえ ${amount.toFixed(2)}
+                      </span>
+                    )}
+                    {b.payment === "captured" && (
+                      <span className="mt-1 block text-[11px] font-semibold text-emerald-700">
+                        入金 ${amount.toFixed(2)}
+                      </span>
+                    )}
                     {b.payment === "refunded" && b.refundAmount != null && (
                       <span className="mt-1 block text-[11px] text-slate-500">
-                        返金 ${b.refundAmount.toFixed(2)}
+                        決済 ${amount.toFixed(2)} → 返金 ${b.refundAmount.toFixed(2)}
                         {b.refundRate != null && `（${Math.round(b.refundRate * 100)}%）`}
                       </span>
                     )}
@@ -135,7 +161,8 @@ export default async function AdminPage() {
                     />
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -156,18 +183,24 @@ function Stat({
   label,
   value,
   highlight,
+  money,
+  muted,
 }: {
   label: string;
-  value: number;
+  value: string | number;
   highlight?: boolean;
+  money?: boolean; // received-money card (emerald)
+  muted?: boolean; // refunded-money card (slate)
 }) {
+  const border = highlight
+    ? "border-amber-200 bg-amber-50"
+    : money
+      ? "border-emerald-200 bg-emerald-50"
+      : "border-slate-200 bg-white";
+  const valueColor = money ? "text-emerald-700" : muted ? "text-slate-500" : "text-slate-900";
   return (
-    <div
-      className={`rounded-xl border p-4 shadow-sm ${
-        highlight ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"
-      }`}
-    >
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
+    <div className={`rounded-xl border p-4 shadow-sm ${border}`}>
+      <p className={`text-2xl font-bold ${valueColor}`}>{value}</p>
       <p className="mt-1 text-sm text-slate-500">{label}</p>
     </div>
   );
