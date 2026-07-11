@@ -114,9 +114,8 @@ export async function POST(request: Request) {
       if (status !== "CREATED") {
         return Response.json(
           {
-            // TEMP DIAGNOSTIC: surface the PayPal authorization status so we can
-            // tell DENIED (declined) from PENDING (under review). Revert after.
-            error: `【診断】承認ステータス=${status} / auth=${authorizationId}。カードの承認が完了しませんでした。`,
+            error:
+              "カードの承認が完了しませんでした。別のカードでお試しいただくか、カード発行会社へご確認ください。",
           },
           { status: 402 },
         );
