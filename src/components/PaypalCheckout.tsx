@@ -22,8 +22,15 @@ declare global {
 
 let sdkPromise: Promise<void> | null = null;
 
-// Load the PayPal JS SDK once. intent=authorize (hold, not charge);
-// components include buttons + card-fields for the Advanced Card path.
+// Standard PayPal Checkout (the PayPal Buttons: "Pay with PayPal" + guest card
+// via PayPal's own hosted flow) works with the account's live "PayPal payments"
+// permission. The Advanced Card Fields path (direct card entry on our own page)
+// additionally requires PayPal's separate "Advanced Card Payments" (ACDC)
+// approval, which is still pending. Keep it OFF until approved, then flip this
+// to true to re-enable on-page card fields.
+const USE_ADVANCED_CARD = false;
+
+// Load the PayPal JS SDK once. intent=authorize (hold, not charge).
 function loadSdk(): Promise<void> {
   if (sdkPromise) return sdkPromise;
   sdkPromise = new Promise<void>((resolve, reject) => {
@@ -33,7 +40,7 @@ function loadSdk(): Promise<void> {
       "client-id": PAYPAL_CLIENT_ID,
       currency: "USD",
       intent: "authorize",
-      components: "buttons,card-fields",
+      components: USE_ADVANCED_CARD ? "buttons,card-fields" : "buttons",
     });
     s.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
     s.async = true;
@@ -78,28 +85,32 @@ export default function PaypalCheckout({
         const paypal = window.paypal;
         if (!paypal) throw new Error("PayPal SDK unavailable");
 
-        // Try Advanced Card Fields first (no buyer login).
-        const cardFields = paypal.CardFields({
-          createOrder: () => createOrder(),
-          onApprove: (data: { orderID: string }) => onApproved(data.orderID),
-          onError: () => onError("カード情報の処理でエラーが発生しました。"),
-        });
+        // Advanced Card Fields (direct card entry on our page) — only when the
+        // account is approved for Advanced Card Payments (ACDC). Disabled for now.
+        if (USE_ADVANCED_CARD) {
+          const cardFields = paypal.CardFields({
+            createOrder: () => createOrder(),
+            onApprove: (data: { orderID: string }) => onApproved(data.orderID),
+            onError: () => onError("カード情報の処理でエラーが発生しました。"),
+          });
 
-        if (cardFields.isEligible() && cardWrapRef.current) {
-          cardFieldsRef.current = cardFields;
-          const nEl = cardWrapRef.current.querySelector<HTMLElement>("#pp-card-number");
-          const eEl = cardWrapRef.current.querySelector<HTMLElement>("#pp-card-expiry");
-          const cEl = cardWrapRef.current.querySelector<HTMLElement>("#pp-card-cvv");
-          if (nEl && eEl && cEl) {
-            await cardFields.NumberField().render(nEl);
-            await cardFields.ExpiryField().render(eEl);
-            await cardFields.CVVField().render(cEl);
-            if (!cancelled) setMode("card");
-            return;
+          if (cardFields.isEligible() && cardWrapRef.current) {
+            cardFieldsRef.current = cardFields;
+            const nEl = cardWrapRef.current.querySelector<HTMLElement>("#pp-card-number");
+            const eEl = cardWrapRef.current.querySelector<HTMLElement>("#pp-card-expiry");
+            const cEl = cardWrapRef.current.querySelector<HTMLElement>("#pp-card-cvv");
+            if (nEl && eEl && cEl) {
+              await cardFields.NumberField().render(nEl);
+              await cardFields.ExpiryField().render(eEl);
+              await cardFields.CVVField().render(cEl);
+              if (!cancelled) setMode("card");
+              return;
+            }
           }
         }
 
-        // Fallback: PayPal Buttons (also offer guest card checkout).
+        // Standard PayPal Buttons: "Pay with PayPal" + guest Debit/Credit Card
+        // via PayPal's hosted flow (works with live PayPal payments; no ACDC).
         if (buttonsRef.current) {
           await paypal
             .Buttons({
