@@ -23,10 +23,25 @@ interface FormValues {
   tourDate: string;      // ISO date (YYYY-MM-DD) — drives peak-season pricing
   startTime: string;     // e.g. "9:00" (plan-linked, from START_TIMES)
   preferredDate: string; // combined "YYYY-MM-DD 9:00" saved to the store
-  guests: number;
+  guests: number;        // total headcount (adults + both child groups) — drives price
+  adults: number;
+  children4to11: number;
+  children0to3: number;
   spots: string;
   notes: string;
   company: string;      // honeypot — hidden; real users leave it empty
+}
+
+// "大人2・子供(4-11)1" style summary for display/emails.
+function guestSummary(v: {
+  adults: number;
+  children4to11: number;
+  children0to3: number;
+}): string {
+  const parts = [`大人${v.adults}`];
+  if (v.children4to11 > 0) parts.push(`子供(4-11歳)${v.children4to11}`);
+  if (v.children0to3 > 0) parts.push(`子供(0-3歳)${v.children0to3}`);
+  return parts.join("・");
 }
 
 const DEFAULT_PLAN = "middle";
@@ -56,9 +71,17 @@ export default function BookingForm() {
     }
   }
 
+  function totalGuests(fd: FormData): number {
+    return (
+      Number(fd.get("adults") || 0) +
+      Number(fd.get("children4to11") || 0) +
+      Number(fd.get("children0to3") || 0)
+    );
+  }
+
   function recalcTotal(form: HTMLFormElement) {
     const fd = new FormData(form);
-    const guests = Number(fd.get("guests") || 0);
+    const guests = totalGuests(fd);
     const isPeak = isPeakDate(String(fd.get("tourDate") || ""));
     setPeak(isPeak);
     setTotal(priceFor(selectedPlan, Math.max(1, guests || 1), isPeak));
@@ -67,6 +90,9 @@ export default function BookingForm() {
   function readForm(form: HTMLFormElement): FormValues {
     const fd = new FormData(form);
     const tourDate = String(fd.get("tourDate") || "");
+    const adults = Number(fd.get("adults") || 0);
+    const children4to11 = Number(fd.get("children4to11") || 0);
+    const children0to3 = Number(fd.get("children0to3") || 0);
     return {
       name: String(fd.get("name") || ""),
       email: String(fd.get("email") || ""),
@@ -75,11 +101,29 @@ export default function BookingForm() {
       tourDate,
       startTime,
       preferredDate: [tourDate, startTime].filter(Boolean).join(" "),
-      guests: Number(fd.get("guests") || 0),
+      guests: adults + children4to11 + children0to3,
+      adults,
+      children4to11,
+      children0to3,
       spots: String(fd.get("spots") || ""),
       notes: String(fd.get("notes") || ""),
       company: String(fd.get("company") || ""),
     };
+  }
+
+  // Total headcount must be 1..7 (one vehicle). Returns true if OK, else sets an error.
+  function guestsOk(v: FormValues): boolean {
+    if (v.adults < 1) {
+      setError("大人を1名以上お選びください。");
+      return false;
+    }
+    if (v.guests > 7) {
+      setError(
+        "1台あたり最大7名です。8名以上は複数台での手配となりますので、LINEでご相談ください。",
+      );
+      return false;
+    }
+    return true;
   }
 
   // Finalize: POST to /api/booking (optionally with the PayPal order id).
@@ -112,15 +156,19 @@ export default function BookingForm() {
   // Request-only submit (no PayPal): send immediately.
   function onSubmitRequestOnly(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    finalize(readForm(e.currentTarget));
+    const values = readForm(e.currentTarget);
+    setError("");
+    if (!guestsOk(values)) return;
+    finalize(values);
   }
 
   // PayPal path: validate the form, then move to the payment step.
   function onProceedToPayment(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const values = readForm(e.currentTarget);
-    savedValues.current = values;
     setError("");
+    if (!guestsOk(values)) return;
+    savedValues.current = values;
     setPayStep(values);
   }
 
@@ -206,7 +254,7 @@ export default function BookingForm() {
         <div className="mt-3 rounded-xl bg-sand p-4 text-sm">
           <div className="flex justify-between">
             <span className="text-muted">
-              {plan.name}／{payStep.guests}名
+              {plan.name}／{payStep.guests}名（{guestSummary(payStep)}）
               {isPeak && (
                 <span className="ml-1 rounded bg-[#fff3d6] px-1.5 py-0.5 text-[11px] font-bold text-[#9a6a00]">
                   繁忙期料金
@@ -291,28 +339,23 @@ export default function BookingForm() {
         ))}
       </select>
 
-      <div className="grid gap-x-3 sm:grid-cols-2">
-        <div>
-          <label className="mt-3 block text-xs font-bold">ツアー実施日</label>
-          <input
-            type="date"
-            name="tourDate"
-            required
-            className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
-          />
-        </div>
-        <div>
-          <label className="mt-3 block text-xs font-bold">ご参加人数</label>
-          <input
-            type="number"
-            name="guests"
-            min={1}
-            max={7}
-            defaultValue={4}
-            required
-            className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
-          />
-        </div>
+      <div>
+        <label className="mt-3 block text-xs font-bold">ツアー実施日</label>
+        <input
+          type="date"
+          name="tourDate"
+          required
+          className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
+        />
+      </div>
+
+      <label className="mt-3 block text-xs font-bold">
+        ご参加人数（合計 最大7名／車1台）
+      </label>
+      <div className="mt-1.5 grid grid-cols-3 gap-2">
+        <GuestSelect label="大人" name="adults" min={1} max={7} defaultValue={2} />
+        <GuestSelect label="子供 4-11歳" name="children4to11" min={0} max={7} defaultValue={0} />
+        <GuestSelect label="子供 0-3歳" name="children0to3" min={0} max={7} defaultValue={0} />
       </div>
 
       {/* Plan-linked start time. Options switch with the plan; end time shown. */}
@@ -349,9 +392,12 @@ export default function BookingForm() {
       <textarea
         name="spots"
         maxLength={1000}
-        placeholder="例：恋人岬、スペイン広場、エメラルドバレー…"
+        placeholder="例：恋人岬、スペイン広場、エメラルドバレー、おまかせ…"
         className="mt-1.5 min-h-[78px] w-full resize-y rounded-lg border border-line px-3 py-2.5 text-sm"
       />
+      <p className="mt-1.5 text-xs text-muted">
+        行き先が決まっていなければ「おまかせ」でもOK。ご希望に合わせてガイドがおすすめコースをご提案します。
+      </p>
 
       <label className="mt-3 block text-xs font-bold">その他ご要望（任意）</label>
       <textarea
@@ -396,6 +442,39 @@ export default function BookingForm() {
           : "送信後、48時間以内に空き状況をご連絡します。この時点では料金は発生しません。"}
       </p>
     </form>
+  );
+}
+
+function GuestSelect({
+  label,
+  name,
+  min,
+  max,
+  defaultValue,
+}: {
+  label: string;
+  name: string;
+  min: number;
+  max: number;
+  defaultValue: number;
+}) {
+  const options = [];
+  for (let n = min; n <= max; n++) options.push(n);
+  return (
+    <div>
+      <label className="block text-[11px] font-medium text-muted">{label}</label>
+      <select
+        name={name}
+        defaultValue={defaultValue}
+        className="mt-1 w-full rounded-lg border border-line px-2 py-2.5 text-sm"
+      >
+        {options.map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 

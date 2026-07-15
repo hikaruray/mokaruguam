@@ -35,6 +35,9 @@ export async function POST(request: Request) {
     planId?: string;
     preferredDate?: string;
     guests?: number;
+    adults?: number;
+    children4to11?: number;
+    children0to3?: number;
     spots?: string;
     notes?: string;
     paypalOrderId?: string;
@@ -60,6 +63,22 @@ export async function POST(request: Request) {
       { status: 429 },
     );
   }
+
+  // Participant breakdown (adults + children). The total headcount is what
+  // drives price/capacity, so recompute it server-side and make it authoritative.
+  const adults = Number(body.adults ?? 0);
+  const children4to11 = Number(body.children4to11 ?? 0);
+  const children0to3 = Number(body.children0to3 ?? 0);
+  const hasBreakdown =
+    body.adults !== undefined ||
+    body.children4to11 !== undefined ||
+    body.children0to3 !== undefined;
+  if (hasBreakdown) body.guests = adults + children4to11 + children0to3;
+  const guestBreakdown = hasBreakdown
+    ? `大人${adults}名` +
+      (children4to11 > 0 ? `・子供(4-11歳)${children4to11}名` : "") +
+      (children0to3 > 0 ? `・子供(0-3歳)${children0to3}名` : "")
+    : "";
 
   const { name, email, phone, planId, preferredDate, guests, spots, notes } = body;
 
@@ -185,7 +204,7 @@ export async function POST(request: Request) {
     `連絡先:   ${email} / ${phone}`,
     `プラン:   ${planName}`,
     `希望日時: ${preferredDate}`,
-    `人数:     ${guests}名`,
+    `人数:     ${guests}名${guestBreakdown ? `（${guestBreakdown}）` : ""}`,
     `行きたいスポット:`,
     spots?.trim() || "（記入なし）",
     ``,
@@ -211,7 +230,7 @@ export async function POST(request: Request) {
     `▼ ご予約内容`,
     `プラン:   ${planName}`,
     `ご希望日時: ${preferredDate}`,
-    `人数:     ${guests}名`,
+    `人数:     ${guests}名${guestBreakdown ? `（${guestBreakdown}）` : ""}`,
     authorized ? `お支払い（予定）: $${amountStr}（仮押さえ中）` : ``,
     ``,
     `▼ このあとの流れ`,
