@@ -33,3 +33,77 @@ body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Restored legacy blog articles (app/[slug]). The WordPress body arrives as
+   plain headings/paragraphs/lists with its classes stripped, so it needs base
+   typography to read well inside our shell. Scoped to .legacy-article so it
+   cannot affect the rest of the site. */
+.legacy-article {
+  line-height: 1.9;
+}
+.legacy-article h2 {
+  margin: 2.5rem 0 1rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.5rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.legacy-article h3 {
+  margin: 2rem 0 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.legacy-article h4 {
+  margin: 1.5rem 0 0.5rem;
+  font-weight: 700;
+}
+.legacy-article p {
+  margin: 1rem 0;
+}
+.legacy-article ul,
+.legacy-article ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+.legacy-article ul {
+  list-style: disc;
+}
+.legacy-article ol {
+  list-style: decimal;
+}
+.legacy-article li {
+  margin: 0.4rem 0;
+}
+.legacy-article a {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.legacy-article strong {
+  font-weight: 700;
+}
+.legacy-article img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+}
+.legacy-article table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.legacy-article th,
+.legacy-article td {
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.legacy-article iframe {
+  max-width: 100%;
+  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+}
+.legacy-article figure {
+  margin: 1.5rem 0;
+}
