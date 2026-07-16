@@ -1,15 +1,12 @@
 // Central place for image sources.
 //
-// Real Mokaru photos live in /public/photos (WebP) and are keyed by seed in
-// REAL_PHOTOS below. Seeds without a real photo yet fall back to a neutral
-// placeholder, so we can add photos incrementally as the owner provides them.
+// Every image on the site is a real Mokaru photo in /public/photos, keyed by
+// seed in REAL_PHOTOS. There is deliberately NO placeholder fallback: PhotoSeed
+// is derived from REAL_PHOTOS, so referencing a seed that has no photo is a
+// compile-time error (`npm run build` fails) rather than a silently broken or
+// stock image on the live site. When adding a spot, add its photo here first.
 
-function placeholder(seed: string, w: number, h: number): string {
-  return `https://picsum.photos/seed/${seed}/${w}/${h}`;
-}
-
-// seed -> real optimized photo in /public/photos. Add entries as photos arrive.
-export const REAL_PHOTOS: Record<string, string> = {
+export const REAL_PHOTOS = {
   "mokaru-guam-hero": "/photos/hero.webp",
   "mokaru-movie": "/photos/video.webp",
   "spot-lovers": "/photos/lovers.webp",
@@ -17,26 +14,39 @@ export const REAL_PHOTOS: Record<string, string> = {
   "spot-fort": "/photos/fort.webp",
   "spot-emerald": "/photos/emerald.webp",
   "spot-coffee": "/photos/coffee.webp",
-};
+} as const satisfies Record<string, `/photos/${string}`>;
 
-// Returns the real photo for a seed if present, else a placeholder. next/image
-// resizes the single source, so width/height only matter for the placeholder.
-export function photoFor(seed: string, w: number, h: number): string {
-  return REAL_PHOTOS[seed] ?? placeholder(seed, w, h);
+/** Seeds that have a real photo. Adding a spot without a photo won't compile. */
+export type PhotoSeed = keyof typeof REAL_PHOTOS;
+
+/** Resolve a seed to its photo. next/image handles resizing, so no dimensions. */
+export function photoFor(seed: PhotoSeed): string {
+  return REAL_PHOTOS[seed];
 }
 
-export const IMAGES = {
-  hero: photoFor("mokaru-guam-hero", 1600, 1000),
-  video: photoFor("mokaru-movie", 1280, 720),
-  spots: [
-    { seed: "spot-lovers", label: "恋人岬" },
-    { seed: "spot-spain", label: "スペイン広場" },
-    { seed: "spot-emerald", label: "エメラルドバレー" },
-    { seed: "spot-fort", label: "アプガン砦" },
-    { seed: "spot-coffee", label: "スロウウォークコーヒー" },
-  ].map((s) => ({ ...s, src: photoFor(s.seed, 500, 380) })),
-};
+// Social preview image (og:image / twitter:image). Derived from the hero photo
+// at the 1200x630 that social platforms crop to, as JPEG because OG crawler
+// support for WebP varies (LINE is our main sharing surface). Regenerate with
+// sharp if the hero photo changes:
+//   sharp('public/photos/hero.webp').resize(1200,630,{fit:'cover'})
+//     .jpeg({quality:82,mozjpeg:true}).toFile('public/og.jpg')
+export const OG_IMAGE = {
+  url: "/og.jpg",
+  width: 1200,
+  height: 630,
+  alt: "グアムの夕陽と海｜Mokaru Guam 完全貸切ガイドチャーター",
+} as const;
 
-// True only while every image is a placeholder. Real photos are now in for the
-// hero and key spots, so the "photos are placeholders" banner is hidden.
-export const USING_PLACEHOLDER_PHOTOS = false;
+export const IMAGES = {
+  hero: photoFor("mokaru-guam-hero"),
+  video: photoFor("mokaru-movie"),
+  spots: (
+    [
+      { seed: "spot-lovers", label: "恋人岬" },
+      { seed: "spot-spain", label: "スペイン広場" },
+      { seed: "spot-emerald", label: "エメラルドバレー" },
+      { seed: "spot-fort", label: "アプガン砦" },
+      { seed: "spot-coffee", label: "スロウウォークコーヒー" },
+    ] satisfies { seed: PhotoSeed; label: string }[]
+  ).map((s) => ({ ...s, src: photoFor(s.seed) })),
+};

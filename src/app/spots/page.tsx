@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import Image from "next/image";
 import PageShell, { PageHero } from "@/components/PageShell";
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
     description: "定番から南部の自然まで。あなたの行きたい場所を自由に組み合わせて。",
     url: "/spots",
     type: "website",
+    images: [OG_IMAGE],
   },
 };
 

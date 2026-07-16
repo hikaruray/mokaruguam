@@ -1,19 +1,20 @@
 // Popular spots — single source for the /spots list and each /spots/[slug] page.
 //
-// PHOTO NOTE: `src` uses placeholder images (picsum.photos). Swap to real photos
-// by pointing `src` at files in /public (e.g. "/photos/spots/lovers.jpg").
+// PHOTO NOTE: each spot's `seed` maps to a real photo in /public/photos via
+// src/lib/images.ts. `seed` is typed as PhotoSeed, so adding a spot before its
+// photo exists is a build error rather than a broken image in production.
 //
 // COPY NOTE: descriptions are intentionally brief and avoid asserting uncertain
 // facts (opening hours, exact prices, history claims). They set the scene and
 // steer the reader toward a booking request. Refine with the owner's input later.
 
-import { photoFor } from "./images";
+import { photoFor, type PhotoSeed } from "./images";
 
 export interface Spot {
   slug: string;
   name: string;        // display name
   keyword: string;     // SEO angle, e.g. "グアム 恋人岬"
-  seed: string;        // placeholder image seed
+  seed: PhotoSeed;     // key into REAL_PHOTOS (must have a real photo)
   tagline: string;     // one-line hook
   body: string[];      // short paragraphs
   tips: string[];      // "こんな方に" bullets
@@ -86,10 +87,11 @@ export function getSpot(slug: string): Spot | undefined {
   return SPOTS.find((s) => s.slug === slug);
 }
 
-// List-thumbnail and hero image helpers. Real photo if available, else placeholder.
+// List-thumbnail and hero image helpers. Both resolve to the spot's real photo;
+// next/image handles the actual sizing at each call site.
 export function spotThumb(spot: Spot): string {
-  return photoFor(spot.seed, 500, 380);
+  return photoFor(spot.seed);
 }
 export function spotHero(spot: Spot): string {
-  return photoFor(spot.seed, 1200, 675);
+  return photoFor(spot.seed);
 }

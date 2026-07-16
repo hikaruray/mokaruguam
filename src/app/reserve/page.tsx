@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingForm from "@/components/BookingForm";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
     description: "行きたいスポットを送るだけ。空き状況を確認してご連絡します（48時間以内）。",
     url: "/reserve",
     type: "website",
+    images: [OG_IMAGE],
   },
 };
 

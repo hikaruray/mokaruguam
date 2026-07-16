@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
     description: "グアム唯一の完全貸切ガイドチャーター。日本語ガイドがあなただけの一日をご案内します。",
     url: "/about",
     type: "website",
+    images: [OG_IMAGE],
   },
 };
 

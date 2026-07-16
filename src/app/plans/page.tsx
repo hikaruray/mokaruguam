@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
       "3時間$170〜。料金は1台あたり、人数が増えるほど1人あたりおトク。繁忙期料金も掲載。",
     url: "/plans",
     type: "website",
+    images: [OG_IMAGE],
   },
 };
 

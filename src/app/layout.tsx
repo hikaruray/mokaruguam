@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { SITE_URL } from "@/lib/config";
+import { OG_IMAGE } from "@/lib/images";
 
 // Only the weights the design uses, to keep the font payload small.
 const notoSansJP = Noto_Sans_JP({
@@ -35,11 +36,13 @@ export const metadata: Metadata = {
     siteName: "Mokaru Guam",
     locale: "ja_JP",
     type: "website",
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "Mokaru Guam｜グアム完全貸切ガイドチャーター",
     description: "日本語ガイド＋専用車で、あなただけのグアムを。",
+    images: [OG_IMAGE],
   },
 };
 

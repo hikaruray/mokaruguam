@@ -46,12 +46,13 @@ npm run start
   - ⚠️ 本番前に **`supabase-bookings-paypal.sql` の ALTER をSupabaseで実行**（`payment` / `paypal_order_id` / `paypal_authorization_id` 列を追加）。未実行だと保存でエラーになる。
 - **簡易Admin**: リクエスト一覧・確定(capture)/お断り(void)/キャンセルの状態管理＋支払い状態バッジ。`/admin` はBasic認証で保護（env `ADMIN_PASSWORD`、本番で未設定ならロック）。
 - **SEO**: title/description/OGP（日本語）、robots.ts、sitemap.ts、モバイルファースト。
+- **写真**: 実写真を `/public/photos`（WebP）に配置し、`src/lib/images.ts` の `REAL_PHOTOS` で seed→写真を解決。仮画像フォールバックは廃止済みで、写真の無い seed は**ビルドエラー**になる（`PhotoSeed` 型で担保）。
+- **OGP画像**: `/public/og.jpg`（1200x630・hero写真から生成）。`metadataBase` により絶対URLで出力。全ページで設定済み（Next.jsのmetadataは浅いマージのため各ページに明示）。
 
 ## まだ実装していないもの（意図的）
 
 - **PayPal 本番（Live）**: 現在は Sandbox 鍵で動作。Live鍵への切替＋DNS/デプロイはオーナー承認後。
 - **キャンセル時の返金（refund）**: `lib/paypal.ts` に `refundCapture` を用意済み。Admin操作に接続するのは今後。
-- **実写真・実動画**: いまは全て仮画像（picsum.photos）。差し替えは `src/lib/images.ts` の1ファイルで完結する設計。
 - **実メール送信**: `RESEND_API_KEY` 未設定のためコンソール記録。
 - **VELTRA実口コミ**: 掲載許諾確認までダミー文＋「※掲載許諾確認中」注記。
 - **英語版**: 当面日本語のみ。文言はコンポーネントに集約しており英語化しやすい構造。

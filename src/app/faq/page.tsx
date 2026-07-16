@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     description: "予約前の疑問を先回りで解消。時間内に回れる？料金は？などにお答えします。",
     url: "/faq",
     type: "website",
+    images: [OG_IMAGE],
   },
 };
 

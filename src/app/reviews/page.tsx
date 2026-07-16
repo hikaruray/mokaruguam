@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { ALL_REVIEWS } from "@/lib/reviews";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     description: "完全貸切だから自分たちのペースで。ご家族・カップル・ご友人からの実際の声。",
     url: "/reviews",
     type: "website",
+    images: [OG_IMAGE],
   },
 };
 

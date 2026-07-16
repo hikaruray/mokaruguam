@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -29,6 +30,7 @@ export async function generateMetadata({
       description: desc,
       url: `/spots/${spot.slug}`,
       type: "article",
+      images: [OG_IMAGE],
     },
   };
 }

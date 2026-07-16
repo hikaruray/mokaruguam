@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     description: "リクエスト予約の流れとキャンセル規定をわかりやすくご案内します。",
     url: "/guide",
     type: "website",
+    images: [OG_IMAGE],
   },
 };
 
