@@ -18,6 +18,30 @@ export const SITE_URL =
 export const CONTACT_EMAIL = "tour@mokaruguam.com";
 
 // ---------------------------------------------------------------------------
+// Analytics (Google Analytics 4)
+// ---------------------------------------------------------------------------
+// The measurement ID is NOT a secret — it ships in the page source — but it is
+// read from the environment rather than hardcoded, so the value can be changed
+// or removed without a code change.
+//
+// Where the value comes from (Next.js env load order: process.env wins, then
+// .env.$(NODE_ENV)):
+//   • Production  → `.env.production` in the repo (or a Vercel env var, which
+//                   takes precedence if the owner later sets one).
+//   • Local dev   → nothing. `next dev` runs with NODE_ENV=development and
+//                   never reads `.env.production`, so no tag is rendered and
+//                   local browsing cannot pollute the real GA property.
+export const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "";
+
+// Vercel exposes this automatically ("production" | "preview" | "development").
+// Preview deployments build with NODE_ENV=production and would otherwise pick
+// up the production GA ID, so exclude them explicitly.
+const VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV;
+
+// Render the GA tag only with an ID present and only outside preview builds.
+export const ANALYTICS_ENABLED = GA_ID !== "" && VERCEL_ENV !== "preview";
+
+// ---------------------------------------------------------------------------
 // Company / legal details (single source of truth for /about and /legal).
 // ---------------------------------------------------------------------------
 export const COMPANY = {

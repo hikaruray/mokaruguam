@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
-import { SITE_URL } from "@/lib/config";
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { SITE_URL, GA_ID, ANALYTICS_ENABLED } from "@/lib/config";
 import { OG_IMAGE } from "@/lib/images";
 
 // Only the weights the design uses, to keep the font payload small.
@@ -52,6 +53,9 @@ export default function RootLayout({
   return (
     <html lang="ja" className={`${notoSansJP.variable} antialiased`}>
       <body className="bg-sand text-ink font-sans">{children}</body>
+      {/* GA4 via gtag.js. Loaded after hydration, so it never blocks first
+          paint. Absent locally and on previews — see ANALYTICS_ENABLED. */}
+      {ANALYTICS_ENABLED && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   );
 }
