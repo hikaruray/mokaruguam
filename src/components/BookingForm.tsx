@@ -322,7 +322,7 @@ export default function BookingForm() {
       <Field label="お名前" name="name" placeholder="山田 太郎" required maxLength={100} />
       <div className="grid gap-x-3 sm:grid-cols-2">
         <Field label="メールアドレス" name="email" type="email" placeholder="you@example.com" required maxLength={200} />
-        <Field label="電話 / LINE ID" name="phone" placeholder="連絡のつく番号など" required maxLength={60} />
+        <Field label="電話番号" name="phone" placeholder="連絡のつく電話番号" required maxLength={60} />
       </div>
 
       <label className="mt-3 block text-xs font-bold">ご希望プラン</label>
