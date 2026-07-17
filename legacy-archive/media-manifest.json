@@ -1,0 +1,440 @@
+{
+  "_note": "旧サイトのメディア一覧（メタ情報のみ）。画像・動画の実ファイルは Xserver 上にのみ存在し、ここには含まれない。記事本文はこれらを使っていない（インライン画像0枚・アイキャッチ0/99）ため、復活した記事の表示には影響しない。ただしXserver上のファイルが消えると実体は失われる＝オーナーによるバックアップ推奨。",
+  "_captured": "2026-07-17",
+  "_total": 54,
+  "_total_bytes_known": 45928267,
+  "items": [
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/04/7e368324043825871e73f53dc803e534.mp4",
+      "mime": "video/mp4",
+      "filesize": 36656332,
+      "width": 1080,
+      "height": 1920,
+      "date_gmt": "2025-04-30T01:27:53"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/IMG_3933-e1743032179673.jpg",
+      "mime": "image/jpeg",
+      "filesize": 174800,
+      "width": 993,
+      "height": 940,
+      "date_gmt": "2025-03-26T23:35:39"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Lexus-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 571160,
+      "width": 2560,
+      "height": 1920,
+      "date_gmt": "2025-03-23T01:38:21"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Chamorro-Village-Slushy.jpg",
+      "mime": "image/jpeg",
+      "filesize": 195779,
+      "width": 640,
+      "height": 480,
+      "date_gmt": "2025-03-15T03:23:38"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Price-e1742008020903.png",
+      "mime": "image/png",
+      "filesize": 365749,
+      "width": 499,
+      "height": 336,
+      "date_gmt": "2025-03-15T03:05:57"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Tumon-Beach-2-2-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 442195,
+      "width": 1920,
+      "height": 2560,
+      "date_gmt": "2025-03-14T22:31:33"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Mall-Center-Top-view-rotated.jpg",
+      "mime": "image/jpeg",
+      "filesize": 154914,
+      "width": 480,
+      "height": 640,
+      "date_gmt": "2025-03-14T22:30:06"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/customize-image.png",
+      "mime": "image/png",
+      "filesize": 100904,
+      "width": 500,
+      "height": 500,
+      "date_gmt": "2025-03-13T22:38:02"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/planning-from-japan.png",
+      "mime": "image/png",
+      "filesize": 52989,
+      "width": 500,
+      "height": 500,
+      "date_gmt": "2025-03-13T22:37:34"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/guide-badge-illust.png",
+      "mime": "image/png",
+      "filesize": 34752,
+      "width": 500,
+      "height": 500,
+      "date_gmt": "2025-03-13T22:28:21"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Chamorro-Village.jpg",
+      "mime": "image/jpeg",
+      "filesize": 502424,
+      "width": 1920,
+      "height": 850,
+      "date_gmt": "2025-03-13T12:08:06"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Tumon-Beach-2-1-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 442195,
+      "width": 1920,
+      "height": 2560,
+      "date_gmt": "2025-03-13T10:44:47"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Tumon-Beach-1-1-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 465142,
+      "width": 1920,
+      "height": 2560,
+      "date_gmt": "2025-03-13T10:44:44"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/sunset2-2-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 324176,
+      "width": 1920,
+      "height": 2560,
+      "date_gmt": "2025-03-13T10:44:42"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/sunset1-1-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 332467,
+      "width": 1920,
+      "height": 2560,
+      "date_gmt": "2025-03-13T10:44:40"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Profile-2-2-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 1020669,
+      "width": 2560,
+      "height": 1920,
+      "date_gmt": "2025-03-13T10:44:38"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Profile-1-1-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 930505,
+      "width": 2560,
+      "height": 1920,
+      "date_gmt": "2025-03-13T10:44:36"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Jet-Ski-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 498768,
+      "width": 1920,
+      "height": 2560,
+      "date_gmt": "2025-03-13T10:44:34"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Jeffs-Pirates-Cove.jpg",
+      "mime": "image/jpeg",
+      "filesize": 118699,
+      "width": 640,
+      "height": 480,
+      "date_gmt": "2025-03-13T10:44:33"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Jeff-Pirate-Entrance.jpg",
+      "mime": "image/jpeg",
+      "filesize": 112631,
+      "width": 640,
+      "height": 480,
+      "date_gmt": "2025-03-13T10:44:33"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Gov-Office-1-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 751422,
+      "width": 1920,
+      "height": 2560,
+      "date_gmt": "2025-03-13T10:44:28"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Beach-momoka-hikaru.jpg",
+      "mime": "image/jpeg",
+      "filesize": 219773,
+      "width": 640,
+      "height": 480,
+      "date_gmt": "2025-03-13T10:44:27"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/beach-beer-rotated.jpg",
+      "mime": "image/jpeg",
+      "filesize": 127200,
+      "width": 640,
+      "height": 480,
+      "date_gmt": "2025-03-13T10:44:27"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Profile-2-1-scaled.jpg",
+      "mime": "image/jpeg",
+      "filesize": 1020669,
+      "width": 2560,
+      "height": 1920,
+      "date_gmt": "2025-03-13T10:43:28"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Mokaru-Guam-Web-Logo-Horizontal.png",
+      "mime": "image/png",
+      "filesize": 21744,
+      "width": 500,
+      "height": 120,
+      "date_gmt": "2025-03-09T03:13:58"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2025/03/Mokaru-Logo-1.png",
+      "mime": "image/png",
+      "filesize": 33716,
+      "width": 500,
+      "height": 500,
+      "date_gmt": "2025-03-09T02:43:22"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2022/07/sample-img02-square.jpg",
+      "mime": "image/jpeg",
+      "filesize": 77993,
+      "width": 500,
+      "height": 500,
+      "date_gmt": "2022-07-14T03:46:49"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2022/07/sample-img12-square.jpg",
+      "mime": "image/jpeg",
+      "filesize": 94289,
+      "width": 500,
+      "height": 500,
+      "date_gmt": "2022-07-05T00:45:16"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2022/07/sample-img08-square.jpg",
+      "mime": "image/jpeg",
+      "filesize": 84211,
+      "width": 500,
+      "height": 500,
+      "date_gmt": "2022-07-05T00:44:55"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/05/sample-img20-2.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1000,
+      "height": 600,
+      "date_gmt": "2021-05-10T09:22:13"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/05/sample-img21-3.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1000,
+      "height": 600,
+      "date_gmt": "2021-05-10T09:21:14"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/05/sample-img21-1.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1900,
+      "height": 600,
+      "date_gmt": "2021-05-10T09:14:03"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/05/sample-img20-1.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1900,
+      "height": 600,
+      "date_gmt": "2021-05-10T09:12:30"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample_logo2021.png",
+      "mime": "image/png",
+      "filesize": null,
+      "width": 483,
+      "height": 120,
+      "date_gmt": "2021-04-30T09:21:00"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img14.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-30T02:58:36"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img13.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-30T02:58:34"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img01.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1000,
+      "height": 667,
+      "date_gmt": "2021-04-30T02:58:34"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img25.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1280,
+      "height": 1920,
+      "date_gmt": "2021-04-28T07:04:39"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img10.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1282,
+      "date_gmt": "2021-04-22T02:51:59"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img23.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1024,
+      "height": 684,
+      "date_gmt": "2021-04-22T02:47:37"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img20.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1900,
+      "height": 1069,
+      "date_gmt": "2021-04-20T12:43:08"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img12.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-20T05:56:53"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img11.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1280,
+      "height": 853,
+      "date_gmt": "2021-04-20T02:36:52"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img09.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1024,
+      "height": 686,
+      "date_gmt": "2021-04-20T02:36:27"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img08.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-19T07:43:14"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img07.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-19T07:38:47"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img06.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-19T07:37:03"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img04.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1281,
+      "date_gmt": "2021-04-19T07:11:17"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img03.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-19T03:35:01"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img02.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1900,
+      "height": 1069,
+      "date_gmt": "2021-04-19T03:10:18"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2021/04/sample-img05.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 1920,
+      "height": 1280,
+      "date_gmt": "2021-04-16T02:33:04"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2020/09/vws-og.png",
+      "mime": "image/png",
+      "filesize": null,
+      "width": 1920,
+      "height": 1080,
+      "date_gmt": "2020-09-12T01:59:41"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2020/03/model-2911330_1920-150x150-1.jpg",
+      "mime": "image/jpeg",
+      "filesize": null,
+      "width": 150,
+      "height": 150,
+      "date_gmt": "2020-03-26T11:21:24"
+    },
+    {
+      "url": "https://mokaruguam.com/wp-content/uploads/2018/02/336_280_lightning.png",
+      "mime": "image/png",
+      "filesize": null,
+      "width": 336,
+      "height": 280,
+      "date_gmt": "2018-02-08T05:41:11"
+    }
+  ]
+}
