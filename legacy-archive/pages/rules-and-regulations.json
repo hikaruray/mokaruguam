@@ -1,0 +1,11 @@
+{
+  "slug": "rules-and-regulations",
+  "original_url": "https://mokaruguam.com/rules-and-regulations/",
+  "site_status": "not-restored",
+  "note": "旧固定ページ。Phase 1/2では復活対象外（現行サイトの該当ページが上位互換。旧料金やContact Form 7を含むため）。301マッピングはオーナー判断待ち。",
+  "title_rendered": "特定商取引法に基づく表記",
+  "date_gmt": "2025-03-13T09:32:45",
+  "modified_gmt": "2025-03-17T01:33:30",
+  "wp_status": "publish",
+  "content_rendered": "\n<figure class=\"wp-block-table is-style-vk-table-border-top-bottom vk-table--th--width25 vk-table--th--bg-bright has-small-font-size is-style-vk-table-cell-vertical\" data-cell-vertical-breakpoint=\"table-cell-vertical-mobile\"><table><tbody><tr><td>会社名</td><td>Mokaru Guam </td></tr><tr><td>英文社名</td><td>Mokaru Guam LLC</td></tr><tr><td>代表取締役</td><td>西平　靖</td></tr><tr><td>メールアドレス</td><td>tour@mokaruguam.com</td></tr><tr><td>所在地</td><td>１７６－１６Perez Way Tamuning Guam 96913</td></tr><tr><td>TEL</td><td>671-777-1019</td></tr></tbody></table></figure>\n<div class=\"veu_socialSet veu_socialSet-position-after veu_contentAddSection\"><script>window.twttr=(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],t=window.twttr||{};if(d.getElementById(id))return t;js=d.createElement(s);js.id=id;js.src=\"https://platform.twitter.com/widgets.js\";fjs.parentNode.insertBefore(js,fjs);t._e=[];t.ready=function(f){t._e.push(f);};return t;}(document,\"script\",\"twitter-wjs\"));</script><ul><li class=\"sb_facebook sb_icon\"><a class=\"sb_icon_inner\" href=\"//www.facebook.com/sharer.php?src=bm&u=https%3A%2F%2Fmokaruguam.com%2Frules-and-regulations%2F&amp;t=Mokaru%20Guam\" target=\"_blank\" onclick=\"window.open(this.href,'FBwindow','width=650,height=450,menubar=no,toolbar=no,scrollbars=yes');return false;\"><span class=\"vk_icon_w_r_sns_fb icon_sns\"></span><span class=\"sns_txt\">Facebook</span><span class=\"veu_count_sns_fb\"></span></a></li></ul></div><!-- [ /.socialSet ] -->"
+}
