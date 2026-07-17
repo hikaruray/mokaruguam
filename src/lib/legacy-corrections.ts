@@ -295,6 +295,16 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: "Totalプランの詳細・ご予約はこちら → [TotalPlanページリンク]",
         replace: "ワンデープランの詳細・ご予約はこちら",
       },
+      {
+        why: "Lists booking restaurants for the guest among the family services. Child seats and on-site support are real and stay.",
+        find: "ホテル移動、ベビーカーやチャイルドシートの準備、レストラン予約、観光地でのサポートなど、きめ細やかに対応します。",
+        replace: "ホテル移動、ベビーカーやチャイルドシートの準備、観光地でのサポートなど、きめ細やかに対応します。",
+      },
+      {
+        why: "Support list pairs the booking agent with interpreting. Interpreting is offered (owner, 2026-07-19); the booking agent is not.",
+        find: "<li>レストラン予約・通訳サポート</li>",
+        replace: "<li>通訳サポート</li>",
+      },
     ],
   },
 
@@ -376,6 +386,16 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         why: "The site standardised on replying within 48 hours.",
         find: "<li>24h 以内に空き状況と見積りをご返信</li>",
         replace: "<li>48時間以内に空き状況と見積りをご返信</li>",
+      },
+      {
+        why: "Sells the free booking agent plus surprise staging (cake, sunset boat, beach photos) as reasons to pick this plan. Neither is offered (owner, 2026-07-19), and the whole bullet is those two claims.",
+        find: "\n\n\n\n<li><strong>レストラン予約・サプライズ演出</strong> もOK<br>誕生日ケーキ、サンセットボート、ビーチフォト手配など柔軟対応。</li>",
+        replace: "",
+      },
+      {
+        why: "Answer to 'can I have dinner at a steakhouse?' offers the booking agent. What we do run — driving there and helping at the table — stays.",
+        find: "<p>予約代行＋送迎込みOK。コース選びもご相談ください。</p>",
+        replace: "<p>送迎込みでご案内します。当日はガイドが注文をサポートしますので、コース選びもご相談ください。</p>",
       },
     ],
   },
@@ -630,6 +650,37 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: "<br>🚖 <strong>空港送迎＆観光プラン手配！</strong> → すべてLINEで簡単手配",
         replace: "",
       },
+      // The free restaurant booking agent — this article sells it hardest (five
+      // mentions, one of them a section heading).
+      //
+      // ORDER MATTERS BELOW: "人気レストランの予約代行（無料！）" appears twice.
+      // The longer §③ pair is removed first, so the remaining single occurrence
+      // is unambiguous and can be asserted at count 1.
+      {
+        why: "Both bullets are the booking agent ('予約代行', and checking availability and booking for you). The two recommendation bullets under them are real and stay.",
+        find: "✅ <strong>人気レストランの予約代行（無料！）</strong><br>✅ <strong>当日でもOK！空席状況を確認して予約</strong><br>",
+        replace: "",
+      },
+      {
+        why: "Booking agent advertised in the opening list of what LINE can do. (Now the only occurrence, after the §③ pair above.)",
+        find: "✅ <strong>人気レストランの予約代行（無料！）</strong><br>",
+        replace: "",
+      },
+      {
+        why: "Section ③'s heading sells booking-by-LINE. Recommending restaurants is real, so the section keeps that half.",
+        find: "<strong>🍽 ③ LINEでレストラン予約＆おすすめ店の紹介もOK！</strong>",
+        replace: "<strong>🍽 ③ LINEでおすすめ店の紹介もOK！</strong>",
+      },
+      {
+        why: "Booking agent named as a LINE service.",
+        find: "<p>MokaruのLINEサポートでは、<strong>レストランの予約代行や、おすすめグルメ情報もお届け！</strong></p>",
+        replace: "<p>MokaruのLINEサポートでは、<strong>おすすめグルメ情報をお届け！</strong></p>",
+      },
+      {
+        why: "Summary repeats the free booking agent.",
+        find: "<br>🍽 <strong>レストラン予約代行無料！</strong> → 人気店の予約もスムーズ",
+        replace: "",
+      },
     ],
   },
 
@@ -658,6 +709,11 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
       {
         why: "Promises 24-hour support, which the business does not offer (owner, 2026-07-19) — the same claim that keeps 24hour-support offline.",
         find: "\n\n\n\n<li>トラブル時も24時間サポート！</li>",
+        replace: "",
+      },
+      {
+        why: "Advertises a women-only tour and a night transfer plan. Neither is a product (owner, 2026-07-19); PLANS has four charter lengths and nothing else.",
+        find: "\n\n\n\n<li>女性専用ツアーや夜間送迎プランあり</li>",
         replace: "",
       },
     ],
@@ -689,6 +745,72 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         why: "Promises '24時間対応のAIサポート'. Written as a vision piece, but it reads as a current service and there is no AI support — the Japanese-speaking guide half is true and stays.",
         find: "<p>そんな声に応えるため、Mokaruでは<strong>LINEサポートを導入！</strong><br>旅行前から、<strong>24時間対応のAIサポート＋日本語ガイドのサポート</strong>で、お客様の安心を守ります。</p>",
         replace: "<p>そんな声に応えるため、Mokaruでは<strong>LINEサポートを導入！</strong><br>旅行前から、<strong>日本語ガイドのサポート</strong>で、お客様の安心を守ります。</p>",
+      },
+      {
+        why: "Lists booking restaurants for the guest as a LINE service (see the booking-agent note below).",
+        find: "✅ <strong>滞在中 → 緊急時の対応（レストラン予約、トラブルサポートなど）</strong>",
+        replace: "✅ <strong>滞在中 → 緊急時の対応（トラブルサポートなど）</strong>",
+      },
+    ],
+  },
+
+  // ===========================================================================
+  // "Free restaurant booking agent" and other services we do not run.
+  // ===========================================================================
+  // Owner, 2026-07-19: the guide helping at the restaurant on the day is real —
+  // a VELTRA review we publish on /reviews says exactly that ("予約や注文サポート
+  // までお世話になり"). What is NOT real is the advertised free booking-agent
+  // service ("人気レストランの予約代行（無料！）"). So the sales claims go and
+  // the descriptions of what a guide does on the day stay; deleting both would
+  // have put the articles at odds with our own review page.
+  //
+  // Deliberately NOT touched, because they are not our claims to make or break:
+  //   • honeymoon-couple's "記念日なら、デザートプレートのサプライズ演出も可能"
+  //     sits in a list of recommended RESTAURANTS (ザ・ビーチ / プロア / …) and
+  //     describes what those restaurants do — same category as the taxi fares in
+  //     guam-traffic.
+  //   • longplanpost / middleplanpost / transportation say a guide helps with
+  //     ordering and booking on the day. That is the real service.
+  //
+  // Confirmed still offered and therefore left alone: child seats, cooler box,
+  // interpreting/negotiating, shoot accompaniment, holding luggage (要相談).
+
+  "mokaru-highlights": {
+    body: [
+      {
+        why: "Advertises the free restaurant booking-agent service, which is not offered.",
+        find: "✔ <strong>レストランの予約代行</strong>（人気店は予約必須！）<br>",
+        replace: "",
+      },
+    ],
+  },
+
+  "family-friendly": {
+    body: [
+      {
+        why: "Advertises booking restaurants on the guest's behalf. Recommending them is real, so the sentence keeps its point.",
+        find: "<p>Mokaruなら、<strong>お子様連れでも安心のレストランをご提案＆予約代行！</strong></p>",
+        replace: "<p>Mokaruなら、<strong>お子様連れでも安心のレストランをご提案！</strong></p>",
+      },
+      {
+        why: "'事前予約' here means we book it for you.",
+        find: "✅ <strong>ベビーチェア完備のレストランを事前予約！</strong><br>",
+        replace: "✅ <strong>ベビーチェア完備のレストランをご提案！</strong><br>",
+      },
+      {
+        why: "Same booking-agent claim in the summary.",
+        find: "→ キッズメニュー＆ベビーチェア完備のレストランを事前予約！",
+        replace: "→ キッズメニュー＆ベビーチェア完備のレストランをご提案！",
+      },
+    ],
+  },
+
+  "post-wedding-tour": {
+    body: [
+      {
+        why: "States a minibus charter is available for large groups. Our vehicles top out at 7 (MAX_GUESTS in pricing.ts); the owner will take it case by case, so it must read as a request rather than a standing offer.",
+        find: "<li>大人数ならミニバスの<strong>グアム チャーター</strong>手配可</li>",
+        replace: "<li>大人数の場合はミニバスの<strong>グアム チャーター</strong>もご相談ください（要相談）</li>",
       },
     ],
   },
