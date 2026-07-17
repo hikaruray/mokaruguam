@@ -3,7 +3,7 @@ import { SITE_URL } from "@/lib/config";
 import { SPOTS } from "@/lib/spots";
 import { LEGACY_SLUGS, getLegacyArticle } from "@/lib/legacy-articles";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -26,21 +26,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Restored legacy articles. Listing them tells Google to re-crawl the URLs
   // that started 404ing at the DNS switch, which is the whole point of getting
-  // them back up quickly. Reuses the same cached origin fetch as the pages, so
-  // this adds no extra load on the old server.
-  const legacyPages: MetadataRoute.Sitemap = await Promise.all(
-    LEGACY_SLUGS.map(async (slug) => {
-      const article = await getLegacyArticle(slug);
-      return {
-        url: `${SITE_URL}/${slug}`,
-        // Real edit date from WordPress — these are archive posts, not fresh
-        // content, so claiming "modified today" would be a false signal.
-        lastModified: article ? new Date(article.modified) : now,
-        changeFrequency: "yearly" as const,
-        priority: 0.5,
-      };
-    }),
-  );
+  // them back up quickly.
+  const legacyPages: MetadataRoute.Sitemap = LEGACY_SLUGS.map((slug) => {
+    const article = getLegacyArticle(slug);
+    return {
+      url: `${SITE_URL}/${slug}`,
+      // Real edit date from WordPress — these are archive posts, not fresh
+      // content, so claiming "modified today" would be a false signal.
+      lastModified: article ? new Date(article.modified) : now,
+      changeFrequency: "yearly" as const,
+      priority: 0.5,
+    };
+  });
 
   const current = [...staticPages, ...spotPages].map((p) => ({
     ...p,

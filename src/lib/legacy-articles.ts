@@ -1,11 +1,10 @@
-// Legacy blog articles (Phase 1 — stop the bleeding).
+// Legacy blog articles — restored from the pre-2026-07-16 WordPress site.
 //
 // BACKGROUND
-// The old WordPress site lived on the same domain until the 2026-07-16 DNS
-// switch. Its ~99 articles still rank (2,490 clicks / 53,100 impressions over
-// 12 months) but every one of them started returning 404 the moment the domain
-// pointed at Vercel. This module restores the article URLs so that traffic
-// stops bleeding while the permanent migration (Phase 2) is prepared.
+// The old WordPress site lived on this domain until the 2026-07-16 DNS switch,
+// which turned every one of its URLs into a 404. The articles still rank
+// (2,490 clicks / 53,100 impressions over 12 months), so they are served here
+// at their original URLs.
 //
 // HOW THE URLS LINE UP (measured, not assumed)
 //   https://mokaruguam.com/<slug>/      -> 308 -> www + slash
@@ -15,32 +14,28 @@
 // 200 at the final URL lets it carry the old ranking over. Nothing about apex
 // canonicalisation or trailingSlash needs to change.
 //
-// WHERE THE CONTENT COMES FROM
-// The old site is still alive on the Xserver origin, which is a shared host
-// that routes by Host header. Measured behaviour:
-//   • Host: mokaruguam.com          -> 200 (the real article)
-//   • no Host override              -> 404
-// A plain next.config rewrite therefore CANNOT work: Vercel sends the
-// destination's hostname as Host. `fetch()` cannot fix it either — undici
-// silently drops a `host` header (verified: still 404). Only a low-level
-// node:https request can set Host explicitly, which is what we do below.
+// WHERE THE CONTENT COMES FROM  (Phase 2-A, 2026-07-17)
+// `legacy-content.json` is a snapshot of the WordPress REST output, committed
+// to this repo. The build no longer talks to the old Xserver box at all:
+// nothing here opens a socket, so the site builds and deploys even if that
+// server is unplugged. This matters because the old host held the ONLY copy of
+// this content (no Wayback snapshots), and Phase 1 left the build depending on
+// it staying alive.
 //
-// WHY BUILD-TIME AND NOT A LIVE PROXY
-// The pages are prerendered at build (see app/[slug]/page.tsx), which means:
-//   • the origin gets ONE request per build, not one per visitor — the old
-//     server is the only surviving copy of this content, so we must not lean
-//     on it;
-//   • the articles keep serving from Vercel's CDN even if Xserver goes down;
-//   • no runtime dependency on a legacy box.
-// Trade-off: if the origin is unreachable during a build, the build fails
-// loudly rather than silently shipping 404s again. Production stays up on the
-// previous deployment. Phase 2 removes this dependency entirely by moving the
-// content into the repo.
+// The snapshot holds each article's RAW `content.rendered`, exactly as
+// WordPress returned it. It is the owner's writing and it already ranks, so it
+// is never edited — not reworded, not summarised, not "improved". cleanHtml()
+// below applies the same presentational fixes it did when the content was
+// fetched live, so the rendered output is byte-for-byte what production served
+// before the snapshot.
+//
+// To refresh it (only if the old WordPress content ever changes — it has not
+// since 2025-09-02), re-run the snapshot against the origin. That box routes by
+// Host header: `Host: mokaruguam.com` -> 200, no override -> 404. `fetch()`
+// cannot do it (undici silently drops a `host` header); only a low-level
+// node:https request can set it.
 
-import https from "node:https";
-
-const ORIGIN_HOST = "sv16378.xserver.jp"; // Xserver box still holding the site
-const SITE_HOST = "mokaruguam.com"; // vhost name the origin routes on
+import snapshot from "./legacy-content.json";
 
 // ---------------------------------------------------------------------------
 // Allow-list — the ONLY slugs this route will ever serve.
@@ -112,77 +107,27 @@ export interface LegacyArticle {
   modified: string; // ISO
 }
 
-interface WpPost {
-  slug: string;
-  date_gmt: string;
-  modified_gmt: string;
-  title: { rendered: string };
-  content: { rendered: string };
+/** Shape of one entry in legacy-content.json (raw WordPress REST fields). */
+interface SnapshotEntry {
+  title: string; // as WP returned it (HTML-encoded)
+  content: string; // RAW content.rendered — never edited
+  date: string;
+  modified: string;
 }
 
-/** GET from the origin with an explicit Host header (see module notes). */
-function originGet(path: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: ORIGIN_HOST,
-        servername: ORIGIN_HOST, // SNI must match the cert we connect to
-        port: 443,
-        path,
-        method: "GET",
-        headers: { Host: SITE_HOST, "User-Agent": "mokaru-site-build" },
-        timeout: 30_000,
-      },
-      (res) => {
-        if (res.statusCode !== 200) {
-          res.resume();
-          reject(
-            new Error(`Legacy origin returned ${res.statusCode} for ${path}`),
-          );
-          return;
-        }
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-      },
-    );
-    req.on("timeout", () => req.destroy(new Error(`Timeout for ${path}`)));
-    req.on("error", reject);
-    req.end();
-  });
-}
+const SNAPSHOT = snapshot as Record<string, SnapshotEntry>;
 
-// One fetch per build, shared by all 80 pages, so the fragile origin sees a
-// single request instead of 80.
-let cache: Promise<Map<string, LegacyArticle>> | undefined;
-
-function loadAll(): Promise<Map<string, LegacyArticle>> {
-  cache ??= (async () => {
-    const raw = await originGet(
-      "/wp-json/wp/v2/posts?per_page=100&_fields=slug,title,content,date_gmt,modified_gmt",
-    );
-    const posts = JSON.parse(raw) as WpPost[];
-    const map = new Map<string, LegacyArticle>();
-    for (const p of posts) {
-      if (!ALLOWED.has(p.slug)) continue; // allow-list is the gate
-      map.set(p.slug, {
-        slug: p.slug,
-        title: decodeEntities(p.title.rendered),
-        html: cleanHtml(p.content.rendered),
-        date: p.date_gmt,
-        modified: p.modified_gmt,
-      });
-    }
-    return map;
-  })();
-  return cache;
-}
-
-export async function getLegacyArticle(
-  slug: string,
-): Promise<LegacyArticle | undefined> {
-  if (!ALLOWED.has(slug)) return undefined;
-  return (await loadAll()).get(slug);
+export function getLegacyArticle(slug: string): LegacyArticle | undefined {
+  if (!ALLOWED.has(slug)) return undefined; // allow-list is the gate
+  const entry = SNAPSHOT[slug];
+  if (!entry) return undefined;
+  return {
+    slug,
+    title: decodeEntities(entry.title),
+    html: cleanHtml(entry.content),
+    date: entry.date,
+    modified: entry.modified,
+  };
 }
 
 /** Minimal entity decode for titles (WP returns them HTML-encoded). */

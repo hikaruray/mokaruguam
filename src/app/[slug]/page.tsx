@@ -39,7 +39,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = await getLegacyArticle(slug);
+  const article = getLegacyArticle(slug);
   if (!article) return { title: "記事が見つかりません" };
 
   const desc = excerpt(article.html);
@@ -70,7 +70,7 @@ export default async function LegacyArticlePage({
   const { slug } = await params;
   if (!isLegacySlug(slug)) notFound();
 
-  const article = await getLegacyArticle(slug);
+  const article = getLegacyArticle(slug);
   if (!article) notFound();
 
   return (
