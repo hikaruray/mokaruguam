@@ -9,6 +9,7 @@ import {
   getLegacyArticle,
   isLegacySlug,
 } from "@/lib/legacy-articles";
+import { ctaFor } from "@/lib/legacy-cta";
 
 // Restored legacy blog articles. See src/lib/legacy-articles.ts for why these
 // exist and how the URLs line up with the old site.
@@ -73,6 +74,8 @@ export default async function LegacyArticlePage({
   const article = getLegacyArticle(slug);
   if (!article) notFound();
 
+  const cta = ctaFor(slug);
+
   return (
     <PageShell>
       <article className="mx-auto max-w-3xl px-5 py-12">
@@ -94,26 +97,23 @@ export default async function LegacyArticlePage({
           dangerouslySetInnerHTML={{ __html: article.html }}
         />
 
-        {/* Give these long-neglected readers a route into the funnel. */}
-        <div className="mt-12 rounded-2xl border border-line bg-white p-6">
-          <h2 className="text-lg font-bold">グアムを、あなただけの貸切で。</h2>
-          <p className="mt-2 text-sm text-muted">
-            日本語ガイド＋専用車で、行きたい場所を自由に。3時間 $170〜、人数が増えるほど1人あたりおトクです。
+        {/* Route into the funnel, phrased for this article's subject. The
+            article itself is left exactly as written — this is appended. */}
+        <aside className="mt-12 rounded-2xl border border-line bg-white p-6">
+          <h2 className="text-lg font-bold">{cta.heading}</h2>
+          <p className="mt-2 text-[15px] leading-relaxed text-muted">
+            {cta.lead}
           </p>
-          <p className="mt-4 text-sm">
-            <Link href="/plans" className="font-bold text-brand underline">
-              料金・プランを見る
-            </Link>
-            {" ・ "}
-            <Link href="/spots" className="font-bold text-brand underline">
-              人気スポットを見る
-            </Link>
-            {" ・ "}
-            <Link href="/reserve" className="font-bold text-brand underline">
-              リクエスト予約
-            </Link>
-          </p>
-        </div>
+          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            {cta.links.map((l) => (
+              <li key={l.href}>
+                <Link href={l.href} className="font-bold text-brand underline">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </aside>
       </article>
 
       <BookingCta />
