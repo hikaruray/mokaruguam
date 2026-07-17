@@ -99,9 +99,9 @@ const THEME_BY_SLUG: Record<string, Theme> = {
   "lottehotel": "hotel", "nikkohotel": "hotel", "pichotel": "hotel",
   "rhigaroyal": "hotel", "royalorchid": "hotel", "tsubakitower": "hotel",
   "westinhotel": "hotel", "chose-hotel": "hotel", "hotel-complaint": "hotel",
-  // transport
+  // transport ("airport-shuttle" used to be here; retired 2026-07-19)
   "transportation": "transport", "guam-traffic": "transport", "bus-rentacar": "transport",
-  "airport-shuttle": "transport", "drivers": "transport",
+  "drivers": "transport",
   // family / occasions
   "family-friendly": "family", "kid-friendly": "family", "kids-3hour-tour": "family",
   "honeymoon-couple": "family", "post-wedding-tour": "family",

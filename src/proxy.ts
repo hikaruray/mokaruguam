@@ -21,32 +21,38 @@
 //   • Local development (`npm run dev`)      → auth is skipped for convenience.
 
 import { NextResponse, type NextRequest } from "next/server";
-import { RETIRED_BRAND } from "@/lib/legacy-articles";
+import { RETIRED_BRAND, RETIRED_SERVICE } from "@/lib/legacy-articles";
 
 export const config = {
   matcher: [
     "/admin/:path*",
     "/api/admin/:path*",
     // Retired legacy URLs (see handleRetired below). Listed literally because
-    // `matcher` is read statically at build time and cannot be built from
-    // RETIRED_BRAND — the assertion under GONE keeps the two in step.
+    // `matcher` is read statically at build time and cannot be built from the
+    // RETIRED_* lists — the assertion under GONE keeps the two in step.
     "/cbd-thc",
     "/drugs",
     "/drug-troubles",
     "/night-life",
     "/night-life-points",
+    "/airport-shuttle",
   ],
 };
 
 // ---------------------------------------------------------------------------
 // Retired legacy URLs — served as 410 Gone.
 // ---------------------------------------------------------------------------
+// Six articles off the old WordPress site, all indexed, all retired by the
+// owner on 2026-07-19 for two different reasons: five on brand grounds
+// (RETIRED_BRAND) and one because the service it sells no longer exists
+// (RETIRED_SERVICE). The lists stay separate so the reason survives; the
+// handling is identical.
+//
 // WHY 410 AND NOT 404
-// These five cannabis/nightlife articles came off the old WordPress site and
-// are indexed. The owner retired them on 2026-07-19. Both codes eventually
-// de-index, but they say different things: 404 means "not found, maybe it comes
-// back", 410 means "gone, on purpose, stop asking". 410 is the honest signal for
-// a deliberate removal, and Google drops the URL sooner.
+// Both codes eventually de-index, but they say different things: 404 means
+// "not found, maybe it comes back", 410 means "gone, on purpose, stop asking".
+// 410 is the honest signal for a deliberate removal, and Google drops the URL
+// sooner.
 //
 // WHY NOT REDIRECT THEM TO /plans
 // /cbd-thc/ was 612 clicks a year and it is tempting to point that at the
@@ -56,12 +62,12 @@ export const config = {
 // site's topical signal on the way.
 //
 // The article text is preserved in legacy-archive/ — reversing this decision
-// means removing the slug here and in RETIRED_BRAND, and adding it back to
-// LEGACY_SLUGS.
-const GONE = new Set<string>(RETIRED_BRAND);
+// means removing the slug here and from the RETIRED_* list, and adding it back
+// to LEGACY_SLUGS.
+const GONE = new Set<string>([...RETIRED_BRAND, ...RETIRED_SERVICE]);
 
-// The matcher above is a literal list, so it can drift from RETIRED_BRAND. If
-// it ever does, a retired slug would quietly 404 instead of 410 — fail the
+// The matcher above is a literal list, so it can drift from the RETIRED_* lists.
+// If it ever does, a retired slug would quietly 404 instead of 410 — fail the
 // build instead. (Module scope runs when the proxy is compiled.)
 const MATCHED_PATHS = config.matcher.filter((m) => !m.includes(":path*"));
 for (const slug of GONE) {

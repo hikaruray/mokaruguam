@@ -561,6 +561,137 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
       },
     ],
   },
+
+  // ===========================================================================
+  // Discontinued-service claims on articles that have been LIVE since 07-17.
+  // ===========================================================================
+  // Owner confirmed 2026-07-19 that airport transfers and 24-hour support are
+  // no longer offered — yet nine live articles still advertised them, five with
+  // a price attached. Measured before acting: only airport-shuttle is ABOUT the
+  // dead service (it is in the title); in the rest the claim is one line to one
+  // section of an article whose real subject is still true. Owner's call: 410
+  // airport-shuttle only, and cut the claim out of the other eight rather than
+  // throw away eight ranking pages to delete a sentence.
+  //
+  // These are the same promises that keep 24hour-support offline — the 07-17
+  // exclusion caught the article about the perk and missed the articles that
+  // mention it in passing.
+
+  "mokaru-support": {
+    body: [
+      {
+        why: "Section ① is entirely the discontinued airport transfer.",
+        find: '<hr class="wp-block-separator has-alpha-channel-opacity"/>\n\n\n\n<h2 class="wp-block-heading"><strong>🛫 ① 空港送迎付きだから、到着後すぐに快適な旅がスタート！</strong></h2>\n\n\n\n<p>グアム到着後、タクシーやレンタカーの手配に手間取る心配なし！<br><strong>Mokaruの日本語ガイドが空港でお出迎えし、ホテルまでスムーズにご案内します。</strong></p>\n\n\n\n<p>💡 <strong>空港送迎のメリット</strong><br>✅ <strong>飛行機の到着時間に合わせてピックアップ🚗✨</strong><br>✅ <strong>英語のやり取り不要！スムーズにホテルチェックイン</strong>🏨<br>✅ <strong>旅行プランの最終確認もその場でOK！</strong></p>\n\n\n\n<p>📌 <strong>「ホテルまでの移動が不安…」という方も、日本語サポート付きで安心！</strong></p>\n\n\n\n',
+        replace: "",
+      },
+      // Renumber ②–⑤ → ①–④ now that ① is gone.
+      {
+        why: "Renumber after deleting section ①.",
+        find: "<strong>🗺 ② 現地の最新情報",
+        replace: "<strong>🗺 ① 現地の最新情報",
+      },
+      {
+        why: "Renumber after deleting section ①.",
+        find: "<strong>🚗 ③ 迷わず快適！",
+        replace: "<strong>🚗 ② 迷わず快適！",
+      },
+      {
+        why: "Renumber after deleting section ①.",
+        find: "<strong>📩 ④ トラブル時も安心！",
+        replace: "<strong>📩 ③ トラブル時も安心！",
+      },
+      {
+        why: "Renumber after deleting section ①.",
+        find: "<strong>🌙 ⑤ 夜のグアムも安心して楽しめる！",
+        replace: "<strong>🌙 ④ 夜のグアムも安心して楽しめる！",
+      },
+      {
+        why: "Summary repeats the airport transfer as a selling point.",
+        find: "✅ <strong>空港送迎で到着後もスムーズ！</strong><br>",
+        replace: "",
+      },
+    ],
+  },
+
+  "before-departure": {
+    body: [
+      {
+        why: "Lists arranging an airport transfer as something LINE can do for you.",
+        find: "✅ <strong>空港送迎やオプショナルツアーの手配</strong><br>",
+        replace: "",
+      },
+      {
+        why: "Section ④ is the discontinued airport transfer, quoted at the old $25 one-way rate. It is the last numbered section, so nothing needs renumbering.",
+        find: '<hr class="wp-block-separator has-alpha-channel-opacity"/>\n\n\n\n<h2 class="wp-block-heading"><strong>🚖 ④ 空港送迎＆観光プランの相談もLINEでOK！</strong></h2>\n\n\n\n<p>「<strong>空港からホテルまでの移動はどうすればいい？</strong>」<br>「<strong>自由に観光したいけど、どんなプランがいい？</strong>」</p>\n\n\n\n<p>Mokaruなら、<strong>LINEで空港送迎や観光プランの手配も簡単！</strong></p>\n\n\n\n<p>💡 <strong>LINEで手配できるサービス！</strong><br>✅ <strong>空港送迎（片道$25～）</strong> → 深夜・早朝便も対応！<br>✅ <strong>観光プランのカスタマイズ相談</strong> → 自分好みのツアーを作れる！<br>✅ <strong>ショッピングやアクティビティの送迎手配</strong><br>✅ <strong>人気の観光地の混雑状況もチェック可能！</strong></p>\n\n\n\n<p>📌 <strong>「移動や観光の手配も、すべてLINEで完結できる！」</strong></p>\n\n\n\n',
+        replace: "",
+      },
+      {
+        why: "Summary repeats the airport transfer.",
+        find: "<br>🚖 <strong>空港送迎＆観光プラン手配！</strong> → すべてLINEで簡単手配",
+        replace: "",
+      },
+    ],
+  },
+
+  touts: {
+    body: [
+      {
+        why: "Closing pitch offers the discontinued airport transfer. The rest of the sentence (LINE, guiding) is still true.",
+        find: "<p>モカルの日本語ガイドサービスなら、怪しいキャッチに遭遇しても即LINEで相談可能。空港送迎から観光サポートまで、日本語で安心対応！</p>",
+        replace: "<p>モカルの日本語ガイドサービスなら、怪しいキャッチに遭遇しても即LINEで相談可能。観光中のサポートまで、日本語で安心対応！</p>",
+      },
+    ],
+  },
+
+  drivers: {
+    body: [
+      {
+        why: "'空港〜観光地まで' promises the discontinued airport pickup. Replaced with what we actually do — a guide driving a dedicated vehicle.",
+        find: "<li>日本語ガイドが空港〜観光地まで安全運転でご案内</li>",
+        replace: "<li>日本語ガイドが専用車で観光地まで安全運転でご案内</li>",
+      },
+    ],
+  },
+
+  "ladies-safety": {
+    body: [
+      {
+        why: "Promises 24-hour support, which the business does not offer (owner, 2026-07-19) — the same claim that keeps 24hour-support offline.",
+        find: "\n\n\n\n<li>トラブル時も24時間サポート！</li>",
+        replace: "",
+      },
+    ],
+  },
+
+  "hotel-complaint": {
+    body: [
+      {
+        why: "'24時間LINEサポート' promises round-the-clock cover. LINE itself is real, so only the 24-hour claim goes.",
+        find: "<li>モカルの24時間LINEサポートなら、<strong>クレームの伝え方をサポート</strong>します！（プランによる）</li>",
+        replace: "<li>モカルのLINEサポートなら、<strong>クレームの伝え方をサポート</strong>します！（プランによる）</li>",
+      },
+    ],
+  },
+
+  "nightmarket-troubles": {
+    body: [
+      {
+        why: "Promises 24-hour cover. LINE is a real channel, so the line keeps its point without the promise.",
+        find: "<li>盗難やトラブル時も24時間対応のサポートあり</li>",
+        replace: "<li>盗難やトラブル時もLINEでご相談いただけます</li>",
+      },
+    ],
+  },
+
+  "mokaru-vision": {
+    body: [
+      {
+        why: "Promises '24時間対応のAIサポート'. Written as a vision piece, but it reads as a current service and there is no AI support — the Japanese-speaking guide half is true and stays.",
+        find: "<p>そんな声に応えるため、Mokaruでは<strong>LINEサポートを導入！</strong><br>旅行前から、<strong>24時間対応のAIサポート＋日本語ガイドのサポート</strong>で、お客様の安心を守ります。</p>",
+        replace: "<p>そんな声に応えるため、Mokaruでは<strong>LINEサポートを導入！</strong><br>旅行前から、<strong>日本語ガイドのサポート</strong>で、お客様の安心を守ります。</p>",
+      },
+    ],
+  },
 };
 
 /**

@@ -53,7 +53,7 @@ import { applyCorrections } from "./legacy-corrections";
 // not listed here 404s, so this list also guarantees the legacy route can never
 // shadow a real page (/plans, /reserve, /spots, /admin, /api, …).
 export const LEGACY_SLUGS = [
-  "airport-shuttle", "bayviewhotel", "before-departure", "bus-rentacar",
+  "bayviewhotel", "before-departure", "bus-rentacar",
   "business", "capitalhotel", "chose-hotel", "common-sense", "crossing-reef",
   "crowneplaza", "dive-spot", "dont-forget", "drivers", "emergencies",
   "family-friendly", "foreign-exchange", "fort-apugan", "grandplazahotel",
@@ -97,6 +97,17 @@ export const LEGACY_SLUGS = [
 export const RETIRED_BRAND = [
   "cbd-thc", "drugs", "drug-troubles", "night-life", "night-life-points",
 ];
+
+// Retired 2026-07-19 because the SERVICE it sells no longer exists, not for
+// brand reasons. Airport transfers were discontinued, and this article is about
+// nothing else — the title is "空港送迎って必要？", so there is no version of it
+// that is both honest and still the same article. Also served as 410.
+//
+// Nine live articles mentioned airport transfers; this is the only one deleted.
+// The other eight keep their real subject and had the claim cut out in
+// legacy-corrections.ts. Deleting a ranking page to remove a sentence would
+// have cost far more than it fixed, and a 410 takes months to undo.
+export const RETIRED_SERVICE = ["airport-shuttle"];
 
 // Restored 2026-07-19 after their prices were corrected — see LEGACY_SLUGS and
 // legacy-corrections.ts. Kept as a named list because the reason they were ever
