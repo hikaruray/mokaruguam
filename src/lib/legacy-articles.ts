@@ -29,6 +29,12 @@
 // fetched live, so the rendered output is byte-for-byte what production served
 // before the snapshot.
 //
+// The one exception is legacy-corrections.ts, which patches statements that are
+// factually wrong today (old prices, discontinued services). Those corrections
+// are declared as explicit find/replace pairs applied at render time — the
+// snapshot itself stays untouched, so the original wording is never lost and
+// every change is auditable in one file. See that file's header for why.
+//
 // To refresh it (only if the old WordPress content ever changes — it has not
 // since 2025-09-02), re-run the snapshot against the origin. That box routes by
 // Host header: `Host: mokaruguam.com` -> 200, no override -> 404. `fetch()`
@@ -36,6 +42,7 @@
 // node:https request can set it.
 
 import snapshot from "./legacy-content.json";
+import { applyCorrections } from "./legacy-corrections";
 
 // ---------------------------------------------------------------------------
 // Allow-list — the ONLY slugs this route will ever serve.
@@ -64,27 +71,55 @@ export const LEGACY_SLUGS = [
   "special-requests", "sunburn", "talafofo-falls", "tipping", "tips",
   "top3-actitivity", "touts", "transportation", "tsubakitower",
   "two-lovers-point", "visas", "westinhotel", "wifi-sim",
+
+  // Restored 2026-07-19 (owner decision). These were held back because they
+  // quoted the old rate card; their prices and any discontinued services are
+  // corrected in legacy-corrections.ts, which fails the build if a correction
+  // stops matching. Do not add a slug here without checking it there first.
+  "1day-plan", "1dayplan", "about-mokaru", "long-plan", "long-tour",
+  "longplanpost", "middleplanpost", "select-tour", "short-plan", "shortplan",
+  "totalplanpost",
 ] as const;
 
 // ---------------------------------------------------------------------------
 // Deliberately NOT restored. Kept here as documentation so the next person
 // knows these were a decision, not an oversight.
 // ---------------------------------------------------------------------------
-// Owner decision (2026-07-17): hold, do not revive. Left as plain 404s — NOT
-// redirected or 410'd — so reviving them later stays an option.
-export const EXCLUDED_BRAND = [
+// Owner decision (2026-07-19): retire for good. These were held pending a
+// decision on 2026-07-17; the owner has now chosen to drop them. They are
+// served as 410 Gone by middleware.ts (not 404), which tells Google the removal
+// is intentional and permanent. The originals stay in legacy-archive/ — the
+// decision is reversible even though the URLs are not coming back on their own.
+//
+// Cost of this, measured, so it is not a surprise later: /cbd-thc/ alone was
+// 612 clicks/year — 24.6% of the old site's entire search traffic. The owner
+// judged the audience too far from a charter customer to be worth it.
+export const RETIRED_BRAND = [
   "cbd-thc", "drugs", "drug-troubles", "night-life", "night-life-points",
 ];
 
-// State prices for our own tours that no longer match pricing.md
-// ($130/3h, $230/5h, $300/8h, $450/day vs the current $170/$250/$345/$500).
-// Restoring these would publish wrong prices — the same landmine that keeps the
-// old /service/price/ page out of scope.
-export const EXCLUDED_STALE_PRICING = [
+// Restored 2026-07-19 after their prices were corrected — see LEGACY_SLUGS and
+// legacy-corrections.ts. Kept as a named list because the reason they were ever
+// held back (they quote our own rate card, so they go stale whenever pricing
+// changes) still applies: if pricing.md ever changes again, these are the
+// articles to re-check first.
+export const QUOTES_OUR_PRICING = [
   "short-plan", "shortplan", "middleplanpost", "totalplanpost", "select-tour",
   "1dayplan", "1day-plan", "longplanpost", "long-plan", "long-tour",
-  "about-mokaru", "linesupport",
+  "about-mokaru",
+  // Not from the original stale-pricing list — found live on 2026-07-19 quoting
+  // $130/$300 and a 6-hour plan that never existed. Corrected, not withdrawn.
+  // The original list was built from the plan articles only; these two are
+  // practical guides that happen to quote our rate card in passing, which is
+  // why they were missed. Sweep by content, not by category, next time.
+  "bus-rentacar", "guam-traffic",
 ];
+
+// Still offline: the whole article sells paid standalone LINE support ($25 for
+// 7 days) and a $120 call-out service. The subject is the product, so there is
+// no price to correct — the business does not offer this at all (owner,
+// 2026-07-19).
+export const EXCLUDED_STALE_PRICING = ["linesupport"];
 
 // Promise perks the current business does not offer (e.g. repeater-discount
 // advertises "2nd visit 10% off / 3rd 15% / up to 20% off"; 24hour-support
@@ -123,8 +158,10 @@ export function getLegacyArticle(slug: string): LegacyArticle | undefined {
   if (!entry) return undefined;
   return {
     slug,
-    title: decodeEntities(entry.title),
-    html: cleanHtml(entry.content),
+    // Corrections run on the RAW snapshot, before cleanHtml(), so their find
+    // strings can be checked against legacy-archive/ verbatim.
+    title: decodeEntities(applyCorrections(slug, entry.title, "title")),
+    html: cleanHtml(applyCorrections(slug, entry.content, "body")),
     date: entry.date,
     modified: entry.modified,
   };
@@ -163,10 +200,15 @@ function cleanHtml(html: string): string {
     "",
   );
 
-  // Old plan/landing pages are out of scope for Phase 1 and 404 — send those
-  // links somewhere real rather than shipping known-broken links.
+  // Old plan/landing PAGES (not posts) are still out of scope and 404 — send
+  // those links somewhere real rather than shipping known-broken links.
+  //
+  // The plan POSTS that used to be listed here (short-plan, middleplanpost,
+  // long-tour, …) were restored on 2026-07-19, so they are deliberately gone
+  // from this list: a link to /short-plan/ now reaches the actual article
+  // instead of being diverted to /plans.
   const RETIRED_TO_PLANS =
-    /href="(?:https:\/\/mokaruguam\.com)?\/(?:service\/price|middleplan|totalplan|longplan|private-tour-3h|1dayplan|1day-plan|short-plan|shortplan|long-plan|long-tour|select-tour|middleplanpost|longplanpost|totalplanpost)\/?"/g;
+    /href="(?:https:\/\/mokaruguam\.com)?\/(?:service\/price|middleplan|totalplan|longplan|private-tour-3h)\/?"/g;
   out = out.replace(RETIRED_TO_PLANS, 'href="/plans"');
 
   // Old contact/booking routes -> our current booking page.

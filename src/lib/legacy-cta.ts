@@ -12,10 +12,11 @@
 // CLAIMS
 // Only things the current site already states: fully-private charter, a
 // Japanese-speaking guide, a dedicated vehicle, and per-vehicle pricing from
-// $170 for 3 hours (pricing.md). Deliberately NO promises about child seats,
-// airport pickup or booking-on-your-behalf — the old articles made service
-// claims the business no longer advertises, which is why 14 of them are not
-// restored at all. We are not going to reintroduce that problem here.
+// $170 for 3 hours (pricing.md). Deliberately NO promises about airport pickup
+// (discontinued), 24-hour support or repeat-customer discounts — the old
+// articles made service claims the business does not honour, which is why some
+// are still offline and why the rest needed legacy-corrections.ts before they
+// could go back up. We are not going to reintroduce that problem here.
 
 export interface CtaLink {
   href: string;
@@ -28,7 +29,7 @@ export interface LegacyCta {
   links: CtaLink[];
 }
 
-type Theme = "sights" | "food" | "shopping" | "hotel" | "transport" | "family" | "practical";
+type Theme = "sights" | "food" | "shopping" | "hotel" | "transport" | "family" | "practical" | "plan";
 
 const PRICE_NOTE = "料金は車1台あたり（3時間 $170〜）で、人数が増えるほど1人あたりおトクです。";
 
@@ -68,6 +69,14 @@ const THEMES: Record<Theme, { heading: string; lead: string }> = {
     heading: "現地のことは、ガイドに直接聞けます",
     lead: `Mokaru Guam は、グアムの完全貸切ガイドチャーター。日本語ガイドが運転する専用車で、行きたい場所を自由に回れます。この記事のような現地の話も、当日いくらでも。${PRICE_NOTE}`,
   },
+  // The article is already about one of our plans (restored 2026-07-19). The
+  // reader knows what we sell by this point, so the note points at the live
+  // rate card instead of re-pitching the service — and because these articles
+  // quote prices, /plans is where the number is guaranteed current.
+  plan: {
+    heading: "このプランの空き状況を確認できます",
+    lead: `記事の内容は最新の料金・プランに合わせて更新しています。人数や時期によって料金が変わるため、確定の金額は料金ページと予約フォームでご確認ください。${PRICE_NOTE}`,
+  },
 };
 
 // Only non-default themes are listed; everything else falls back to "practical".
@@ -96,6 +105,11 @@ const THEME_BY_SLUG: Record<string, Theme> = {
   // family / occasions
   "family-friendly": "family", "kid-friendly": "family", "kids-3hour-tour": "family",
   "honeymoon-couple": "family", "post-wedding-tour": "family",
+  // plan marketing articles (restored 2026-07-19)
+  "short-plan": "plan", "shortplan": "plan", "select-tour": "plan",
+  "middleplanpost": "plan", "longplanpost": "plan", "long-plan": "plan",
+  "long-tour": "plan", "1dayplan": "plan", "1day-plan": "plan",
+  "totalplanpost": "plan", "about-mokaru": "plan",
 };
 
 // Legacy article -> the matching spot page on the current site. Only real
