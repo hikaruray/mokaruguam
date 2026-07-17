@@ -56,13 +56,12 @@ const LEGACY_PAGE_REDIRECTS: { source: string; destination: string }[] = [
   // the homepage carries the same pitch, so it is the closest match.
   { source: "/strength", destination: "/" },
 
-  // プライバシーポリシー (2,012 chars). ⚠️ THIS ONE IS NOT A REAL MATCH.
-  // The current site has no privacy policy — /legal is 特定商取引法 only — even
-  // though /reserve collects a name, email and phone number and takes card
-  // payments. /legal is the nearest legal page and stops the 404, but the right
-  // fix is to publish a privacy policy and point this at it. Flagged to the
-  // owner 2026-07-19; see MokaruGuam/todo.md.
-  { source: "/privacy", destination: "/legal" },
+  // NOTE: /privacy is deliberately NOT in this list. It briefly redirected to
+  // /legal as a stopgap, because the site had no privacy policy at all. It now
+  // has a real one at /privacy (app/privacy/page.tsx), so the old URL resolves
+  // to the page that replaced it — which is what it always should have been.
+  // Redirects run ahead of routing, so leaving the entry here would shadow the
+  // new page entirely.
 ];
 
 const nextConfig: NextConfig = {

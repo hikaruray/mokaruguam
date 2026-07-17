@@ -441,6 +441,15 @@ export default function BookingForm() {
           ? "確定時に決済が確定します。お手配できない場合は自動で解除されます。"
           : "送信後、48時間以内に空き状況をご連絡します。この時点では料金は発生しません。"}
       </p>
+      {/* Shown at the point of collection, not just in the footer: this is the
+          form that actually takes the name, email and phone number. */}
+      <p className="mt-2 text-center text-xs text-muted">
+        お預かりした情報の取り扱いは
+        <a href="/privacy" className="underline hover:text-ink">
+          プライバシーポリシー
+        </a>
+        をご覧ください。
+      </p>
     </form>
   );
 }
