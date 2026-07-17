@@ -9,8 +9,9 @@ import { Eyebrow, SectionHeading, Sub } from "./Section";
 // the heavy YouTube iframe after the user clicks. Keeps the page fast (the
 // iframe would otherwise pull ~500KB+ of scripts on every visit).
 //
-// Replace YOUTUBE_ID with the real tour video id when available.
-const YOUTUBE_ID = ""; // e.g. "dQw4w9WgXcQ"
+// Mokaru Guam LONG プラン紹介ムービー（YouTube: MokaruGuam チャンネル）
+// https://www.youtube.com/watch?v=KHwH1ByuBcM
+const YOUTUBE_ID = "KHwH1ByuBcM";
 
 export default function VideoSection() {
   const [playing, setPlaying] = useState(false);
@@ -28,8 +29,8 @@ export default function VideoSection() {
         {playing && hasVideo ? (
           <iframe
             className="absolute inset-0 h-full w-full"
-            src={`https://www.youtube-nocookie.com/embed/${YOUTUBE_ID}?autoplay=1`}
-            title="Mokaru Guam ツアー紹介ムービー"
+            src={`https://www.youtube-nocookie.com/embed/${YOUTUBE_ID}`}
+            title="Mokaru Guam LONGプラン紹介ムービー"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
@@ -38,7 +39,7 @@ export default function VideoSection() {
             type="button"
             onClick={() => hasVideo && setPlaying(true)}
             className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-white"
-            aria-label="ツアー紹介ムービーを再生"
+            aria-label="LONGプラン紹介ムービーを再生"
           >
             <Image
               src={IMAGES.video}
@@ -53,7 +54,7 @@ export default function VideoSection() {
             </span>
             <span className="relative font-bold">
               {hasVideo
-                ? "ツアー紹介ムービーを再生"
+                ? "LONGプラン紹介ムービーを再生"
                 : "ツアー紹介ムービー（YouTube 埋め込み予定）"}
             </span>
           </button>
