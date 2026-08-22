@@ -18,6 +18,7 @@ import "server-only";
 import { promises as fs } from "fs";
 import path from "path";
 import { getSupabase } from "./supabase";
+import { amountForBooking } from "./pricing";
 
 export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
 export type PaymentStatus =
@@ -40,6 +41,11 @@ export interface BookingRequest {
   notes: string;        // any extra requests
   status: BookingStatus;
   payment: PaymentStatus;
+  // USD actually authorized/charged, snapshotted at request time. Prices in
+  // lib/pricing.ts change over time, so recomputing later would misstate what
+  // the customer was really charged (wrong confirmation emails, wrong partial
+  // refunds). null only for bookings taken before this field existed.
+  amount: number | null;
   paypalOrderId: string | null;         // PayPal order (intent=AUTHORIZE)
   paypalAuthorizationId: string | null; // authorization to capture/void later
   paypalCaptureId: string | null;       // capture id (needed to refund later)
@@ -66,6 +72,7 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     notes: String(row.notes ?? ""),
     status: (row.status as BookingStatus) ?? "pending",
     payment: (row.payment as PaymentStatus) ?? "none",
+    amount: row.amount != null ? Number(row.amount) : null,
     paypalOrderId: (row.paypal_order_id as string) ?? null,
     paypalAuthorizationId: (row.paypal_authorization_id as string) ?? null,
     paypalCaptureId: (row.paypal_capture_id as string) ?? null,
@@ -74,6 +81,25 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     refundRate: row.refund_rate != null ? Number(row.refund_rate) : null,
     createdAt: String(row.created_at),
   };
+}
+
+/**
+ * What this booking was actually charged, in USD.
+ *
+ * ALWAYS use this instead of recomputing from lib/pricing.ts. Prices there
+ * change over time, so a recomputation would report today's price for a booking
+ * taken at yesterday's — misstating confirmation emails, partial refunds and the
+ * Admin revenue totals.
+ *
+ * Bookings created before the `amount` column existed fall back to a
+ * recomputation, which is the best information available for them.
+ */
+export function chargedAmount(booking: BookingRequest): number {
+  if (booking.amount != null) return booking.amount;
+  return (
+    amountForBooking(booking.planId, booking.guests, booking.preferredDate)
+      ?.amount ?? 0
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +141,7 @@ export async function addBooking(
     | "id"
     | "status"
     | "payment"
+    | "amount"
     | "paypalOrderId"
     | "paypalAuthorizationId"
     | "paypalCaptureId"
@@ -124,11 +151,13 @@ export async function addBooking(
   > & {
     // Optional payment fields — set when the request went through PayPal.
     payment?: PaymentStatus;
+    amount?: number | null;
     paypalOrderId?: string | null;
     paypalAuthorizationId?: string | null;
   },
 ): Promise<BookingRequest> {
   const payment: PaymentStatus = data.payment ?? "none";
+  const amount = data.amount ?? null;
   const paypalOrderId = data.paypalOrderId ?? null;
   const paypalAuthorizationId = data.paypalAuthorizationId ?? null;
 
@@ -149,6 +178,7 @@ export async function addBooking(
         notes: data.notes,
         status: "pending",
         payment,
+        amount,
         paypal_order_id: paypalOrderId,
         paypal_authorization_id: paypalAuthorizationId,
       })
@@ -171,6 +201,7 @@ export async function addBooking(
     id: localId(),
     status: "pending",
     payment,
+    amount,
     paypalOrderId,
     paypalAuthorizationId,
     paypalCaptureId: null,

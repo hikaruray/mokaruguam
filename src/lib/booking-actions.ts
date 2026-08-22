@@ -14,6 +14,7 @@ import {
   getBooking,
   setBookingStatus,
   setBookingPayment,
+  chargedAmount,
   type BookingRequest,
 } from "./store";
 import {
@@ -21,7 +22,7 @@ import {
   refundCapture,
   isPaypalConfigured,
 } from "./paypal";
-import { amountForBooking, refundRateForDate } from "./pricing";
+import { refundRateForDate } from "./pricing";
 import { sendMail } from "./email";
 import { cancelledEmail } from "./booking-emails";
 
@@ -69,12 +70,10 @@ export async function cancelBooking(
     booking.payment === "captured" &&
     Boolean(booking.paypalCaptureId);
 
-  const calc = amountForBooking(
-    booking.planId,
-    booking.guests,
-    booking.preferredDate,
-  );
-  const chargedAmount = calc?.amount ?? 0;
+  // Refund off what was ACTUALLY charged (snapshotted at request time), not a
+  // recomputation — otherwise a price change would make a "50% refund" mean 50%
+  // of today's price rather than 50% of what this customer paid.
+  const charged = chargedAmount(booking);
 
   let refund: CancelResult["refund"] = null;
 
@@ -88,7 +87,7 @@ export async function cancelBooking(
       mode === "full"
         ? { rate: 1, tier: "全額返金（自社都合・天候）" }
         : refundRateForDate(booking.preferredDate);
-    const refundAmount = Math.round(chargedAmount * rate * 100) / 100;
+    const refundAmount = Math.round(charged * rate * 100) / 100;
     if (rate > 0) {
       await refundCapture(
         booking.paypalCaptureId!,

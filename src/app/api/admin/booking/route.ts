@@ -2,6 +2,7 @@ import {
   getBooking,
   setBookingStatus,
   setBookingPayment,
+  chargedAmount,
 } from "@/lib/store";
 import {
   captureAuthorization,
@@ -9,7 +10,6 @@ import {
   isPaypalConfigured,
 } from "@/lib/paypal";
 import { cancelBooking } from "@/lib/booking-actions";
-import { amountForBooking } from "@/lib/pricing";
 import { sendMail } from "@/lib/email";
 import { confirmedEmail, declinedEmail } from "@/lib/booking-emails";
 
@@ -64,6 +64,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "Booking not found." }, { status: 404 });
   }
 
+  // Guard: a booking whose money is already captured must not be "declined".
+  // Declining sends the customer a "the hold was released, you were not charged"
+  // email and issues no refund — so on a charged booking it would be a lie plus
+  // kept money. Cancel (with refund) is the correct action there. The Admin UI
+  // only offers decline on pending bookings; this makes that structural.
+  if (action === "decline" && booking.payment === "captured") {
+    return Response.json(
+      {
+        error:
+          "この予約は決済確定済みです。お断りではなく「キャンセル（返金）」をご利用ください。",
+      },
+      { status: 409 },
+    );
+  }
+
   const hasAuthorization =
     isPaypalConfigured() &&
     booking.payment === "authorized" &&
@@ -99,12 +114,9 @@ export async function POST(request: Request) {
 
   // Notify the customer of the outcome (best-effort; sendMail never throws).
   if (action === "confirm") {
-    const amt = amountForBooking(
-      booking.planId,
-      booking.guests,
-      booking.preferredDate,
-    );
-    const mail = confirmedEmail(booking, amt?.amount ?? 0);
+    // The amount charged, as snapshotted at request time — so the email always
+    // matches the customer's card statement even after a price change.
+    const mail = confirmedEmail(booking, chargedAmount(booking));
     await sendMail({ to: booking.email, subject: mail.subject, text: mail.text });
   } else {
     const mail = declinedEmail(booking);

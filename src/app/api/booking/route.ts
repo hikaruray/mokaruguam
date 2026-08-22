@@ -101,6 +101,7 @@ export async function POST(request: Request) {
   // --- PayPal path: verify + authorize before saving --------------------
   let paymentFields: {
     payment?: "authorized";
+    amount?: number;
     paypalOrderId?: string;
     paypalAuthorizationId?: string;
   } = {};
@@ -141,6 +142,10 @@ export async function POST(request: Request) {
       }
       paymentFields = {
         payment: "authorized",
+        // Snapshot the price actually held on the card. Later confirmation
+        // emails and refunds read this instead of recomputing, so a future
+        // price change can't restate what this customer was charged.
+        amount: calc.amount,
         paypalOrderId: body.paypalOrderId,
         paypalAuthorizationId: authorizationId,
       };

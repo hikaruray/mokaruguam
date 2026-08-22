@@ -22,6 +22,10 @@ create table if not exists public.bookings (
   --   voided=hold released (お断り), refunded=charged then refunded (キャンセル)
   payment        text not null default 'none'
                  check (payment in ('none', 'authorized', 'captured', 'voided', 'refunded')),
+  -- USD authorized/charged, snapshotted at request time. Prices change over
+  -- time, so later steps (confirmation email, refund, revenue totals) must read
+  -- this rather than recomputing from lib/pricing.ts.
+  amount                  numeric(10,2),
   paypal_order_id         text,
   paypal_authorization_id text,
   paypal_capture_id       text,     -- capture id (needed to refund later)

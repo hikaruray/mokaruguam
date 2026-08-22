@@ -1,5 +1,9 @@
-import { listBookings, type BookingStatus, type PaymentStatus } from "@/lib/store";
-import { amountForBooking } from "@/lib/pricing";
+import {
+  listBookings,
+  chargedAmount,
+  type BookingStatus,
+  type PaymentStatus,
+} from "@/lib/store";
 import BookingActions from "./BookingActions";
 import TourSchedule, { type ScheduleRow } from "./TourSchedule";
 
@@ -45,9 +49,9 @@ export default async function AdminPage() {
   const bookings = await listBookings();
   const pending = bookings.filter((b) => b.status === "pending").length;
   const confirmed = bookings.filter((b) => b.status === "confirmed").length;
-  // The amount charged for a booking = server price for its plan/guests/date.
-  const amountOf = (b: (typeof bookings)[number]) =>
-    amountForBooking(b.planId, b.guests, b.preferredDate)?.amount ?? 0;
+  // What each booking was actually charged (snapshotted at request time), so
+  // the revenue totals stay correct after a price change.
+  const amountOf = (b: (typeof bookings)[number]) => chargedAmount(b);
   // Money actually received (captured and not refunded).
   const receivedTotal = bookings
     .filter((b) => b.payment === "captured")
