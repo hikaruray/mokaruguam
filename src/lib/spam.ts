@@ -16,6 +16,7 @@ export const FIELD_LIMITS = {
   email: 200,
   phone: 60,
   preferredDate: 100,
+  hotel: 200,
   spots: 1000,
   notes: 1000,
 } as const;
@@ -29,6 +30,7 @@ export interface BookingInput {
   email?: string;
   phone?: string;
   preferredDate?: string;
+  hotel?: string;
   guests?: number | string;
   spots?: string;
   notes?: string;
@@ -50,6 +52,7 @@ export function validateBooking(b: BookingInput): string | null {
     [b.email, FIELD_LIMITS.email, "メールアドレス"],
     [b.phone, FIELD_LIMITS.phone, "連絡先"],
     [b.preferredDate, FIELD_LIMITS.preferredDate, "希望日時"],
+    [b.hotel, FIELD_LIMITS.hotel, "ご宿泊先"],
     [b.spots, FIELD_LIMITS.spots, "行きたいスポット"],
     [b.notes, FIELD_LIMITS.notes, "ご要望"],
   ];

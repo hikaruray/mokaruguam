@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     phone?: string;
     planId?: string;
     preferredDate?: string;
+    hotel?: string;
     guests?: number;
     adults?: number;
     children4to11?: number;
@@ -80,11 +81,15 @@ export async function POST(request: Request) {
       (children0to3 > 0 ? `・子供(0-3歳)${children0to3}名` : "")
     : "";
 
-  const { name, email, phone, planId, preferredDate, guests, spots, notes } = body;
+  const { name, email, phone, planId, preferredDate, hotel, guests, spots, notes } =
+    body;
 
-  if (!name || !email || !phone || !preferredDate || !guests) {
+  // Hotel is required because it is where the guide drives on the day. Guests
+  // who have not booked accommodation yet are told to write 未定 rather than
+  // being blocked — a blank field cannot be told apart from "we never asked".
+  if (!name || !email || !phone || !preferredDate || !guests || !hotel?.trim()) {
     return Response.json(
-      { error: "必須項目（お名前・連絡先・希望日・人数）をご入力ください。" },
+      { error: "必須項目（お名前・連絡先・希望日・ご宿泊先・人数）をご入力ください。" },
       { status: 400 },
     );
   }
@@ -168,6 +173,7 @@ export async function POST(request: Request) {
       planId: planId ?? "",
       planName,
       preferredDate,
+      hotel: hotel.trim(),
       guests: Number(guests),
       spots: spots?.trim() ?? "",
       notes: notes?.trim() ?? "",
@@ -209,6 +215,7 @@ export async function POST(request: Request) {
     `連絡先:   ${email} / ${phone}`,
     `プラン:   ${planName}`,
     `希望日時: ${preferredDate}`,
+    `ご宿泊先: ${hotel.trim()}`,
     `人数:     ${guests}名${guestBreakdown ? `（${guestBreakdown}）` : ""}`,
     `行きたいスポット:`,
     spots?.trim() || "（記入なし）",
@@ -235,6 +242,7 @@ export async function POST(request: Request) {
     `▼ ご予約内容`,
     `プラン:   ${planName}`,
     `ご希望日時: ${preferredDate}`,
+    `ご宿泊先: ${hotel.trim()}`,
     `人数:     ${guests}名${guestBreakdown ? `（${guestBreakdown}）` : ""}`,
     authorized ? `お支払い（予定）: $${amountStr}（仮押さえ中）` : ``,
     ``,

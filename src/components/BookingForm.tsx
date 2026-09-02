@@ -22,6 +22,7 @@ interface FormValues {
   planId: string;
   tourDate: string;      // ISO date (YYYY-MM-DD) — drives peak-season pricing
   startTime: string;     // e.g. "9:00" (plan-linked, from START_TIMES)
+  hotel: string;         // where the guide picks the guest up
   preferredDate: string; // combined "YYYY-MM-DD 9:00" saved to the store
   guests: number;        // total headcount (adults + both child groups) — drives price
   adults: number;
@@ -101,6 +102,7 @@ export default function BookingForm() {
       tourDate,
       startTime,
       preferredDate: [tourDate, startTime].filter(Boolean).join(" "),
+      hotel: String(fd.get("hotel") || ""),
       guests: adults + children4to11 + children0to3,
       adults,
       children4to11,
@@ -386,6 +388,21 @@ export default function BookingForm() {
       </select>
       <p className="mt-1.5 text-xs text-muted">
         選択された時間はご希望です。空き状況により前後をご提案する場合があります。
+      </p>
+
+      {/* Where the guide drives on the day. Required: a blank field cannot be
+          told apart from "we never asked", and until now the hotel was chased
+          up by email after every booking. Guests who have not booked a room
+          yet write 未定 rather than being blocked from requesting a tour. */}
+      <Field
+        label="ご宿泊先（ホテル名）"
+        name="hotel"
+        placeholder="例：ヒルトン グアム／未定の場合は「未定」"
+        required
+        maxLength={200}
+      />
+      <p className="-mt-1 text-xs text-muted">
+        当日のお迎え場所の確認に使用します。ホテル以外（Airbnb・ご親族宅など）の場合はその旨をご記入ください。
       </p>
 
       <label className="mt-3 block text-xs font-bold">行きたいスポット（自由記入）</label>

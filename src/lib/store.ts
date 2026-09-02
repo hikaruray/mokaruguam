@@ -36,6 +36,7 @@ export interface BookingRequest {
   planId: string;       // e.g. "middle" (see lib/pricing.ts)
   planName: string;     // human label at time of request
   preferredDate: string; // free-text preferred date/time (e.g. "7/20 午後")
+  hotel: string;        // where the guide picks the guest up (added 2026-08-30)
   guests: number;
   spots: string;        // free-text wishlist of places to visit
   notes: string;        // any extra requests
@@ -67,6 +68,8 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     planId: String(row.plan_id ?? ""),
     planName: String(row.plan_name ?? ""),
     preferredDate: String(row.preferred_date ?? ""),
+    // Bookings taken before 2026-08-30 have no hotel — read as empty, not "null".
+    hotel: String(row.hotel ?? ""),
     guests: Number(row.guests ?? 0),
     spots: String(row.spots ?? ""),
     notes: String(row.notes ?? ""),
@@ -173,6 +176,7 @@ export async function addBooking(
         plan_id: data.planId,
         plan_name: data.planName,
         preferred_date: data.preferredDate,
+        hotel: data.hotel,
         guests: data.guests,
         spots: data.spots,
         notes: data.notes,
@@ -195,6 +199,7 @@ export async function addBooking(
     planId: data.planId,
     planName: data.planName,
     preferredDate: data.preferredDate,
+    hotel: data.hotel,
     guests: data.guests,
     spots: data.spots,
     notes: data.notes,

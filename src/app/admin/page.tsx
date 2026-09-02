@@ -126,6 +126,13 @@ export default async function AdminPage() {
                   <td className="px-4 py-3 text-slate-600">
                     <p className="font-medium">{b.planName}</p>
                     <p className="text-xs text-slate-400">希望：{b.preferredDate}</p>
+                    {/* Where to drive on the day. Blank for bookings taken
+                        before 2026-08-30, when the field did not exist. */}
+                    {b.hotel && (
+                      <p className="text-xs font-medium text-slate-500">
+                        宿泊先：{b.hotel}
+                      </p>
+                    )}
                     {b.spots && (
                       <p className="mt-1 max-w-xs text-xs text-slate-500">
                         行きたい：{b.spots}
