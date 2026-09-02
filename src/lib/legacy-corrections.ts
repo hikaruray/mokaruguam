@@ -736,6 +736,15 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: "<li>盗難やトラブル時も24時間対応のサポートあり</li>",
         replace: "<li>盗難やトラブル時もLINEでご相談いただけます</li>",
       },
+      {
+        // The 2026-07-19 sweep fixed the claim at the foot of this article and
+        // missed this one higher up — same article, same promise, found on
+        // 2026-09-03 by grepping the live pages rather than the source. Worth
+        // noting for the next sweep: one hit per article is not the end of it.
+        why: "Same 24-hour promise as above, in the 'ask Mokaru on LINE' step. It is the claim that keeps 24hour-support offline, and this is the worst page to make it on — a reader here is already in trouble and would rely on it.",
+        find: "<li><strong>24時間対応</strong>で、現地トラブルのサポートが可能　（プランによる）</li>",
+        replace: "<li><strong>LINEでご相談いただけます</strong>（プランによる）</li>",
+      },
     ],
   },
 
