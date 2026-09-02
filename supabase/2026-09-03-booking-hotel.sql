@@ -1,5 +1,5 @@
 -- Mokaru Guam — collect the guest's hotel on the booking form
--- Owner request, 2026-08-30.
+-- Owner request, 2026-09-03.
 --
 -- Run this ONCE in Supabase → SQL Editor, BEFORE deploying the code that
 -- writes to it. addBooking() inserts an explicit column list, so shipping the
@@ -24,4 +24,4 @@ alter table public.bookings
 --     from public.bookings order by created_at desc limit 20;
 
 comment on column public.bookings.hotel is
-  'Guest''s hotel / where the guide picks them up. NULL = booking taken before this column existed (2026-08-30).';
+  'Guest''s hotel / where the guide picks them up. NULL = booking taken before this column existed (2026-09-03).';
