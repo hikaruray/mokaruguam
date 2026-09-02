@@ -272,7 +272,7 @@ export async function POST(request: Request) {
         "\n--- CUSTOMER ---\n" +
         custText,
     );
-    return Response.json({ ok: true, delivered: false, authorized });
+    return Response.json({ ok: true, delivered: false, authorized, amount: authorizedAmount, planId: planId ?? "" });
   }
 
   try {
@@ -298,11 +298,11 @@ export async function POST(request: Request) {
     } catch (custErr) {
       console.error("Failed to send customer confirmation:", custErr);
     }
-    return Response.json({ ok: true, delivered: true, authorized });
+    return Response.json({ ok: true, delivered: true, authorized, amount: authorizedAmount, planId: planId ?? "" });
   } catch (err) {
     console.error("Failed to send booking email:", err);
     // The request is already saved to the store, so report success to the user;
     // the owner can still see it in the Admin dashboard.
-    return Response.json({ ok: true, delivered: false, authorized });
+    return Response.json({ ok: true, delivered: false, authorized, amount: authorizedAmount, planId: planId ?? "" });
   }
 }

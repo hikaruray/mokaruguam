@@ -146,6 +146,7 @@ export default function BookingForm() {
           return;
         }
         setPaid(Boolean(data.authorized));
+        trackBookingRequest(values, data);
         setState("sent");
       } catch {
         setError("通信エラーが発生しました。時間をおいて再度お試しください。");
@@ -532,4 +533,39 @@ function Field({
       />
     </div>
   );
+}
+
+// Tell GA4 that a request was submitted.
+//
+// Until 2026-09-03 the property only recorded page views, so it could say how
+// many people arrived and never which of them booked — the site had run for
+// weeks on the assumption that traffic was the problem, with no way to check.
+// Attribution needs the conversion, not just the visit.
+//
+// Deliberately no name, email or phone: GA4 must not receive anything that
+// identifies a guest. Plan, headcount and whether a card was authorized are
+// enough to tell a channel that produces real bookings from one that does not.
+//
+// value is sent only when PayPal actually authorized an amount. A request-only
+// booking has no confirmed price yet, and inventing an estimate would quietly
+// mix guesses into revenue reporting.
+function trackBookingRequest(
+  values: FormValues,
+  data: { authorized?: boolean; amount?: number | null; planId?: string },
+) {
+  // gtag is absent in dev and on preview deployments (see ANALYTICS_ENABLED),
+  // and an analytics call must never break a submission that already succeeded.
+  const gtag = (window as unknown as { gtag?: (...a: unknown[]) => void }).gtag;
+  if (typeof gtag !== "function") return;
+  try {
+    gtag("event", "generate_lead", {
+      currency: "USD",
+      value: typeof data.amount === "number" ? data.amount : 0,
+      plan_id: data.planId || values.planId || "",
+      guests: values.guests,
+      payment_state: data.authorized ? "authorized" : "request_only",
+    });
+  } catch {
+    // Analytics is never worth an error in front of the customer.
+  }
 }
