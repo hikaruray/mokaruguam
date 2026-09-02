@@ -112,15 +112,32 @@ export async function POST(request: Request) {
     );
   }
 
-  // Notify the customer of the outcome (best-effort; sendMail never throws).
+  // Notify the customer of the outcome, and copy the owner (best-effort;
+  // sendMail never throws).
+  //
+  // bccOwner was already here for cancellations but not for these two, so the
+  // owner's inbox held the request and the cancellation and nothing in
+  // between: no written record of what was actually promised to the guest, on
+  // the one step that commits a guide and a vehicle to a date. Owner request,
+  // 2026-08-30.
   if (action === "confirm") {
     // The amount charged, as snapshotted at request time — so the email always
     // matches the customer's card statement even after a price change.
     const mail = confirmedEmail(booking, chargedAmount(booking));
-    await sendMail({ to: booking.email, subject: mail.subject, text: mail.text });
+    await sendMail({
+      to: booking.email,
+      subject: mail.subject,
+      text: mail.text,
+      bccOwner: true,
+    });
   } else {
     const mail = declinedEmail(booking);
-    await sendMail({ to: booking.email, subject: mail.subject, text: mail.text });
+    await sendMail({
+      to: booking.email,
+      subject: mail.subject,
+      text: mail.text,
+      bccOwner: true,
+    });
   }
 
   return Response.json({ ok: true });
