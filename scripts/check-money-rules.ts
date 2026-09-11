@@ -54,8 +54,28 @@ function check(ok: boolean, label: string, detail: string) {
 }
 
 const day = 86_400_000;
-const inDays = (n: number) =>
-  new Date(Date.now() + n * day).toISOString().slice(0, 10);
+
+// 🔴 Counted from GUAM's calendar date, not UTC's.
+//
+// This used to be `Date.now() + n * day`, which takes the UTC date as its
+// starting point. The rule being tested does not: refundRateForDate measures
+// whole days from today IN GUAM (UTC+10). So for the ten hours a day when Guam
+// has already rolled over and UTC has not, inDays(8) produced a date seven
+// Guam-days away, landed in the 50% tier, and this suite reported a failure in
+// code that was working perfectly.
+//
+// That is worse than a flaky test. check:money is the file people are told to
+// trust about money, and one that cries wolf every evening is one that gets
+// waved through — including on the morning it is right.
+const inDays = (n: number) => {
+  const guamNow = new Date(Date.now() + 10 * 3600_000);
+  const guamMidnight = Date.UTC(
+    guamNow.getUTCFullYear(),
+    guamNow.getUTCMonth(),
+    guamNow.getUTCDate(),
+  );
+  return new Date(guamMidnight + n * day).toISOString().slice(0, 10);
+};
 
 console.log("\n--- What a request costs ---");
 

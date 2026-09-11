@@ -183,6 +183,103 @@ for (const [label, fallbackChoice] of [
   );
 }
 
+console.log("\n--- What the server refuses that the browser also refuses ---");
+
+// Every rule the form enforces has to hold at the API too: the form's own
+// attributes are a convenience, and nothing stops a request arriving without
+// them. The tour path needs no payment, so it is reachable by anyone.
+const oversized = await bookingPost(
+  post("http://localhost/api/booking", {
+    ...baseRequest,
+    requestType: "tour",
+    partnerName: "あ".repeat(500),
+  }),
+);
+check(
+  oversized.status === 400,
+  "an oversized partner name is refused (it lands in the owner's inbox)",
+  `HTTP ${oversized.status} (expected 400)`,
+);
+
+// Adding the three groups up and checking only the sum accepts this: it totals
+// 5, and reaches the owner as「大人-5名・子供(4-11歳)10名」.
+const negativeAdults = await bookingPost(
+  post("http://localhost/api/booking", {
+    ...baseRequest,
+    requestType: "tour",
+    adults: -5,
+    children4to11: 10,
+    children0to3: 0,
+  }),
+);
+check(
+  negativeAdults.status === 400,
+  "a negative headcount is refused even when the total looks sane",
+  `HTTP ${negativeAdults.status} (expected 400)`,
+);
+
+// A mistyped year. Nothing is charged in the end, but on the restaurant path it
+// would hold the guest's money for a meal that already happened.
+const pastDate = await bookingPost(
+  post("http://localhost/api/booking", {
+    ...baseRequest,
+    requestType: "tour",
+    preferredDate: "2020-01-01 09:00",
+  }),
+);
+check(
+  pastDate.status === 400,
+  "a date in the past is refused",
+  `HTTP ${pastDate.status} (expected 400)`,
+);
+
+console.log("\n--- The honeypot drops bots, not guests who paid ---");
+
+const { isBot } = await import("@/lib/spam");
+// 🔴 The rename is the fix, so assert the rename. An input named `company`
+// under a label reading「会社名」is what an address autofill fills in, and a
+// trip here discards the request in silence.
+check(
+  isBot({ mg_field_2: "filled" }) === true &&
+    isBot({ company: "ACME Corp" } as Record<string, unknown>) === false,
+  "an autofilled company name no longer trips it",
+  "only mg_field_2 counts",
+);
+
+const trapped = await bookingPost(
+  post("http://localhost/api/booking", {
+    ...baseRequest,
+    requestType: "tour",
+    mg_field_2: "i am a bot",
+  }),
+);
+check(
+  trapped.status === 200,
+  "a tripped honeypot still answers 200 so the bot does not retry",
+  `HTTP ${trapped.status} (expected 200)`,
+);
+
+// 🔴 And the exception. An approved PayPal order id cannot be produced by a
+// bot — our server mints it and only a human completing PayPal's flow approves
+// it. Dropping a request that carries one abandons a guest who has already
+// agreed to pay. It must reach the real gates instead; gate 1 answering 402
+// here is proof it got past the honeypot.
+const paidButTrapped = await bookingPost(
+  post("http://localhost/api/booking", {
+    ...baseRequest,
+    requestType: "restaurant",
+    partnerName: "Proa",
+    fallbackChoice: "cancel",
+    mg_field_2: "autofilled",
+    paypalOrderId: "ORDER-APPROVED",
+  }),
+);
+check(
+  paidButTrapped.status !== 200,
+  "but a request carrying an approved order is never silently dropped",
+  `HTTP ${paidButTrapped.status} (200 would mean it vanished)`,
+);
+
 console.log("\n--- Nothing refused was written ---");
 
 // The point of the gates is not the status code, it is that no booking exists
@@ -289,7 +386,7 @@ check(
 console.log("\n--- Gate 2: confirming needs a live hold, for restaurants only ---");
 
 const { POST: adminPost } = await import("@/app/api/admin/booking/route");
-const { addBooking, setBookingPayment, getBooking } = await import("@/lib/store");
+const { addBooking, setBookingPayment, getBooking, setBookingStatus } = await import("@/lib/store");
 
 process.env.ADMIN_PASSWORD = "gate-check";
 
@@ -359,6 +456,24 @@ check(
   !(r5body.error ?? "").includes("再度のお手続き"),
   "and does not send an already-charged guest to pay again",
   `"${(r5body.error ?? "").slice(0, 40)}…"`,
+);
+
+// 🔴 A settled booking is not actionable. The buttons only appear on pending
+// rows, so the way in is a stale screen — the guest cancels in one tab while
+// the owner has the list open in another. Confirming then sent someone who had
+// called off their booking「お手配が完了しました」, in an email nobody can recall.
+const settledTour = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski" });
+await setBookingStatus(settledTour.id, "cancelled");
+const reconfirm = await admin(settledTour.id, "confirm");
+check(
+  reconfirm.status === 409,
+  "a cancelled booking cannot be confirmed back to life",
+  `HTTP ${reconfirm.status} (expected 409)`,
+);
+check(
+  (await getBooking(settledTour.id))?.status === "cancelled",
+  "and it stays cancelled",
+  String((await getBooking(settledTour.id))?.status),
 );
 
 console.log("\n--- What the restaurant path has to remember ---");
@@ -489,7 +604,7 @@ check(
   paidCheck.ok === false ? `HTTP ${paidCheck.status}` : "allowed",
 );
 
-const { setBookingStatus } = await import("@/lib/store");
+// setBookingStatus is imported with the rest of the store above.
 const settledRepay = await seed({ requestType: "restaurant", partnerName: "Proa" });
 await setBookingStatus(settledRepay.id, "confirmed");
 check(

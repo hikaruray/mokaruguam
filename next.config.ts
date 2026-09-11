@@ -1,6 +1,78 @@
 import type { NextConfig } from "next";
 
 // ---------------------------------------------------------------------------
+// 🔴 Fail the PRODUCTION build when a NEXT_PUBLIC_ value is broken.
+// ---------------------------------------------------------------------------
+// NEXT_PUBLIC_ values are baked in at build time, so a misconfigured one cannot
+// be detected at runtime. Left alone it produces the worst failure shape there
+// is: a green build and a page that is quietly, invisibly dead. GuamJobs lost
+// its whole authentication flow to exactly this, and a full day to diagnosing
+// it — the remedy below is the one written down in ENGINEERING_LESSONS.md.
+//
+// What it costs us here: NEXT_PUBLIC_PAYPAL_CLIENT_ID is what makes the payment
+// box render. Without it the restaurant path silently stops offering payment,
+// falls through to the server, and is refused by gate 1 with「お支払い情報を確認
+// できませんでした。お手数ですが、もう一度お試しください」— a sentence the guest
+// can only read as "my card was rejected". The paid product would be at zero
+// from 2026-10-01 and every guest would blame themselves.
+//
+// 🔴 PRODUCTION ONLY. Local dev, `next dev` and preview builds must never fail:
+// running without PayPal or Supabase is a supported mode of this site, not a
+// bug, and breaking it stops development. next.config.ts is evaluated after
+// .env files are loaded, so reading process.env here is correct.
+//
+// 🔴 Say WHICH variable is wrong and HOW. The build log is the only evidence
+// anyone gets.
+function assertPublicEnv() {
+  if (process.env.VERCEL_ENV !== "production") return;
+
+  const problems: string[] = [];
+  const value = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+
+  if (value === undefined) {
+    problems.push("NEXT_PUBLIC_PAYPAL_CLIENT_ID is not set");
+  } else if (value.trim() === "") {
+    problems.push("NEXT_PUBLIC_PAYPAL_CLIENT_ID is empty or whitespace only");
+  } else if (value.includes("•")) {
+    // Vercel renders Secret-typed values as eyJhbGci•••••• on screen. Copying
+    // that display back into the field stores the bullets as the real value,
+    // and they reach the build intact. NEXT_PUBLIC_ variables must be Config
+    // type, never Secret.
+    problems.push(
+      "NEXT_PUBLIC_PAYPAL_CLIENT_ID contains U+2022 (•) — the masked display " +
+        "was pasted back in. Delete it and re-enter the real value as a " +
+        "Config variable, not a Secret",
+    );
+  } else if (value.trim().length < 20) {
+    problems.push(
+      `NEXT_PUBLIC_PAYPAL_CLIENT_ID is only ${value.trim().length} characters — too short to be a PayPal client id`,
+    );
+  }
+
+  if (problems.length > 0) {
+    throw new Error(
+      "Refusing to build for production:\n  - " +
+        problems.join("\n  - ") +
+        "\n\nThe restaurant arrangement fee cannot be collected without this " +
+        "value, and the site would tell guests their card was declined " +
+        "instead. Fix it in the Vercel dashboard and rebuild.",
+    );
+  }
+
+  // Degrades rather than breaks: SITE_URL falls back to localhost, which makes
+  // emailed cancel/repay links wrong but leaves the site working. Warn, do not
+  // fail — a build that fails for everything gets ignored when it matters.
+  if (!process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://")) {
+    console.warn(
+      "[env] NEXT_PUBLIC_SITE_URL is not an https URL. Links in emails " +
+        "(cancel, repay) will point at the fallback origin.",
+    );
+  }
+}
+
+assertPublicEnv();
+
+// ---------------------------------------------------------------------------
 // Legacy fixed pages → their nearest live equivalent (301/permanent).
 // ---------------------------------------------------------------------------
 // The old WordPress site had 19 fixed pages. The 2026-07-16 DNS switch left 18

@@ -151,10 +151,24 @@ alter table public.bookings
 -- block at the bottom asks the database directly. If a CHECK on plan_id does
 -- come back, STOP: restaurant rows will fail the insert and the whole pivot
 -- stalls on its first booking.
+-- 🔴 EVERY GUARD BELOW NAMES THE TABLE.
+--
+-- `conname` is not unique within a schema — two tables may each carry a
+-- constraint of the same name. A guard that asks only "does anything called
+-- bookings_request_type_check exist?" answers yes as soon as ANY table has one,
+-- and then skips adding it here. The constraint never lands, nothing errors,
+-- and the gap shows up the day a bad request_type is written.
+--
+-- 🔴 This is not hypothetical housekeeping: this Supabase project is SHARED
+-- WITH DaDeal, so there is a second application's worth of tables in the same
+-- schema. Section 4 above already scopes its lookup with conrelid; these three
+-- did not, and they are corrected to match.
 do $$
 begin
   if not exists (
-    select 1 from pg_constraint where conname = 'bookings_request_type_check'
+    select 1 from pg_constraint
+     where conname = 'bookings_request_type_check'
+       and conrelid = 'public.bookings'::regclass
   ) then
     alter table public.bookings
       add constraint bookings_request_type_check
@@ -162,7 +176,9 @@ begin
   end if;
 
   if not exists (
-    select 1 from pg_constraint where conname = 'bookings_fallback_choice_check'
+    select 1 from pg_constraint
+     where conname = 'bookings_fallback_choice_check'
+       and conrelid = 'public.bookings'::regclass
   ) then
     alter table public.bookings
       add constraint bookings_fallback_choice_check
@@ -170,7 +186,9 @@ begin
   end if;
 
   if not exists (
-    select 1 from pg_constraint where conname = 'bookings_ref_no_key'
+    select 1 from pg_constraint
+     where conname = 'bookings_ref_no_key'
+       and conrelid = 'public.bookings'::regclass
   ) then
     alter table public.bookings
       add constraint bookings_ref_no_key unique (ref_no);

@@ -41,7 +41,18 @@ interface FormValues {
   children4to11: number;
   children0to3: number;
   notes: string;
-  company: string;       // honeypot — hidden; real users leave it empty
+  mg_field_2: string;    // honeypot — hidden; real users leave it empty
+}
+
+// Today in Guam (UTC+10) as YYYY-MM-DD, for the date field's `min`.
+//
+// Guam, not the visitor's device: a guest booking from Japan an hour before
+// midnight is already on tomorrow's date locally, and using that would refuse
+// a day that is still bookable here. The server measures the same way
+// (pricing.ts, daysUntilTour).
+function guamToday(): string {
+  const guam = new Date(Date.now() + 10 * 3600_000);
+  return guam.toISOString().slice(0, 10);
 }
 
 function guestSummary(v: {
@@ -117,7 +128,7 @@ export default function BookingForm() {
       children4to11,
       children0to3,
       notes: String(fd.get("notes") || ""),
-      company: String(fd.get("company") || ""),
+      mg_field_2: String(fd.get("mg_field_2") || ""),
     };
   }
 
@@ -331,12 +342,20 @@ export default function BookingForm() {
 
       {/* Honeypot: hidden from real users; bots that fill every field trip it
           and are dropped server-side. Not display:none so headless bots that
-          skip hidden inputs still see it; kept out of the layout + a11y tree. */}
+          skip hidden inputs still see it; kept out of the layout + a11y tree.
+
+          🔴 No label, and a name that means nothing. It used to be an input
+          named `company` under a label reading「会社名」— which is exactly what
+          a password manager or an address autofill fills in, and tripping it
+          discards the request in silence. */}
       <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
-        <label>
-          会社名（入力しないでください）
-          <input type="text" name="company" tabIndex={-1} autoComplete="off" />
-        </label>
+        <input
+          type="text"
+          name="mg_field_2"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+        />
       </div>
 
       {/* The choice everything else depends on. */}
@@ -446,10 +465,15 @@ export default function BookingForm() {
                   is captured when the table is confirmed, not on the day of the
                   meal, so a ceiling measured from the meal date never protected
                   anything — it only turned away guests planning months out. */}
+              {/* A lower bound, though, there must be: without one a mistyped
+                  year reaches PayPal and holds $10 for a meal in the past. The
+                  server refuses it too (validateBooking); this only stops the
+                  guest getting that far. */}
               <input
                 type="date"
                 name="tourDate"
                 required
+                min={guamToday()}
                 className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
               />
             </div>

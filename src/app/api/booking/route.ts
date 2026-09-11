@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     spots?: string;
     notes?: string;
     paypalOrderId?: string;
-    company?: string; // honeypot
+    mg_field_2?: string; // honeypot — see isBot() for why it is named this
   };
 
   try {
@@ -62,7 +62,25 @@ export async function POST(request: Request) {
 
   // Honeypot: a bot filled the hidden field. Pretend success so it doesn't
   // retry, but save nothing and send nothing.
-  if (isBot(body)) {
+  //
+  // 🔴 Never drop a request that carries an approved PayPal order.
+  //
+  // A bot cannot produce one: it is minted by our server and only becomes an
+  // approved order after a human completes PayPal's own flow. So its presence
+  // is proof of a real guest — and on the restaurant path, a guest who has
+  // ALREADY approved paying $10 by the time execution reaches this line. The
+  // silent drop then leaves them certain they paid and booked, and us with no
+  // request, no record and nothing to act on. Let it through to the real gates.
+  if (isBot(body) && !body.paypalOrderId) {
+    // 🔴 And say so. Autofill can trip this on a real person, and until now
+    // that produced no evidence anywhere — the guest saw a success screen and
+    // the booking simply never existed. Without a line in the log there is no
+    // way to learn it is happening.
+    console.error("[honeypot] dropped a booking request", {
+      requestType: body.requestType,
+      email: body.email,
+      hasPaypalOrder: false,
+    });
     return Response.json({ ok: true, delivered: false, authorized: false });
   }
 

@@ -98,6 +98,10 @@ export async function POST(request: Request) {
     );
   }
 
+  // The hold we are about to replace. Captured before the write, because the
+  // write is what forgets it.
+  const superseded = booking.paypalAuthorizationId;
+
   try {
     await setBookingAuthorization(booking.id, {
       paypalOrderId: orderId,
@@ -117,6 +121,24 @@ export async function POST(request: Request) {
       { error: "お手続きを保存できませんでした。時間をおいて再度お試しください。" },
       { status: 503 },
     );
+  }
+
+  // Release the hold we just replaced.
+  //
+  // Usually it is already dead — an expired hold is what sent the guest here —
+  // and voidAuthorization absorbs every "it is already gone" answer, so this
+  // does nothing at all in the normal case. It matters when /repay runs twice
+  // over: two tabs, a double-tapped PayPal button, a retry after a slow save.
+  // Then a live hold really was replaced, and without this it sits on the
+  // guest's card for three days with nothing left that would ever release it.
+  if (superseded && superseded !== authorizationId) {
+    try {
+      await voidAuthorization(superseded);
+    } catch (err) {
+      // Best-effort: the booking is already recorded against the new hold, and
+      // the old one expires on its own. Log so it can be reconciled by hand.
+      console.error("Could not void the superseded authorization:", err);
+    }
   }
 
   // The owner has to learn about this: under §6-4-1 nothing is booked until the

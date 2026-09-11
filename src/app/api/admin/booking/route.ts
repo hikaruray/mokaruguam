@@ -68,6 +68,26 @@ export async function POST(request: Request) {
     return Response.json({ error: "Booking not found." }, { status: 404 });
   }
 
+  // 🔴 Guard: confirm and decline only act on a booking still waiting.
+  //
+  // Neither used to look at status at all. The Admin UI only offers these
+  // buttons on a pending row, so the way in is a stale screen: the guest
+  // cancels in one tab while the owner has the list open in another. Pressing
+  // 確定 then moved a cancelled booking to confirmed and sent the guest
+  // 「お手配が完了しました」— for something they had called off, in an email
+  // that cannot be taken back.
+  if (booking.status !== "pending") {
+    const state = { confirmed: "確定済み", declined: "お断り済み", cancelled: "キャンセル済み" }[
+      booking.status
+    ];
+    return Response.json(
+      {
+        error: `この依頼は既に${state}です。画面を再読み込みしてから操作してください。`,
+      },
+      { status: 409 },
+    );
+  }
+
   // Guard: a booking whose money is already captured must not be "declined".
   // Declining sends the customer a "the hold was released, you were not charged"
   // email and issues no refund — so on a charged booking it would be a lie plus
