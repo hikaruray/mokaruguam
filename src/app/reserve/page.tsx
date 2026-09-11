@@ -3,16 +3,17 @@ import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingForm from "@/components/BookingForm";
-import { LINE_URL } from "@/lib/config";
+import { CONTACT_EMAIL } from "@/lib/config";
+import { RESTAURANT_FEE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
-  title: "リクエスト予約",
+  title: "手配を依頼する",
   description:
-    "グアム完全貸切ガイドチャーターのリクエスト予約ページ。希望日時・人数・行きたいスポットを送るだけ。空き状況を確認して48時間以内にご連絡します。この時点では料金は発生しません。",
+    "グアムのレストラン予約代行・ツアー手配のご依頼ページ。お店やツアー名とご希望日時を送るだけ。48時間以内に手配の状況をご連絡します。レストランは1件$10、お取りできなければ料金はいただきません。",
   alternates: { canonical: "/reserve" },
   openGraph: {
-    title: "リクエスト予約｜Mokaru Guam",
-    description: "行きたいスポットを送るだけ。空き状況を確認してご連絡します（48時間以内）。",
+    title: "手配を依頼する｜Mokaru Guam",
+    description: "お店の名前とご希望日時を送るだけ。48時間以内に状況をご連絡します。",
     url: "/reserve",
     type: "website",
     images: [OG_IMAGE],
@@ -24,44 +25,63 @@ export default function ReservePage() {
     <PageShell>
       <PageHero
         eyebrow="Reserve"
-        title="リクエスト予約"
-        lead="Mokaru Guam はリクエスト予約制です。まずはご希望をお送りください。空き状況を確認してご連絡します。"
+        title="手配を依頼する"
+        lead="ご希望のお店・ツアーと日時をお送りください。グアム在住の日本人スタッフが、お客様に代わって手配します。"
       />
 
       <section className="mx-auto max-w-5xl px-5 py-12">
         <div className="grid gap-8 md:grid-cols-[1fr_1.1fr]">
           {/* How the request works */}
           <div>
-            <h2 className="text-lg font-bold">リクエスト予約の流れ</h2>
+            <h2 className="text-lg font-bold">ご依頼の流れ</h2>
             <ol className="mt-4 list-decimal space-y-3 pl-5 text-[15px]">
               <li>
-                希望日時・人数・行きたいスポットを送ってリクエスト。お支払いは全額前払いで、
-                <span className="font-bold text-brand">この時点では仮押さえ（まだ引き落とされません）。</span>
+                ご依頼の種類（レストラン／ツアー）と、ご希望日時・人数をお送りください。レストランのみ、手配料 $
+                {RESTAURANT_FEE} をカードに
+                <span className="font-bold text-brand">
+                  お預かりします（この時点では請求されません）。
+                </span>
               </li>
-              <li>ガイド・車両の空きを確認し、48時間以内にお返事します。</li>
-              <li>予約が確定するとお支払いが確定します。お手配できない場合は自動で解除（返金）されます。あとは当日を待つだけ。</li>
+              <li>
+                お店・実施会社に空き状況を確認し、
+                <span className="font-bold text-ink">48時間以内に状況</span>
+                をご連絡します。
+              </li>
+              <li>
+                お席・ご予約が取れた時点で、レストランは手配料のお支払いが確定します。
+                <span className="font-bold text-ink">
+                  お取りできなかった場合、料金はいただきません。
+                </span>
+              </li>
             </ol>
 
             <div className="mt-5 rounded-2xl border border-line bg-sand p-4 text-sm text-muted">
-              お申し込み前に、
-              <Link href="/guide" className="font-bold text-brand hover:underline">
-                予約の流れ・キャンセルポリシー
-              </Link>
-              をご確認ください。キャンセルは実施日の8日以上前で全額返金、7〜4日前は50%、3日前以降は返金なしとなります。
+              <p>
+                <b className="text-ink">ツアーの手配は、当社へのお支払いはありません。</b>
+                ツアー代金は当日、実施会社へ直接お支払いください。
+              </p>
+              <p className="mt-2">
+                レストランの手配料は、
+                <b className="text-ink">お手配の完了後はご返金の対象外</b>
+                となります（お店へのキャンセルのご連絡は当社が代行します）。詳しくは{" "}
+                <Link href="/guide" className="font-bold text-brand hover:underline">
+                  ご依頼の流れ・キャンセルについて
+                </Link>{" "}
+                をご確認ください。
+              </p>
             </div>
 
             <div className="mt-5 text-sm text-muted">
               <p className="font-bold text-ink">ご不明な点は</p>
-              <div className="mt-2 flex flex-wrap gap-3">
+              <p className="mt-1">
                 <a
-                  href={LINE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full border border-[#06c755] px-4 py-2 text-sm font-medium text-[#06c755] hover:bg-[#06c755]/10"
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="font-bold text-brand hover:underline"
                 >
-                  質問・相談はLINEで
-                </a>
-              </div>
+                  {CONTACT_EMAIL}
+                </a>{" "}
+                までお気軽にご相談ください。8名以上のご依頼もこちらで承ります。
+              </p>
             </div>
           </div>
 

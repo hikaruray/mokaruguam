@@ -16,7 +16,12 @@ export default function Reviews() {
       <div className="mx-auto max-w-5xl px-5 py-16">
         <Eyebrow>Reviews</Eyebrow>
         <SectionHeading>お客様の声</SectionHeading>
-        <Sub>VELTRA に寄せられた実際のお客様の声をご紹介します。</Sub>
+        {/* 🔴 出典と時期を必ず添える。2026-09-30で終了した貸切ツアーへのレビューなので、
+            日付を書かずに出すと、いまの手配サービスへの評価に読めてしまう。 */}
+        <Sub>
+          2026年9月まで実施していた貸切ガイドツアーへ、VELTRA
+          に寄せられたお客様の声です。
+        </Sub>
         <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURED_REVIEWS.map((r) => (
             <div key={r.name} className="rounded-2xl border border-line p-5">

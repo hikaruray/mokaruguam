@@ -7,7 +7,9 @@ export default function Spots() {
     <section id="spots" className="mx-auto max-w-5xl px-5 py-16">
       <Eyebrow>Popular spots</Eyebrow>
       <SectionHeading>みんなが訪れる、人気スポット</SectionHeading>
-      <Sub>定番から穴場まで。あなたの「行きたい」を組み合わせてプランを作れます。</Sub>
+      <Sub>
+        定番から穴場まで、グアムの見どころ。近くのレストランのご予約や、アクティビティの手配も承ります。
+      </Sub>
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {IMAGES.spots.map((spot) => (
           <div

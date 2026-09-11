@@ -7,11 +7,11 @@ import { ALL_REVIEWS } from "@/lib/reviews";
 export const metadata: Metadata = {
   title: "お客様の声",
   description:
-    "グアム完全貸切ガイドチャーターをご利用いただいたお客様の声。VELTRAに寄せられた実際の高評価レビューをご紹介します。日本語ガイド・南部の絶景・柔軟な対応など。",
+    "2026年9月まで実施していた貸切ガイドツアーへ、VELTRAに寄せられたお客様の声です。日本語ガイド・南部の絶景・柔軟な対応など。",
   alternates: { canonical: "/reviews" },
   openGraph: {
     title: "お客様の声｜Mokaru Guam",
-    description: "完全貸切だから自分たちのペースで。ご家族・カップル・ご友人からの実際の声。",
+    description: "2026年9月まで実施していた貸切ガイドツアーへの、ご家族・カップル・ご友人からの実際の声。",
     url: "/reviews",
     type: "website",
     images: [OG_IMAGE],
@@ -33,7 +33,7 @@ export default function ReviewsPage() {
       <PageHero
         eyebrow="Reviews"
         title="お客様の声"
-        lead="完全貸切だから、自分たちのペースで。VELTRA に寄せられた実際のお客様の声をご紹介します。"
+        lead="2026年9月まで実施していた貸切ガイドツアーへ、VELTRA に寄せられたお客様の声です。現在はレストラン予約代行・ツアー手配サービスとして営業しています。"
       />
 
       <section className="mx-auto max-w-5xl px-5 py-12">

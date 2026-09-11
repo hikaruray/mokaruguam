@@ -20,7 +20,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const spot = getSpot(slug);
   if (!spot) return { title: "スポットが見つかりません" };
-  const desc = `${spot.name}（${spot.keyword}）を日本語ガイドの完全貸切チャーターでご案内。${spot.tagline}`;
+  const desc = `グアムの${spot.name}（${spot.keyword}）。${spot.tagline}`;
   return {
     title: `${spot.name}｜グアムの人気スポット`,
     description: desc,

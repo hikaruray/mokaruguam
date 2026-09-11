@@ -1,86 +1,92 @@
-"use client";
-
-import { useState } from "react";
-import { PLANS, priceFor, perPerson, MAX_GUESTS } from "@/lib/pricing";
+import Link from "next/link";
+import { RESTAURANT_FEE } from "@/lib/pricing";
 import { Eyebrow, SectionHeading, Sub } from "./Section";
 
-// Interactive pricing: a guest slider updates the per-person amount live, so the
-// "cheaper as the group grows" value is obvious. Numbers come from lib/pricing.ts.
+// What the business sells, on the home page.
+//
+// This used to be an interactive charter price table — four time-based plans
+// and a slider showing the per-person cost falling as the group grew. All of
+// it described a service that ends 2026-09-30. It is not adapted here, because
+// there is nothing left for it to compute: one service is a flat fee that does
+// not vary with headcount, and the other has no price of ours at all.
+//
+// No client state, so this is a server component now.
 export default function Pricing() {
-  const [guests, setGuests] = useState(4);
-
   return (
     <section id="price" className="mx-auto max-w-5xl px-5 py-16">
-      <Eyebrow>Pricing</Eyebrow>
-      <SectionHeading>シンプルな時間制プラン</SectionHeading>
-      <Sub>料金は1台あたり。人数が増えるほど、1人あたりはおトクになります。</Sub>
+      <Eyebrow>What we do</Eyebrow>
+      <SectionHeading>できること・料金</SectionHeading>
+      <Sub>
+        ふたつだけです。レストランのご予約と、アクティビティ・ツアーのお手配。
+      </Sub>
 
-      <div className="mt-6 rounded-2xl border border-line bg-white p-5">
-        <label
-          htmlFor="guests"
-          className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold"
-        >
-          <span>ご参加人数で1人あたりを計算</span>
-          <span className="text-brand">
-            {guests}名{guests >= 5 && "（5〜7名 +$20）"}
-          </span>
-        </label>
-        <input
-          id="guests"
-          type="range"
-          min={1}
-          max={MAX_GUESTS}
-          value={guests}
-          onChange={(e) => setGuests(Number(e.target.value))}
-          className="mt-3 w-full accent-[#ea5a0c]"
-          aria-label="参加人数"
-        />
-        <div className="mt-1 flex justify-between text-xs text-muted">
-          <span>1名</span>
-          <span>{MAX_GUESTS}名</span>
+      <div className="mt-8 grid gap-5 sm:grid-cols-2">
+        <div className="rounded-2xl border-2 border-brand bg-white p-6">
+          <h3 className="text-lg font-bold">レストランの予約代行</h3>
+          <div className="mt-2 text-4xl font-bold text-brand">
+            ${RESTAURANT_FEE}
+            <small className="text-base font-medium text-muted"> /1件</small>
+          </div>
+          <p className="mt-1 text-sm font-bold text-brand">
+            人数にかかわらず同額
+          </p>
+          <ul className="mt-3.5 space-y-1.5 text-sm text-muted">
+            <li>
+              <span className="mr-1.5 font-bold text-brand">✓</span>
+              <b className="text-ink">お取りできなければ0円</b>
+            </li>
+            <li>
+              <span className="mr-1.5 font-bold text-brand">✓</span>
+              満席なら代わりのお店を1件までご提案
+            </li>
+            <li>
+              <span className="mr-1.5 font-bold text-muted">−</span>
+              お食事代は当日、お店へ直接
+            </li>
+          </ul>
+          <Link
+            href="/reserve?type=restaurant"
+            className="mt-5 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark"
+          >
+            レストランの予約を依頼する
+          </Link>
+        </div>
+
+        <div className="rounded-2xl border border-line bg-white p-6">
+          <h3 className="text-lg font-bold">アクティビティ・ツアーの手配</h3>
+          <div className="mt-2 text-4xl font-bold text-brand">$0</div>
+          <p className="mt-1 text-sm font-bold text-brand">
+            当社へのお支払いはありません
+          </p>
+          <ul className="mt-3.5 space-y-1.5 text-sm text-muted">
+            <li>
+              <span className="mr-1.5 font-bold text-brand">✓</span>
+              提携先のツアーを代わりに手配します
+            </li>
+            <li>
+              <span className="mr-1.5 font-bold text-brand">✓</span>
+              やりたいことだけ書いてもOK
+            </li>
+            <li>
+              <span className="mr-1.5 font-bold text-muted">−</span>
+              ツアー代金は当日、実施会社へ直接
+            </li>
+          </ul>
+          <Link
+            href="/reserve?type=tour"
+            className="mt-5 inline-block rounded-full border border-brand px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
+          >
+            ツアーの手配を依頼する
+          </Link>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {PLANS.map((plan) => {
-          const total = priceFor(plan, guests);
-          const pp = perPerson(plan, guests);
-          return (
-            <div
-              key={plan.id}
-              className={`relative rounded-2xl bg-white p-6 text-center ${
-                plan.popular
-                  ? "border-2 border-brand"
-                  : "border border-line"
-              }`}
-            >
-              {plan.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand px-3.5 py-1 text-xs font-bold text-white">
-                  いちばん人気
-                </span>
-              )}
-              <h3 className="text-lg font-bold">{plan.name}</h3>
-              <div className="mt-2 text-4xl font-bold text-brand">
-                ${total}
-                <small className="text-base font-medium text-muted"> /台</small>
-              </div>
-              <div className="mt-1 text-sm font-bold text-brand">
-                {guests}名なら1人あたり 約${pp}
-              </div>
-              <ul className="mt-3.5 inline-block text-left text-sm text-muted">
-                {plan.blurb.map((b) => (
-                  <li key={b} className="my-1.5">
-                    <span className="mr-1.5 font-bold text-brand">✓</span>
-                    {b}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-4 text-center text-sm text-muted">
-        ※ 5〜7名は各プラン +$20。繁忙期（GW・夏休み・年末年始等）は別料金です。詳しくはお問い合わせください。
+      <p className="mt-5 text-center text-sm text-muted">
+        提携先のツアー一覧や詳しい規定は{" "}
+        <Link href="/plans" className="font-bold text-brand hover:underline">
+          できること・料金のページ
+        </Link>{" "}
+        をご覧ください。8名以上のご依頼は別途お見積りとなります。
       </p>
     </section>
   );

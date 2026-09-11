@@ -9,7 +9,7 @@ import { SPOTS, spotThumb } from "@/lib/spots";
 export const metadata: Metadata = {
   title: "人気スポット",
   description:
-    "グアムの人気スポットを日本語ガイドがご案内。恋人岬・スペイン広場・アプガン砦・エメラルドバレー・スロウウォークコーヒー。完全貸切だから行きたい場所を自由に組み合わせられます。",
+    "グアムの人気スポット。恋人岬・スペイン広場・アプガン砦・エメラルドバレー・スロウウォークコーヒー。近くのレストランのご予約やアクティビティの手配も承ります。",
   alternates: { canonical: "/spots" },
   openGraph: {
     title: "人気スポット｜Mokaru Guam",
@@ -26,7 +26,7 @@ export default function SpotsPage() {
       <PageHero
         eyebrow="Popular spots"
         title="人気スポット"
-        lead="定番から穴場まで。完全貸切だから、あなたの「行きたい」を自由に組み合わせてプランを作れます。"
+        lead="定番から穴場まで、グアムの見どころをご紹介します。近くのレストランのご予約や、アクティビティの手配も承ります。"
       />
 
       <section className="mx-auto max-w-5xl px-5 py-12">

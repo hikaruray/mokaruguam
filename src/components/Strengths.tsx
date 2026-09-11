@@ -2,24 +2,24 @@ import { Eyebrow, SectionHeading, Sub } from "./Section";
 
 const STRENGTHS = [
   {
-    icon: "🚐",
-    title: "完全貸切",
-    body: "他のお客様との相乗りなし。家族・グループだけの気兼ねない時間を過ごせます。",
-  },
-  {
-    icon: "🗺️",
-    title: "自由なプラン",
-    body: "行きたいスポットを送るだけ。時間内で回れるようガイドが最適ルートをご提案。",
-  },
-  {
     icon: "🇯🇵",
-    title: "日本語ガイド",
-    body: "言葉の心配なし。写真撮影やおすすめ情報まで、日本語で丁寧にご案内します。",
+    title: "日本語で手配",
+    body: "お店や実施会社とのやり取りは当社が行います。英語でご連絡いただく必要はありません。",
+  },
+  {
+    icon: "📍",
+    title: "現地スタッフが知っている",
+    body: "グアム在住の日本人スタッフが手配します。満席のときは、代わりのお店もご提案できます。",
+  },
+  {
+    icon: "✈️",
+    title: "渡航前から",
+    body: "着いてから探す必要がありません。出発前に、人気店やアクティビティの予約を済ませておけます。",
   },
   {
     icon: "💰",
-    title: "人数追加もおトク",
-    body: "料金は1台あたり。人数が増えるほど1人あたりの負担が下がります。",
+    title: "取れなければ0円",
+    body: "レストランの手配料は1件 $10。お席をお取りできなかった場合、料金はいただきません。",
   },
 ];
 
@@ -27,9 +27,9 @@ export default function Strengths() {
   return (
     <section id="strength" className="mx-auto max-w-5xl px-5 py-16">
       <Eyebrow>Why Mokaru</Eyebrow>
-      <SectionHeading>「自分たちだけ」の時間を、まるごと。</SectionHeading>
+      <SectionHeading>予約の手間を、こちらへ。</SectionHeading>
       <Sub>
-        決まったコースに合わせるのではなく、あなたの「行きたい」に合わせる。だから満足度が高い。
+        人気店は英語での電話予約が必要なことも。その一手間を、グアムにいる日本人が代わりに引き受けます。
       </Sub>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STRENGTHS.map((s) => (

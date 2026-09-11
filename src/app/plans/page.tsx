@@ -3,155 +3,149 @@ import { OG_IMAGE } from "@/lib/images";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
-import { PLANS, EXTRA_GUEST_SURCHARGE, perPerson } from "@/lib/pricing";
+import { RESTAURANT_FEE } from "@/lib/pricing";
+import { PARTNERS } from "@/lib/partners";
 
 export const metadata: Metadata = {
-  title: "料金・プラン詳細",
+  title: "できること・料金",
   description:
-    "グアム完全貸切ガイドチャーターの料金・プラン。3時間$170／5時間$250／8時間$345／ワンデー$500（1台あたり）。5〜7名は+$20、繁忙期料金も掲載。人数が増えるほど1人あたりおトク。",
+    "グアムのレストラン予約代行は1件$10、お取りできなければ料金はいただきません。アクティビティ・ツアーの手配は当社へのお支払いなし。渡航前に日本語だけで手配が終わります。",
   alternates: { canonical: "/plans" },
   openGraph: {
-    title: "料金・プラン詳細｜Mokaru Guam",
+    title: "できること・料金｜Mokaru Guam",
     description:
-      "3時間$170〜。料金は1台あたり、人数が増えるほど1人あたりおトク。繁忙期料金も掲載。",
+      "レストラン予約代行は1件$10（取れなければ0円）。ツアーの手配は当社へのお支払いなし。",
     url: "/plans",
     type: "website",
     images: [OG_IMAGE],
   },
 };
 
-// What's included / not included — kept general and accurate.
-const INCLUDED = [
-  "日本語ガイド＋専用車（完全貸切／相乗りなし）",
-  "行きたいスポットに合わせたルートのご提案",
-  "道中の写真撮影・おすすめ情報のご案内",
-];
-const NOT_INCLUDED = [
-  "各施設の入場料・アクティビティ代",
-  "飲食代・お買い物代",
-  "ガイド指定時間を超える延長分（要相談）",
-];
-
 export default function PlansPage() {
   return (
     <PageShell>
       <PageHero
-        eyebrow="Pricing"
-        title="料金・プラン詳細"
-        lead="料金は1台あたり（1〜4名）。5〜7名は各プラン +$20。人数が増えるほど、1人あたりはおトクになります。"
+        eyebrow="What we do"
+        title="できること・料金"
+        lead="グアム在住の日本人スタッフが、お客様に代わってお店や実施会社とやり取りします。渡航前に、日本語だけで手配が終わります。"
       />
 
-      {/* Plan detail cards */}
+      {/* Restaurant arrangement */}
       <section className="mx-auto max-w-5xl px-5 py-12">
-        <div className="grid gap-5 sm:grid-cols-2">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={`rounded-2xl bg-white p-6 ${
-                plan.popular ? "border-2 border-brand" : "border border-line"
-              }`}
-            >
-              <div className="flex items-baseline justify-between">
-                <h2 className="text-xl font-bold">
-                  {plan.name}
-                  {plan.popular && (
-                    <span className="ml-2 rounded-full bg-brand px-2.5 py-0.5 align-middle text-xs font-bold text-white">
-                      いちばん人気
-                    </span>
-                  )}
-                </h2>
-                <span className="text-sm text-muted">{plan.hours}</span>
-              </div>
-              <div className="mt-2 text-3xl font-bold text-brand">
-                ${plan.base}
-                <small className="text-base font-medium text-muted"> /台（1〜4名）</small>
-              </div>
-              <p className="mt-1 text-sm font-bold text-brand">
-                4名なら1人あたり 約${perPerson(plan, 4)}／ 5名なら 約$
-                {perPerson(plan, 5)}
-              </p>
-              <ul className="mt-3 space-y-1 text-sm text-muted">
-                {plan.blurb.map((b) => (
-                  <li key={b}>
-                    <span className="mr-1.5 font-bold text-brand">✓</span>
-                    {b}
-                  </li>
-                ))}
-                <li>
-                  <span className="mr-1.5 font-bold text-brand">✓</span>
-                  5〜7名は +${EXTRA_GUEST_SURCHARGE}（例：${plan.base + EXTRA_GUEST_SURCHARGE}）
-                </li>
-              </ul>
-              <Link
-                href="/#booking"
-                className="mt-5 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark"
+        <div className="rounded-2xl border-2 border-brand bg-white p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-xl font-bold">レストランの予約代行</h2>
+            <div className="text-3xl font-bold text-brand">
+              ${RESTAURANT_FEE}
+              <small className="text-base font-medium text-muted"> /1件</small>
+            </div>
+          </div>
+          <p className="mt-2 text-sm text-muted">
+            ご希望のお店・日時・人数をお送りください。お店へのご予約を代行します。
+            <b className="text-ink">手配料は人数にかかわらず1件 ${RESTAURANT_FEE}</b>
+            です。
+          </p>
+          <ul className="mt-4 space-y-1.5 text-sm text-muted">
+            <li>
+              <span className="mr-1.5 font-bold text-brand">✓</span>
+              <b className="text-ink">お取りできなかった場合、料金はいただきません</b>
+              （カードのお預かりを解除します）
+            </li>
+            <li>
+              <span className="mr-1.5 font-bold text-brand">✓</span>
+              満席だった場合は、ご希望に応じて代わりのお店を1件までご提案します
+            </li>
+            <li>
+              <span className="mr-1.5 font-bold text-brand">✓</span>
+              英語でのやり取りは不要です。すべて日本語で承ります
+            </li>
+            <li>
+              <span className="mr-1.5 font-bold text-muted">−</span>
+              お食事代は含まれません（当日、お店へ直接お支払いください）
+            </li>
+          </ul>
+          <Link
+            href="/reserve?type=restaurant"
+            className="mt-5 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark"
+          >
+            レストランの予約を依頼する
+          </Link>
+        </div>
+      </section>
+
+      {/* Partner activities */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-5xl px-5 py-12">
+          <h2 className="text-lg font-bold">アクティビティ・ツアーの手配</h2>
+          <p className="mt-1 text-sm text-muted">
+            提携する実施会社のツアーを、お客様に代わって手配します。
+            <b className="text-ink">当社へのお支払いはありません。</b>
+            ツアー代金は当日、実施会社へ直接お支払いください。
+          </p>
+
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            {PARTNERS.map((p) => (
+              <div
+                key={p.id}
+                className="rounded-2xl border border-line bg-white p-6"
               >
-                このプランでリクエスト予約
+                <p className="text-xs font-bold text-brand">{p.company}（提携先）</p>
+                <h3 className="mt-1 text-lg font-bold">{p.activity}</h3>
+                <p className="mt-2 text-sm text-muted">
+                  所要 {p.duration} ／{" "}
+                  <b className="text-ink">{p.priceFrom}</b>
+                  <span className="block text-xs">（{p.priceNote}）</span>
+                </p>
+                <p className="mt-2 text-sm text-muted">{p.blurb}</p>
+                {/* 🔴 Our own form, never the operator's booking page: the
+                    commission is owed on bookings we send. */}
+                <Link
+                  href={`/reserve?type=tour&partner=${encodeURIComponent(p.company)}`}
+                  className="mt-4 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark"
+                >
+                  モカル経由で手配を依頼
+                </Link>
+                <p className="mt-2 text-xs text-muted">
+                  ※ 最新の料金は手配時にご案内します。
+                </p>
+              </div>
+            ))}
+
+            <div className="rounded-2xl border border-dashed border-line bg-sand p-6">
+              <h3 className="text-lg font-bold">ご希望のツアーはありますか？</h3>
+              <p className="mt-2 text-sm text-muted">
+                掲載のないツアーやアクティビティも、可能な範囲でお手配します。やりたいことをそのままお送りください（「シュノーケリング」などでも構いません）。
+              </p>
+              <Link
+                href="/reserve?type=tour"
+                className="mt-4 inline-block rounded-full border border-brand px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
+              >
+                やりたいことを相談する
               </Link>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Included / not included */}
-      <section className="bg-white">
-        <div className="mx-auto grid max-w-5xl gap-6 px-5 py-12 sm:grid-cols-2">
-          <div>
-            <h2 className="text-lg font-bold">含まれるもの</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted">
-              {INCLUDED.map((x) => (
-                <li key={x}>
-                  <span className="mr-1.5 font-bold text-brand">✓</span>
-                  {x}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold">含まれないもの</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted">
-              {NOT_INCLUDED.map((x) => (
-                <li key={x}>
-                  <span className="mr-1.5 font-bold text-muted">−</span>
-                  {x}
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </section>
 
-      {/* Peak-season table */}
-      <section className="mx-auto max-w-5xl px-5 py-12">
-        <h2 className="text-lg font-bold">繁忙期料金（1〜4名・1台あたり）</h2>
-        <p className="mt-1 text-sm text-muted">
-          繁忙期は GW・夏休み・シルバーウィーク・年末年始などが対象です。5〜7名は各プラン +${EXTRA_GUEST_SURCHARGE}。
-        </p>
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-sand text-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">プラン</th>
-                <th className="px-4 py-3 font-medium">時間</th>
-                <th className="px-4 py-3 font-medium">通常料金</th>
-                <th className="px-4 py-3 font-medium">繁忙期料金</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {PLANS.map((plan) => (
-                <tr key={plan.id}>
-                  <td className="px-4 py-3 font-medium">{plan.name}</td>
-                  <td className="px-4 py-3 text-muted">{plan.hours}</td>
-                  <td className="px-4 py-3">${plan.base}</td>
-                  <td className="px-4 py-3 font-bold text-brand">${plan.peak}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Disclaimer — summary. The governing copy is /legal (design §10-1). */}
+      <section className="mx-auto max-w-5xl px-5 py-10">
+        <div className="rounded-2xl border border-line bg-sand p-5 text-sm text-muted">
+          <p>
+            <b className="text-ink">手配サービスについて：</b>{" "}
+            当社は手配を代行する立場であり、ツアーの実施者ではありません。ツアーに関する契約は、お客様と実施会社との間に成立します。
+          </p>
+          <p className="mt-2 text-xs">
+            8名以上のご依頼は別途お見積りとなります。詳しい規定は{" "}
+            <Link href="/legal" className="font-bold text-brand hover:underline">
+              特定商取引法に基づく表記
+            </Link>{" "}
+            および{" "}
+            <Link href="/guide" className="font-bold text-brand hover:underline">
+              ご依頼の流れ・キャンセルについて
+            </Link>{" "}
+            をご覧ください。
+          </p>
         </div>
-        <p className="mt-3 text-xs text-muted">
-          ※ 繁忙期の対象期間は年により前後する場合があります。詳しくはお問い合わせください。
-        </p>
       </section>
 
       <BookingCta />
