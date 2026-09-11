@@ -131,8 +131,31 @@ export default async function AdminPage() {
                     </p>
                   </td>
                   <td className="px-4 py-3 text-slate-600">
-                    <p className="font-medium">{b.planName}</p>
+                    <p className="font-medium">{b.partnerName || b.planName}</p>
                     <p className="text-xs text-slate-400">希望：{b.preferredDate}</p>
+                    {/* 🔴 The answer the owner needs the moment the restaurant
+                        says no. Without it on screen the arrangement stops and
+                        turns into an email exchange — the wait that outlives
+                        the hold and sends the booking through /repay. */}
+                    {b.fallbackChoice && (
+                      <p
+                        className={`mt-1 text-xs font-medium ${
+                          b.fallbackChoice === "suggest"
+                            ? "text-amber-700"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        満席なら：
+                        {b.fallbackChoice === "suggest"
+                          ? "別の店を提案（1件まで）"
+                          : "キャンセル（請求しない）"}
+                      </p>
+                    )}
+                    {(b.budgetHint || b.cuisineHint) && (
+                      <p className="text-xs text-slate-500">
+                        {[b.budgetHint, b.cuisineHint].filter(Boolean).join("／")}
+                      </p>
+                    )}
                     {/* Where to drive on the day. Blank for bookings taken
                         before 2026-08-30, when the field did not exist. */}
                     {b.hotel && (

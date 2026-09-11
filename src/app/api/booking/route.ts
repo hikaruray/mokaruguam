@@ -33,6 +33,11 @@ export async function POST(request: Request) {
     requestType?: string;
     // The partner operator, or the restaurant (first choice).
     partnerName?: string;
+    // Restaurant only: what to do if that first choice is full, and the hints
+    // used to make an alternative proposal a good one.
+    fallbackChoice?: string;
+    budgetHint?: string;
+    cuisineHint?: string;
     name?: string;
     email?: string;
     phone?: string;
@@ -127,8 +132,56 @@ export async function POST(request: Request) {
     );
   }
 
+  // --- Gate 0b: a restaurant request must be arrangeable -----------------
+  //
+  // Two questions whose answers we cannot get later without stopping the work
+  // and emailing the guest — and that pause is the one that outlives a PayPal
+  // hold (design §6-4). Asking now costs a form field; asking later costs the
+  // hold, and the guest a trip through /repay.
+  //
+  // WHICH RESTAURANT: we are about to hold $10 for the act of getting a table.
+  // Not knowing where means we cannot start, and refunding is worse for
+  // everyone than refusing before any money moves.
+  //
+  // WHAT IF IT IS FULL: the terms allow exactly one alternative proposal, and
+  // whether the guest wants one at all changes what we do the moment we find
+  // out. A missing answer is not a neutral default either way — "cancel" gives
+  // up a booking they might have wanted, "suggest" spends their money on a
+  // restaurant they did not choose.
+  const partnerName = body.partnerName?.trim() ?? "";
+  const fallbackChoice =
+    body.fallbackChoice === "cancel" || body.fallbackChoice === "suggest"
+      ? body.fallbackChoice
+      : null;
+
+  if (requestType === "restaurant") {
+    if (!partnerName) {
+      return Response.json(
+        { error: "ご希望のお店（第1希望）をご入力ください。" },
+        { status: 400 },
+      );
+    }
+    if (fallbackChoice === null) {
+      return Response.json(
+        { error: "満席だった場合のご希望をお選びください。" },
+        { status: 400 },
+      );
+    }
+  }
+  // 🔴 Not required on a tour, and that asymmetry is deliberate. Arranging a
+  // partner activity moves no money, so an incomplete request costs one email
+  // to ask what they meant — while refusing it turns away a free enquiry on the
+  // strength of a form field. The gates get strict exactly where money does.
+
   const plan = PLANS.find((p) => p.id === planId);
-  const planName = plan ? plan.name : "（未選択）";
+  // The charter plans go away on 2026-10-01, so most requests from then on
+  // carry no plan at all. Naming the row by what it IS beats「（未選択）」,
+  // which is what the Admin list and every email would otherwise display.
+  const planName = plan
+    ? plan.name
+    : requestType === "restaurant"
+      ? "レストラン予約代行"
+      : "ツアー手配";
 
   // --- PayPal path: verify + authorize before saving --------------------
   let paymentFields: {
@@ -237,7 +290,10 @@ export async function POST(request: Request) {
       email,
       phone,
       requestType,
-      partnerName: body.partnerName?.trim() ?? "",
+      partnerName,
+      fallbackChoice,
+      budgetHint: body.budgetHint?.trim() ?? "",
+      cuisineHint: body.cuisineHint?.trim() ?? "",
       planId: planId ?? "",
       planName,
       preferredDate,
@@ -281,12 +337,41 @@ export async function POST(request: Request) {
     ``,
     `お名前:   ${name}`,
     `連絡先:   ${email} / ${phone}`,
-    `プラン:   ${planName}`,
+    `種類:     ${requestType === "restaurant" ? "レストラン予約代行" : "ツアー手配"}`,
+    // Only when an actual charter plan was chosen. Without the guard this
+    // repeats the line above word for word on every post-pivot request, since
+    // planName falls back to the name of the request type.
+    ...(plan ? [`プラン:   ${planName}`] : []),
+    ...(partnerName
+      ? [
+          `${requestType === "restaurant" ? "第1希望の店" : "提携先・ツアー"}: ${partnerName}`,
+        ]
+      : []),
+    // 🔴 The owner acts on this the moment the restaurant says no, so it has to
+    // be in the mail that arrives with the request — not only in the Admin
+    // screen they may not have open.
+    ...(requestType === "restaurant"
+      ? [
+          `満席の場合: ${
+            fallbackChoice === "suggest"
+              ? "別のお店を提案してほしい（提案は1件まで）"
+              : "キャンセル（料金は請求しない）"
+          }`,
+          ...(body.budgetHint?.trim()
+            ? [`ご予算の目安: ${body.budgetHint.trim()}`]
+            : []),
+          ...(body.cuisineHint?.trim()
+            ? [`お料理の種類: ${body.cuisineHint.trim()}`]
+            : []),
+        ]
+      : []),
     `希望日時: ${preferredDate}`,
     `ご宿泊先: ${hotel.trim()}`,
     `人数:     ${guests}名${guestBreakdown ? `（${guestBreakdown}）` : ""}`,
-    `行きたいスポット:`,
-    spots?.trim() || "（記入なし）",
+    // The wishlist field belonged to the charter, where the guest chose where
+    // the car went. The form stopped asking at stage 4; the column stays for
+    // the bookings that did answer, so print it only when there is an answer.
+    ...(spots?.trim() ? [``, `行きたいスポット:`, spots.trim()] : []),
     ``,
     `その他ご要望:`,
     notes?.trim() || "（なし）",

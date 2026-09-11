@@ -72,10 +72,21 @@ function check(ok: boolean, label: string, detail: string) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label} -> ${detail}`);
 }
 
+// Each request comes from its own address.
+//
+// The per-IP throttle allows five submissions a minute, and every call here
+// shares one instance — so once this file grew past five posts the later gates
+// started answering 429 and the assertions failed for a reason that had nothing
+// to do with what they were testing. Giving each call a distinct address takes
+// the throttle out of the way. It is therefore NOT exercised by this suite.
+let callNo = 0;
 const post = (url: string, body: unknown) =>
   new Request(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-forwarded-for": `203.0.113.${++callNo}`,
+    },
     body: JSON.stringify(body),
   });
 
@@ -107,11 +118,16 @@ for (const [label, requestType] of [
 
 console.log("\n--- Gate 1: a restaurant request needs the money held ---");
 
+// Complete in every other way — a named restaurant and an answer for a full
+// one — so the only thing missing is the money. Gate 0b sits in front of this
+// one and would otherwise answer first, and a 400 here would look like gate 1
+// working when it had never run.
 const noHold = await bookingPost(
   post("http://localhost/api/booking", {
     ...baseRequest,
     requestType: "restaurant",
     partnerName: "Proa",
+    fallbackChoice: "cancel",
   }),
 );
 // 402, not 503: PayPal is configured here as it is in production, so the
@@ -129,10 +145,48 @@ check(
   JSON.stringify(noHoldBody).slice(0, 90),
 );
 
+console.log("\n--- Gate 0b: a restaurant request must be arrangeable ---");
+
+// Both answers are impossible to get later without stopping the arrangement and
+// emailing the guest — and that pause is what outlives a PayPal hold. Neither
+// has a safe default: "cancel" gives up a booking they may have wanted,
+// "suggest" spends their money somewhere they did not choose.
+const noShop = await bookingPost(
+  post("http://localhost/api/booking", {
+    ...baseRequest,
+    requestType: "restaurant",
+    fallbackChoice: "cancel",
+  }),
+);
+check(
+  noShop.status === 400,
+  "restaurant with no restaurant named",
+  `HTTP ${noShop.status} (expected 400)`,
+);
+
+for (const [label, fallbackChoice] of [
+  ["no answer at all", undefined],
+  ["an unknown answer", "maybe"],
+] as [string, unknown][]) {
+  const res = await bookingPost(
+    post("http://localhost/api/booking", {
+      ...baseRequest,
+      requestType: "restaurant",
+      partnerName: "Proa",
+      fallbackChoice,
+    }),
+  );
+  check(
+    res.status === 400,
+    `restaurant, full-restaurant question: ${label}`,
+    `HTTP ${res.status} (expected 400)`,
+  );
+}
+
 console.log("\n--- Nothing refused was written ---");
 
-// The point of gate 1 is not the status code, it is that no booking exists to
-// go and work on afterwards. Count the rows.
+// The point of the gates is not the status code, it is that no booking exists
+// to go and work on afterwards. Count the rows, after every refusal above.
 const rows = await listBookings();
 check(
   rows.length === 0,
@@ -166,6 +220,34 @@ check(
   "and with no payment attached",
   `${after[0]?.payment} (expected "none")`,
 );
+check(
+  after[0]?.partnerName === "Joe's Jet Ski",
+  "and with the partner we are to arrange with",
+  `"${after[0]?.partnerName}"`,
+);
+
+// 🔴 The asymmetry in gate 0b, asserted from the free side. A tour moves no
+// money, so an incomplete request costs one email to ask what they meant —
+// refusing it would turn away a free enquiry on the strength of a form field.
+// The gates are strict exactly where money is.
+const tourNoPartner = await bookingPost(
+  post("http://localhost/api/booking", { ...baseRequest, requestType: "tour" }),
+);
+check(
+  tourNoPartner.status === 200,
+  "a tour with nothing named is still accepted",
+  `HTTP ${tourNoPartner.status} (expected 200)`,
+);
+
+// A restaurant request that answers both questions and holds no money is
+// refused by gate 1, not saved — already asserted above. The complete
+// restaurant path (with a hold) cannot run here: it needs PayPal.
+const saved = await listBookings();
+check(
+  saved.every((b) => b.requestType === "tour"),
+  "and nothing but tours reached the store",
+  `${saved.length} rows, all tours`,
+);
 
 // The tour above was dated 2026-10-20 on purpose. The charter cutoff rejected
 // anything after 2026-09-30 without looking at the request type, and every date
@@ -176,27 +258,38 @@ check(
 console.log("\n--- The form sends what the server demands ---");
 
 // check:gates calls the routes directly and supplies requestType by hand, so it
-// cannot notice that the browser does not. That gap is real right now: stage 4
-// has not landed, readForm() never sets requestType, and every real submission
-// is refused. Asserting it here keeps the fact visible instead of letting a
-// green test suite imply the form works.
+// cannot notice whether the browser does. Until stage 4 landed it did not, and
+// every real submission was refused by gate 0 while this suite reported green —
+// which is why the fact is asserted from the source rather than assumed.
 const formSource = await readFile(
   join(import.meta.dirname, "..", "src", "components", "BookingForm.tsx"),
   "utf8",
 );
-const formSendsType = /requestType:\s*(String\(|fd\.get|requestType\b)/.test(formSource);
 check(
-  !formSendsType,
-  "BookingForm still does NOT set requestType (stage 4 outstanding)",
-  formSendsType
-    ? "it does now — delete this assertion and assert the opposite"
-    : "confirmed: this branch cannot be merged until stage 4 lands",
+  /requestType:\s*requestType as RequestType/.test(formSource),
+  "BookingForm sends requestType (stage 4 landed)",
+  "readForm() fills it from the chosen option",
+);
+// 🔴 The one way stage 4 could be "finished" and still be a money bug: a
+// default. "tour" makes a paid restaurant arrangement free; "restaurant"
+// charges $10 for something given away. The state must start null.
+check(
+  /useState<RequestType \| null>\(null\)/.test(formSource),
+  "and starts with no kind pre-selected",
+  "requestType begins as null — neither path is a default",
+);
+// PayPal on the tour path contradicts「お客様のお支払いはありません」the moment
+// it renders, even briefly (design §6-5).
+check(
+  /const takesPayment = isRestaurant && PAYPAL_ENABLED/.test(formSource),
+  "and only offers payment on the restaurant path",
+  "takesPayment requires isRestaurant",
 );
 
 console.log("\n--- Gate 2: confirming needs a live hold, for restaurants only ---");
 
 const { POST: adminPost } = await import("@/app/api/admin/booking/route");
-const { addBooking, setBookingPayment } = await import("@/lib/store");
+const { addBooking, setBookingPayment, getBooking } = await import("@/lib/store");
 
 process.env.ADMIN_PASSWORD = "gate-check";
 
@@ -219,6 +312,9 @@ const seed = async (over: Record<string, unknown>) =>
     phone: "090-0000-0000",
     requestType: null,
     partnerName: "",
+    fallbackChoice: null,
+    budgetHint: "",
+    cuisineHint: "",
     planId: "middle",
     planName: "5時間プラン",
     preferredDate: "2026-10-20 18:00",
@@ -263,6 +359,36 @@ check(
   !(r5body.error ?? "").includes("再度のお手続き"),
   "and does not send an already-charged guest to pay again",
   `"${(r5body.error ?? "").slice(0, 40)}…"`,
+);
+
+console.log("\n--- What the restaurant path has to remember ---");
+
+// The write side of gate 0b. The API refuses a request missing either answer —
+// asserted above — but a field that is read and then dropped on the way to the
+// store fails silently: the booking saves, the owner sees no answer, and the
+// arrangement stops to ask by email. That is the pause the hold does not
+// survive.
+//
+// Exercised through the store rather than the API because a complete restaurant
+// request needs a real PayPal hold, which this harness cannot produce.
+const withHints = await seed({
+  requestType: "restaurant",
+  partnerName: "Proa",
+  fallbackChoice: "suggest",
+  budgetHint: "1人 $50 くらい",
+  cuisineHint: "シーフード",
+});
+const readBack = await getBooking(withHints.id);
+check(
+  readBack?.fallbackChoice === "suggest",
+  "what to do about a full restaurant survives the round trip",
+  `${readBack?.fallbackChoice}`,
+);
+check(
+  readBack?.budgetHint === "1人 $50 くらい" &&
+    readBack?.cuisineHint === "シーフード",
+  "and so do the hints that make the one proposal a good one",
+  `${readBack?.budgetHint} / ${readBack?.cuisineHint}`,
 );
 
 console.log("\n--- A confirmed tour is never told it was charged ---");
@@ -394,7 +520,7 @@ check(
 
 console.log("\n--- A replacement hold never loses the one it replaces ---");
 
-const { setBookingAuthorization, getBooking } = await import("@/lib/store");
+const { setBookingAuthorization } = await import("@/lib/store");
 
 await setBookingAuthorization(deadHold.id, {
   paypalOrderId: "ORDER-2",

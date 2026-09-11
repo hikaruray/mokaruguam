@@ -42,6 +42,15 @@ export type PaymentStatus =
 // value means.
 export type RequestType = "tour" | "restaurant";
 
+// What to do when the first-choice restaurant turns out to be full. Asked on
+// the form and required there, because the alternative is emailing the guest in
+// the middle of the arrangement and waiting for a reply — and that wait is
+// exactly what outlives a PayPal hold and sends the booking down /repay.
+//   cancel  — stop there, charge nothing
+//   suggest — propose somewhere else (one proposal, per the terms)
+// null on tours and on every pre-pivot row, where the question does not arise.
+export type FallbackChoice = "cancel" | "suggest";
+
 export interface BookingRequest {
   id: string;
   name: string;
@@ -53,6 +62,13 @@ export interface BookingRequest {
   // (first choice) for a table. Empty on pre-pivot charters, which we ran
   // ourselves and so had nobody to name.
   partnerName: string;
+  // Restaurant only. See FallbackChoice — null means the question was never
+  // asked (a tour, or a booking taken before the pivot).
+  fallbackChoice: FallbackChoice | null;
+  // Optional hints, used only to make that one alternative proposal a good one.
+  // Empty when not given; there is nothing to infer from a blank.
+  budgetHint: string;
+  cuisineHint: string;
   planId: string;       // e.g. "middle" (see lib/pricing.ts)
   planName: string;     // human label at time of request
   preferredDate: string; // free-text preferred date/time (e.g. "7/20 午後")
@@ -101,6 +117,12 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
         ? row.request_type
         : null,
     partnerName: String(row.partner_name ?? ""),
+    fallbackChoice:
+      row.fallback_choice === "cancel" || row.fallback_choice === "suggest"
+        ? row.fallback_choice
+        : null,
+    budgetHint: String(row.budget_hint ?? ""),
+    cuisineHint: String(row.cuisine_hint ?? ""),
     planId: String(row.plan_id ?? ""),
     planName: String(row.plan_name ?? ""),
     preferredDate: String(row.preferred_date ?? ""),
@@ -255,6 +277,9 @@ export async function addBooking(
         // correctly afterwards.
         request_type: data.requestType,
         partner_name: data.partnerName,
+        fallback_choice: data.fallbackChoice,
+        budget_hint: data.budgetHint,
+        cuisine_hint: data.cuisineHint,
         plan_id: data.planId,
         plan_name: data.planName,
         preferred_date: data.preferredDate,
@@ -280,6 +305,9 @@ export async function addBooking(
     phone: data.phone,
     requestType: data.requestType,
     partnerName: data.partnerName,
+    fallbackChoice: data.fallbackChoice,
+    budgetHint: data.budgetHint,
+    cuisineHint: data.cuisineHint,
     planId: data.planId,
     planName: data.planName,
     preferredDate: data.preferredDate,
