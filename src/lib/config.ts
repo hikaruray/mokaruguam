@@ -64,23 +64,32 @@ export const FROM_EMAIL = "Mokaru Guam <tour@mokaruguam.com>";
 
 // LINE official account URL.
 //
-// 2026-09-11: LINE is being removed as a customer-facing channel (the pivot runs
-// on email only). The constant STAYS because the privacy policy still describes
+// 2026-09-11: LINE was removed as a customer-facing channel (the pivot runs on
+// email only). The constant STAYS because the privacy policy still describes
 // how past LINE enquiries are handled — the account continues to exist, so
-// deleting the clause would be less accurate than keeping it. What is removed is
-// every CTA, button and email line that invites a new enquiry through it.
-// Removed so far: Header, Footer, MobileCta, Booking, BookingCta. Do not
-// re-add it to any of those.
+// deleting that clause would be less accurate than keeping it. What was removed
+// is every CTA, button and email line inviting a NEW enquiry through it.
 //
-// 🔴 STILL PRESENT, and each one is scheduled work — not an oversight to be
-// "tidied up" by deleting the constant:
-//   booking-emails.ts:32,56,114   confirmed / declined / cancelled emails
-//   api/booking/route.ts:252      the request acknowledgement
-//   cancel/[token]/page.tsx:36,80,120
-//   reserve/page.tsx, BookingForm.tsx
-// Email bodies and the dynamic /cancel route never appear in the built HTML,
-// so grepping the build output reports "0 occurrences" while a guest is still
-// being pointed at LINE. These have to be grepped in the SOURCE.
+// ✅ As of 2026-09-12 the removal is complete. The only remaining reference in
+// the application is the privacy policy clause above, which is deliberate
+// (design §10-3). Legacy articles under lib/legacy-* still contain LINE links
+// in their body text; those are stage 6 and are not this constant's business.
+//
+// 🔴 DO NOT re-add a LINE call to action anywhere.
+//
+// 🔴 AND DO NOT TRUST A LIST OF LINE NUMBERS IN THIS COMMENT.
+// There used to be one here — file paths with line numbers, kept as the work
+// list for the removal. By the time anyone read it, it named a file that had
+// been clean for a day and pointed at lines that had all moved. A list like
+// that produces both failures at once: work believed outstanding that is
+// finished, and work still outstanding that is not on the list. If you need to
+// know where LINE appears, ask the code:
+//
+//   grep -rn "LINE_URL\|lin\.ee" src/
+//
+// 🔴 Grep the SOURCE, not the build output. Email bodies and the dynamic
+// /cancel route never appear in the rendered HTML, so a build-output grep
+// answers "0 occurrences" while a guest is still being pointed at LINE.
 export const LINE_URL = "https://lin.ee/OfniH2h";
 
 // VELTRA listing URL.

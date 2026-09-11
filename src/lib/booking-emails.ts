@@ -5,7 +5,12 @@
 // by lib/email.ts. Tone: reassuring and unambiguous about money — the customer
 // should always know exactly whether they were charged / refunded.
 
-import { requestTypeOf, chargedAmount, type BookingRequest } from "./store";
+import {
+  requestTypeOf,
+  chargedAmount,
+  refLabel,
+  type BookingRequest,
+} from "./store";
 import { CONTACT_EMAIL } from "./config";
 
 // Booking confirmed (予約確定 → payment captured for a restaurant, or the
@@ -59,7 +64,7 @@ export function confirmedEmail(
       closingLine,
       `ご不明な点や当日のご連絡は ${CONTACT_EMAIL} までご返信ください。`,
       ``,
-      `受付ID: ${b.id}`,
+      `受付番号: ${refLabel(b)}`,
       `— Mokaru Guam`,
     ].join("\n"),
   };
@@ -94,7 +99,7 @@ export function reauthorizedEmail(
       `2. お席が取れた時点で手配料のお支払いが確定し、確定のご連絡をお送りします。`,
       `3. お席をご用意できなかった場合は、仮押さえを解除します。ご請求は発生しません。`,
       ``,
-      `受付ID: ${b.id}`,
+      `受付番号: ${refLabel(b)}`,
       `— Mokaru Guam`,
     ].join("\n"),
   };
@@ -121,7 +126,7 @@ export function reauthorizedOwnerEmail(
       `お席が取れたら管理画面で「確定」を押すと手配料が確定します。`,
       `取れなかった場合は「お断り」で仮押さえを解除してください。`,
       ``,
-      `受付ID: ${b.id}`,
+      `受付番号: ${refLabel(b)}`,
     ].join("\n"),
   };
 }
@@ -174,7 +179,7 @@ export function declinedEmail(b: BookingRequest): {
       `${isLegacyCharter ? "プラン:    " : "お手配先:  "} ${b.partnerName || b.planName}`,
       `ご希望日時: ${b.preferredDate}`,
       ...(b.hotel ? [`ご滞在先:   ${b.hotel}`] : []),
-      `受付ID:     ${b.id}`,
+      `受付番号:   ${refLabel(b)}`,
       `— Mokaru Guam`,
     ].join("\n"),
   };
@@ -235,7 +240,7 @@ export function cancelledEmail(
       `ご希望日時: ${b.preferredDate}`,
       ...(b.hotel ? [`ご宿泊先:   ${b.hotel}`] : []),
       `人数:       ${b.guests}名`,
-      `受付ID:     ${b.id}`,
+      `受付番号:   ${refLabel(b)}`,
       ``,
       ...moneyLines,
       ``,

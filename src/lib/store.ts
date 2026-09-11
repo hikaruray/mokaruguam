@@ -53,6 +53,18 @@ export type FallbackChoice = "cancel" | "suggest";
 
 export interface BookingRequest {
   id: string;
+  // Reference number assigned by the DATABASE (an identity column), shown to
+  // guests, partners and restaurants as #0012.
+  //
+  // 🔴 Always null in local JSON mode — only Postgres assigns it — so every
+  // display of it needs a fallback. refLabel() below is that fallback; use it
+  // rather than formatting refNo at each call site.
+  //
+  // It exists so a partner can search their inbox for [Mokaru] and we can then
+  // point at one booking at a time when reconciling the commission at month
+  // end. The column was added and then nothing read it for a day, which is how
+  // a table ends up written but never queried.
+  refNo: number | null;
   name: string;
   email: string;
   phone: string;
@@ -105,6 +117,7 @@ export interface BookingRequest {
 function rowToBooking(row: Record<string, unknown>): BookingRequest {
   return {
     id: String(row.id),
+    refNo: row.ref_no != null ? Number(row.ref_no) : null,
     name: String(row.name),
     email: String(row.email),
     phone: String(row.phone ?? ""),
@@ -166,6 +179,23 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
  */
 export function requestTypeOf(booking: BookingRequest): RequestType {
   return booking.requestType ?? "tour";
+}
+
+/**
+ * How to name this booking to a human — guest, partner or restaurant.
+ *
+ * Prefers the database's reference number (#0012), and falls back to the row id
+ * where there is none. There is always none in local JSON mode, and there is
+ * none on the four rows taken before the column existed, so the fallback is not
+ * defensive padding: it is the normal case in development.
+ *
+ * One function so every email, screen and subject line says the same thing. The
+ * number is the handle a partner searches their inbox by, and two formats would
+ * make half the bookings unfindable.
+ */
+export function refLabel(booking: BookingRequest): string {
+  if (booking.refNo == null) return booking.id;
+  return `#${String(booking.refNo).padStart(4, "0")}`;
 }
 
 /**
@@ -238,6 +268,8 @@ export async function addBooking(
   data: Omit<
     BookingRequest,
     | "id"
+    // Assigned by the database, never by a caller — see the field's note.
+    | "refNo"
     | "status"
     | "payment"
     | "amount"
@@ -316,6 +348,9 @@ export async function addBooking(
     spots: data.spots,
     notes: data.notes,
     id: localId(),
+    // No identity column in the JSON fallback. Every display of refNo has to
+    // cope with this — see refLabel().
+    refNo: null,
     status: "pending",
     payment,
     amount,

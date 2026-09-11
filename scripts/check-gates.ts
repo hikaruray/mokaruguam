@@ -506,6 +506,25 @@ check(
   `${readBack?.budgetHint} / ${readBack?.cuisineHint}`,
 );
 
+console.log("\n--- A booking has one name, whether or not the DB numbered it ---");
+
+// refNo comes from a Postgres identity column, so it is ALWAYS null here and
+// always null in local development. A display that assumed otherwise would look
+// perfect on Vercel and print「#NaN」or「#0null」everywhere else — and the place
+// it is printed is the handle a partner quotes back to us.
+const { refLabel } = await import("@/lib/store");
+const unnumbered = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski" });
+check(
+  unnumbered.refNo === null && refLabel(unnumbered) === unnumbered.id,
+  "with no number, a booking is named by its id",
+  refLabel(unnumbered),
+);
+check(
+  refLabel({ ...unnumbered, refNo: 12 }) === "#0012",
+  "and with one, as #0012",
+  refLabel({ ...unnumbered, refNo: 12 }),
+);
+
 console.log("\n--- A confirmed tour is never told it was charged ---");
 
 // chargedAmount() used to recompute from the plan when amount was null, so a

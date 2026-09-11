@@ -1,6 +1,7 @@
 import {
   listBookings,
   chargedAmount,
+  refLabel,
   type BookingStatus,
   type PaymentStatus,
 } from "@/lib/store";
@@ -125,6 +126,10 @@ export default async function AdminPage() {
                 <tr key={b.id} className="align-top hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-900">{b.name}</p>
+                    {/* The handle a partner or restaurant will quote back. */}
+                    <p className="font-mono text-xs text-slate-500">
+                      {refLabel(b)}
+                    </p>
                     <p className="text-xs text-slate-400">{b.guests}名</p>
                     <p className="mt-1 text-xs text-slate-400">
                       {new Date(b.createdAt).toLocaleString("ja-JP")}

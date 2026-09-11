@@ -5,7 +5,7 @@ import {
   OWNER_COPY_EMAIL,
   SITE_URL,
 } from "@/lib/config";
-import { addBooking } from "@/lib/store";
+import { addBooking, refLabel } from "@/lib/store";
 import { PLANS, amountForRequest } from "@/lib/pricing";
 import {
   authorizeOrder,
@@ -396,7 +396,7 @@ export async function POST(request: Request) {
     authorized
       ? `お支払い: PayPalで $${amountStr} を仮押さえ済み（確定時に自動決済／お断り時に自動解除）`
       : `お支払い: 未設定（リクエストのみ）`,
-    `受付ID: ${saved.id}`,
+    `受付番号: ${refLabel(saved)}`,
     `— Mokaru Guam サイトのリクエストフォームより`,
   ].join("\n");
 
@@ -478,7 +478,7 @@ export async function POST(request: Request) {
     ...cancelLines,
     ``,
     `ご不明な点は ${CONTACT_EMAIL} までご返信ください。`,
-    `受付ID: ${saved.id}`,
+    `受付番号: ${refLabel(saved)}`,
     `— Mokaru Guam`,
   ].join("\n");
 
