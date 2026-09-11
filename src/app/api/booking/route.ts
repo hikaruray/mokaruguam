@@ -31,6 +31,8 @@ export async function POST(request: Request) {
   let body: {
     // "tour" | "restaurant". Never defaulted here — see amountForRequest.
     requestType?: string;
+    // The partner operator, or the restaurant (first choice).
+    partnerName?: string;
     name?: string;
     email?: string;
     phone?: string;
@@ -235,6 +237,7 @@ export async function POST(request: Request) {
       email,
       phone,
       requestType,
+      partnerName: body.partnerName?.trim() ?? "",
       planId: planId ?? "",
       planName,
       preferredDate,

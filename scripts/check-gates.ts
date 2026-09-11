@@ -17,9 +17,15 @@
 //
 // The gates, in the order a request meets them:
 //   0  no request type            -> 400, nothing saved
-//   1  restaurant with no hold    -> 402 (or 503 when PayPal is switched off)
-//   2  confirming such a booking  -> 409
-//   3  a failed capture           -> never leaves the booking "confirmed"
+//   1  restaurant with no hold    -> 402, nothing saved
+//   2  confirming such a booking  -> 409, and 409 again if already captured
+//      ...but a TOUR with no hold must still confirm. Gate 2 written one word
+//      wider stops every confirmation from 2026-10-01 onwards.
+//
+// Gate 3 — a failed capture never leaves the booking "confirmed" — is not
+// asserted here. It needs PayPal to fail mid-call, which this harness cannot
+// produce without reaching the network. Say so rather than let the list imply
+// coverage that does not exist.
 
 // --- Blank the environment BEFORE importing anything from the project ------
 for (const key of [
@@ -31,10 +37,25 @@ for (const key of [
 ]) {
   delete process.env[key];
 }
+
+// PayPal is then switched back on with credentials that are obviously not
+// credentials. Deleting them entirely made isPaypalConfigured() false, which
+// sent every restaurant case down the "we cannot take this right now" branch —
+// so the 402 and 409 the design actually specifies were never executed once,
+// while the suite reported all green. In production PayPal IS configured, so
+// those are the paths that matter.
+//
+// Safe because no path asserted below makes a PayPal call: gate 1 returns
+// before authorizeOrder, gate 2 returns before captureAuthorization. These
+// strings could not authenticate against anything if one ever did.
+process.env.PAYPAL_CLIENT_ID = "not-a-real-client-id";
+process.env.PAYPAL_CLIENT_SECRET = "not-a-real-secret";
+process.env.PAYPAL_ENV = "sandbox";
 // Keep writes inside the scratch directory rather than the repo's own data dir.
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
 
 import { mkdtempSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -88,12 +109,13 @@ const noHold = await bookingPost(
     partnerName: "Proa",
   }),
 );
-// PayPal is switched off in this process, so the honest answer is "we cannot
-// take this right now", not "your card failed".
+// 402, not 503: PayPal is configured here as it is in production, so the
+// refusal is about this request having no hold — the condition the design
+// specifies. Nothing was saved either; that is asserted by row count below.
 check(
-  noHold.status === 503,
-  "restaurant, no hold, PayPal off",
-  `HTTP ${noHold.status} (expected 503)`,
+  noHold.status === 402,
+  "restaurant, no hold",
+  `HTTP ${noHold.status} (expected 402)`,
 );
 const noHoldBody = (await noHold.json()) as { error?: string; ok?: boolean };
 check(
@@ -140,15 +162,116 @@ check(
   `${after[0]?.payment} (expected "none")`,
 );
 
-console.log("\n--- A date in October is accepted ---");
+// The tour above was dated 2026-10-20 on purpose. The charter cutoff rejected
+// anything after 2026-09-30 without looking at the request type, and every date
+// the new business handles is after it — so its removal is load-bearing, not
+// tidying. If this file ever starts failing at the assertion above with a
+// message about ガイドツアー, the cutoff has come back.
 
-// LAST_TOUR_DATE rejects anything after 2026-09-30 without looking at the
-// request type. Every booking from 2026-10-01 onwards is after it, so if this
-// ever starts failing, the new business is refusing all of its own traffic.
+console.log("\n--- The form sends what the server demands ---");
+
+// check:gates calls the routes directly and supplies requestType by hand, so it
+// cannot notice that the browser does not. That gap is real right now: stage 4
+// has not landed, readForm() never sets requestType, and every real submission
+// is refused. Asserting it here keeps the fact visible instead of letting a
+// green test suite imply the form works.
+const formSource = await readFile(
+  join(import.meta.dirname, "..", "src", "components", "BookingForm.tsx"),
+  "utf8",
+);
+const formSendsType = /requestType:\s*(String\(|fd\.get|requestType\b)/.test(formSource);
 check(
-  tour.status === 200,
-  "2026-10-20 not blocked by the charter cutoff",
-  `HTTP ${tour.status} — remove LAST_TOUR_DATE at merge (design §7-2)`,
+  !formSendsType,
+  "BookingForm still does NOT set requestType (stage 4 outstanding)",
+  formSendsType
+    ? "it does now — delete this assertion and assert the opposite"
+    : "confirmed: this branch cannot be merged until stage 4 lands",
+);
+
+console.log("\n--- Gate 2: confirming needs a live hold, for restaurants only ---");
+
+const { POST: adminPost } = await import("@/app/api/admin/booking/route");
+const { addBooking, setBookingPayment } = await import("@/lib/store");
+
+process.env.ADMIN_PASSWORD = "gate-check";
+
+const admin = (id: string, action: string) =>
+  adminPost(
+    new Request("http://localhost/api/admin/booking", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie: "admin=gate-check",
+      },
+      body: JSON.stringify({ id, action }),
+    }),
+  );
+
+const seed = async (over: Record<string, unknown>) =>
+  addBooking({
+    name: "検証",
+    email: "gate-check@example.invalid",
+    phone: "090-0000-0000",
+    requestType: null,
+    partnerName: "",
+    planId: "middle",
+    planName: "5時間プラン",
+    preferredDate: "2026-10-20 18:00",
+    hotel: "未定",
+    guests: 2,
+    spots: "",
+    notes: "",
+    ...over,
+  } as Parameters<typeof addBooking>[0]);
+
+// A restaurant with no hold must not be confirmable — this is the case that
+// used to email the guest 「お支払い: $0.00（決済確定済み）」.
+const restNoHold = await seed({ requestType: "restaurant", partnerName: "Proa" });
+const r1 = await admin(restNoHold.id, "confirm");
+check(r1.status === 409, "restaurant, no hold, confirm", `HTTP ${r1.status} (expected 409)`);
+
+// 🔴 The mirror image, and the reason gate 2 is restricted to restaurants:
+// arranging a partner tour never touches PayPal, so payment is "none" by
+// design. A gate written one word wider stops every confirmation from
+// 2026-10-01 onwards. This assertion is the regression test for that.
+const tourRow = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski" });
+const r2 = await admin(tourRow.id, "confirm");
+check(r2.status === 200, "tour, no hold, confirm (gate 2 must NOT catch it)", `HTTP ${r2.status} (expected 200)`);
+
+// Pre-pivot charter rows are request-only too and must stay operable.
+const legacyRow = await seed({ requestType: null });
+const r3 = await admin(legacyRow.id, "confirm");
+check(r3.status === 200, "pre-pivot row, confirm", `HTTP ${r3.status} (expected 200)`);
+
+const legacyDecline = await seed({ requestType: null });
+const r4 = await admin(legacyDecline.id, "decline");
+check(r4.status === 200, "pre-pivot row, decline", `HTTP ${r4.status} (expected 200)`);
+
+// A charged row whose status never moved: the money is taken. Confirming must
+// refuse, and must NOT tell the owner to send the guest for another payment.
+const stuck = await seed({ requestType: "restaurant", partnerName: "Proa" });
+await setBookingPayment(stuck.id, { payment: "captured", paypalCaptureId: "CAP-TEST" });
+const r5 = await admin(stuck.id, "confirm");
+const r5body = (await r5.json()) as { error?: string };
+check(r5.status === 409, "restaurant, already captured, confirm", `HTTP ${r5.status} (expected 409)`);
+check(
+  !(r5body.error ?? "").includes("再度のお手続き"),
+  "and does not send an already-charged guest to pay again",
+  `"${(r5body.error ?? "").slice(0, 40)}…"`,
+);
+
+console.log("\n--- A confirmed tour is never told it was charged ---");
+
+// chargedAmount() used to recompute from the plan when amount was null, so a
+// free arrangement was confirmed with 「お支払い: $300.00（決済確定済み）」.
+const { confirmedEmail } = await import("@/lib/booking-emails");
+const { chargedAmount } = await import("@/lib/store");
+const confirmedTour = { ...tourRow, requestType: "tour" as const, amount: null };
+const mail = confirmedEmail(confirmedTour, chargedAmount(confirmedTour));
+check(
+  !/\$\d/.test(mail.text),
+  "tour confirmation states no dollar figure",
+  mail.text.split("\n").find((l) => l.includes("お支払い")) ?? "(no payment line)",
 );
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);

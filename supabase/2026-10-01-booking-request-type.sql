@@ -83,15 +83,67 @@ alter table public.bookings
   add column if not exists ref_no integer generated always as identity;
 
 -- ---------------------------------------------------------------------------
--- 4. Constraints
+-- 4. Re-authorisation
+-- ---------------------------------------------------------------------------
+-- A PayPal hold is guaranteed for about three days, and the fee is captured
+-- when the restaurant confirms the table — not on the day of the meal. The
+-- usual request settles well inside three days. One branch does not: the first
+-- choice is full, we propose somewhere else, and the guest takes a few days to
+-- answer. By then the hold is dead.
+--
+-- The owner's decision (2026-09-11) is that we re-authorise FIRST and only then
+-- book the table, so we are never left having done the work with no way to
+-- charge for it. That requires two things the original six columns did not
+-- provide.
+--
+-- One: somewhere to say the hold died. `payment` has a CHECK listing
+-- none/authorized/captured/voided/refunded, and none of them mean "expired".
+-- Leaving such a row as `authorized` makes it indistinguishable from a live
+-- hold: the admin screen shows money waiting, and the confirm gate tries to
+-- capture it and gets a 502 every time.
+-- The old constraint is dropped BY DISCOVERY, not by guessing its name. It was
+-- written inline on the column in the original CREATE TABLE, so Postgres named
+-- it — almost certainly bookings_payment_check, but "almost certainly" is not
+-- good enough here: if the real name differs, `drop constraint if exists` would
+-- quietly do nothing, the old constraint would survive alongside the new one,
+-- and every write of 'expired' would be rejected by a rule nobody could see.
+do $$
+declare
+  c record;
+begin
+  for c in
+    select conname
+      from pg_constraint
+     where conrelid = 'public.bookings'::regclass
+       and contype = 'c'
+       and pg_get_constraintdef(oid) ilike '%payment%'
+  loop
+    execute format('alter table public.bookings drop constraint %I', c.conname);
+    raise notice 'dropped payment check: %', c.conname;
+  end loop;
+
+  alter table public.bookings
+    add constraint bookings_payment_check
+    check (payment in ('none','authorized','captured','voided','refunded','expired'));
+end $$;
+
+-- Two: somewhere to keep the authorisation we are replacing. paypal_authorization_id
+-- holds exactly one id, so re-authorising would overwrite the old one and leave
+-- no way to answer "which hold was this booking actually charged on" when
+-- reconciling with PayPal. Append, never overwrite.
+alter table public.bookings
+  add column if not exists previous_authorization_ids text[] not null default '{}';
+
+-- ---------------------------------------------------------------------------
+-- 5. Constraints
 -- ---------------------------------------------------------------------------
 -- Postgres has no "add constraint if not exists", so each one is guarded to
 -- keep this file safe to re-run.
 --
 -- NOTE ON WHAT IS *NOT* HERE: the design doc said a CHECK on plan_id would
 -- have to be rebuilt to let restaurant rows through. schema.sql shows no CHECK
--- on plan_id — only on `status` and `payment`, neither of which the pivot
--- changes.
+-- on plan_id — only on `status`, which the pivot does not change, and on
+-- `payment`, which section 4 above rebuilds to admit 'expired'.
 --
 -- 🔴 BUT schema.sql IS THE ORIGINAL CREATE TABLE, NOT THE LIVE ONE. It is
 -- missing `hotel`, which production has had since 2026-09-03. So the sentence
@@ -141,9 +193,9 @@ comment on column public.bookings.ref_no is
   'Reference number shown to partners and restaurants (#0012). Assigned by the database so concurrent requests cannot collide. The four pre-pivot rows take 1-4, so the first October request is #0005 — do not reset the sequence to start at 1.';
 
 -- ---------------------------------------------------------------------------
--- 5. 🔴 VERIFY BEFORE DEPLOYING THE CODE
+-- 6. 🔴 VERIFY BEFORE DEPLOYING THE CODE
 -- ---------------------------------------------------------------------------
--- Run this and read the result. Six rows must come back. A missing column is
+-- Run this and read the result. SEVEN rows must come back. A missing column is
 -- not a warning at deploy time — it is every booking failing.
 --
 --   select column_name, data_type, is_nullable
@@ -151,8 +203,23 @@ comment on column public.bookings.ref_no is
 --    where table_schema = 'public'
 --      and table_name = 'bookings'
 --      and column_name in ('request_type','partner_name','fallback_choice',
---                          'budget_hint','cuisine_hint','ref_no')
+--                          'budget_hint','cuisine_hint','ref_no',
+--                          'previous_authorization_ids')
 --    order by column_name;
+--
+-- 🔴 And confirm the payment check now admits 'expired'. Section 4 drops every
+-- check constraint mentioning payment and adds one back, so exactly one must
+-- come out, and it must list six values:
+--
+--   select conname, pg_get_constraintdef(oid)
+--     from pg_constraint
+--    where conrelid = 'public.bookings'::regclass
+--      and contype = 'c'
+--      and pg_get_constraintdef(oid) ilike '%payment%';
+--
+-- If two rows come back, the old one survived under a name section 4 did not
+-- match — stop, because writes of 'expired' will be rejected by whichever one
+-- is stricter.
 --
 -- 🔴 And settle the CHECK question by measurement rather than by reading
 -- schema.sql, which is two migrations out of date:

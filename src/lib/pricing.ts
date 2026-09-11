@@ -27,9 +27,14 @@ export interface Plan {
 // have rejected all of the new business on day one. It remains in force on
 // `main` until this branch merges on the night of 2026-09-30.
 //
-// The date itself is kept because it is a fact about the business that the
-// site still states: the reviews page, the retired-plan articles and /about
-// all say the charter ended on this day. One place to change it.
+// 🔵 Nothing reads this any more. It is kept only as the written record of
+// when the charter stopped, next to the plans it priced.
+//
+// It is NOT the single source of that date: legacy-cta.ts states 2026年9月30日
+// as a literal in the notice under the retired-plan articles, and the pages
+// rewritten in stages 4-5 will state it in prose too. A date inside a sentence
+// cannot be interpolated from a constant without making the sentence worse, so
+// there will be several. If the date ever changes, grep for it.
 export const LAST_TOUR_DATE = "2026-09-30";
 
 // +$20 for groups of 5–7 guests (applies to every plan, regular and peak).

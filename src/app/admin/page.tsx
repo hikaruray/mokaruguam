@@ -35,6 +35,9 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   captured: "決済確定",
   voided: "解除済み",
   refunded: "返金済み",
+  // A hold that died before it could be captured. Must read differently from
+  // 仮押さえ at a glance: the money is NOT waiting, and confirming will fail.
+  expired: "仮押さえ期限切れ",
 };
 
 const PAYMENT_STYLE: Record<PaymentStatus, string> = {
@@ -43,6 +46,8 @@ const PAYMENT_STYLE: Record<PaymentStatus, string> = {
   captured: "bg-emerald-100 text-emerald-700",
   voided: "bg-slate-200 text-slate-600",
   refunded: "bg-violet-100 text-violet-700",
+  // Amber, not the sky blue of 仮押さえ — this one needs action.
+  expired: "bg-amber-100 text-amber-800",
 };
 
 export default async function AdminPage() {

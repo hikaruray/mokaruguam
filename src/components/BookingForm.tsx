@@ -18,13 +18,19 @@ type State = "idle" | "sending" | "sent" | "error";
 interface FormValues {
   // "tour" | "restaurant" — which kind of arrangement this is.
   //
-  // Optional only while this form is mid-migration. The two-path form is stage
-  // 4 of the Oct 1 pivot; until it lands nothing sets this, and the payment
-  // routes correctly refuse to move money for a request whose type they do not
-  // know (see amountForRequest in lib/pricing.ts). That refusal is the point —
-  // defaulting it to "tour" here would make a paid restaurant booking silently
-  // free, and defaulting to "restaurant" would charge $10 for a tour.
+  // 🔴 THIS FORM DOES NOT SET IT YET, AND SO SUBMITS NOTHING SUCCESSFULLY.
+  // readForm() below never fills it in, so every submission is rejected by gate
+  // 0 in /api/booking with 400「ご依頼の種類を選択してください。」, and
+  // createOrder is rejected by /api/paypal/create-order. Tours and restaurants
+  // both. That is stage 4 of the pivot — the two-path form — and until it lands
+  // THIS BRANCH CANNOT BE MERGED.
+  //
+  // The gap is deliberate and the refusal is correct: defaulting to "tour"
+  // would make a paid restaurant booking silently free, and defaulting to
+  // "restaurant" would charge $10 for a tour. Do not "fix" it with a default.
   requestType?: "tour" | "restaurant";
+  // Who we are arranging with. Also set by stage 4.
+  partnerName?: string;
   name: string;
   email: string;
   phone: string;

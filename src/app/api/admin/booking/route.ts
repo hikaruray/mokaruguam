@@ -102,10 +102,33 @@ export async function POST(request: Request) {
     requestTypeOf(booking) === "restaurant" &&
     !hasAuthorization
   ) {
+    // 🔴 Already captured is a different situation and must not share the
+    // message below. It happens when setBookingPayment succeeded and
+    // setBookingStatus did not — the money is taken, the status never moved.
+    // hasAuthorization requires payment === "authorized", so a captured row
+    // lands here too and used to be told「お客様に再度のお手続きをご案内して
+    // ください」: an instruction to send the guest to /repay and charge them a
+    // second time for a table they have already paid for.
+    if (booking.payment === "captured") {
+      return Response.json(
+        {
+          error:
+            "この依頼は手配料が決済済みですが、状態が確定になっていません（保存時の障害の可能性）。🔴 再決済のご案内はしないでください（二重請求になります）。お手配を進める場合はお客様へ直接ご連絡を、取りやめる場合は「全額返金でキャンセル」をご利用ください。",
+        },
+        { status: 409 },
+      );
+    }
+    if (!isPaypalConfigured()) {
+      // Our configuration, not the guest's card. Do not send them anywhere.
+      return Response.json(
+        { error: "決済が設定されていないため確定できません。環境設定をご確認ください。" },
+        { status: 503 },
+      );
+    }
     return Response.json(
       {
         error:
-          "この依頼にはカードのお預かりがありません。確定すると $10 を請求できないため、確定できません。お客様に再度のお手続きをご案内してください。",
+          "この依頼にはカードのお預かりがありません。確定すると手配料を請求できないため、確定できません。お客様に再度のお手続きをご案内してください。",
       },
       { status: 409 },
     );

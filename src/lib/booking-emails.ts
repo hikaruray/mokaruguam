@@ -8,27 +8,55 @@
 import { requestTypeOf, chargedAmount, type BookingRequest } from "./store";
 import { LINE_URL } from "./config";
 
-// Booking confirmed (予約確定 → payment captured).
+// Booking confirmed (予約確定 → payment captured for a restaurant, or the
+// arrangement simply agreed for a tour).
+//
+// 🔴 The payment line is a branch, not wording. It used to print
+// 「お支払い: $X（決済確定済み）」unconditionally, so a partner-tour
+// arrangement — free to the guest, and by design carrying no amount — told the
+// guest in writing that they had been charged. Never state a figure on a path
+// where no money moved.
 export function confirmedEmail(
   b: BookingRequest,
   amount: number,
 ): { subject: string; text: string } {
+  const isRestaurant = requestTypeOf(b) === "restaurant";
+  // Pre-pivot charter bookings keep exactly the line they always had.
+  const isLegacyCharter = b.requestType === null;
+
+  const paymentLine = isRestaurant
+    ? [`手配料:     $${amount.toFixed(2)}（お支払い済み）`]
+    : isLegacyCharter
+      ? [`お支払い:   $${amount.toFixed(2)}（決済確定済み）`]
+      : // Partner tour: we arranged it, the operator is paid on the day.
+        [`お支払い:   当社へのお支払いはございません（ツアー代金は当日、実施会社へお支払いください）`];
+
+  const closingLine = isLegacyCharter
+    ? `開始時間の少し前にお集まりください。当日を楽しみにお待ちしております。`
+    : isRestaurant
+      ? `当日は直接お店へお越しください。お席はお名前で承っております。`
+      : `当日の集合場所・持ち物は、実施会社のご案内に従ってください。`;
+
   return {
-    subject: "【Mokaru Guam】ご予約が確定しました",
+    subject: isLegacyCharter
+      ? "【Mokaru Guam】ご予約が確定しました"
+      : "【Mokaru Guam】お手配が完了しました",
     text: [
       `${b.name} 様`,
       ``,
       `この度はMokaru Guamをご利用いただきありがとうございます。`,
-      `ご予約が確定しました。当日は日本語ガイドがご案内いたします。`,
+      isLegacyCharter
+        ? `ご予約が確定しました。当日は日本語ガイドがご案内いたします。`
+        : `ご予約のお手配が完了しました。`,
       ``,
       `▼ ご予約内容`,
-      `プラン:     ${b.planName}`,
+      `${isLegacyCharter ? "プラン:    " : "お手配先:  "} ${b.partnerName || b.planName}`,
       `ご希望日時: ${b.preferredDate}`,
       ...(b.hotel ? [`ご宿泊先:   ${b.hotel}`] : []),
       `人数:       ${b.guests}名`,
-      `お支払い:   $${amount.toFixed(2)}（決済確定済み）`,
+      ...paymentLine,
       ``,
-      `開始時間の少し前にお集まりください。当日を楽しみにお待ちしております。`,
+      closingLine,
       `ご不明な点や当日のご連絡は LINE でお気軽に：${LINE_URL}`,
       ``,
       `受付ID: ${b.id}`,

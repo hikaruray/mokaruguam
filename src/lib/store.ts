@@ -26,7 +26,14 @@ export type PaymentStatus =
   | "authorized" // held (仮押さえ)
   | "captured"   // charged (決済確定)
   | "voided"     // hold released without charge (お断り→解除)
-  | "refunded";  // captured then refunded (キャンセル→返金)
+  | "refunded"   // captured then refunded (キャンセル→返金)
+  // Hold died before we could capture it. A PayPal authorisation is guaranteed
+  // for about three days, and the fee is captured when the restaurant confirms
+  // the table — so the proposal branch (first choice full, guest takes a few
+  // days to answer) can outlive it. Distinct from "authorized" on purpose:
+  // leaving such a row as authorized makes a dead hold look like a live one,
+  // and the confirm gate then tries to capture it and fails, every time.
+  | "expired";
 
 // Which kind of arrangement a booking is. NULL on every row taken before
 // 2026-10-01 — those are charter bookings from when there was only one kind.
@@ -42,6 +49,10 @@ export interface BookingRequest {
   phone: string;
   // null = taken before the pivot. See requestTypeOf().
   requestType: RequestType | null;
+  // Who we are arranging with: the partner operator for a tour, the restaurant
+  // (first choice) for a table. Empty on pre-pivot charters, which we ran
+  // ourselves and so had nobody to name.
+  partnerName: string;
   planId: string;       // e.g. "middle" (see lib/pricing.ts)
   planName: string;     // human label at time of request
   preferredDate: string; // free-text preferred date/time (e.g. "7/20 午後")
@@ -82,6 +93,7 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
       row.request_type === "tour" || row.request_type === "restaurant"
         ? row.request_type
         : null,
+    partnerName: String(row.partner_name ?? ""),
     planId: String(row.plan_id ?? ""),
     planName: String(row.plan_name ?? ""),
     preferredDate: String(row.preferred_date ?? ""),
@@ -135,6 +147,20 @@ export function requestTypeOf(booking: BookingRequest): RequestType {
  */
 export function chargedAmount(booking: BookingRequest): number {
   if (booking.amount != null) return booking.amount;
+
+  // 🔴 Never recompute for a booking taken after the pivot.
+  //
+  // The fallback below exists for charter bookings predating the `amount`
+  // column: recomputing from their plan is the best information available for
+  // them. Applied to a request_type row it invents money. A partner-tour
+  // arrangement is free to the guest and carries amount=null by design, and
+  // because the form still posts a default planId, the recomputation happily
+  // answered "$300" — which the confirmation email then printed as
+  // 「お支払い: $300.00（決済確定済み）」for a booking on which nothing was
+  // ever charged. A restaurant row with a missing amount is a fault, and $0 is
+  // the honest answer to it, not a guess.
+  if (booking.requestType !== null) return 0;
+
   return (
     amountForBooking(booking.planId, booking.guests, booking.preferredDate)
       ?.amount ?? 0
@@ -215,6 +241,7 @@ export async function addBooking(
         // because a saved booking with no type cannot be priced or refunded
         // correctly afterwards.
         request_type: data.requestType,
+        partner_name: data.partnerName,
         plan_id: data.planId,
         plan_name: data.planName,
         preferred_date: data.preferredDate,
@@ -239,6 +266,7 @@ export async function addBooking(
     email: data.email,
     phone: data.phone,
     requestType: data.requestType,
+    partnerName: data.partnerName,
     planId: data.planId,
     planName: data.planName,
     preferredDate: data.preferredDate,
