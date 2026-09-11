@@ -1,3 +1,5 @@
+import { LAST_TOUR_DATE } from "./pricing";
+
 // Abuse protection for the public booking endpoints.
 //
 // This is the SERVER-SIDE guard. Client-side maxLength / required attributes
@@ -64,6 +66,18 @@ export function validateBooking(b: BookingInput): string | null {
 
   if (typeof b.email === "string" && b.email && !EMAIL_RE.test(b.email)) {
     return "メールアドレスの形式が正しくありません。";
+  }
+
+  // Tours after the last operating day cannot be run, so they must not be
+  // bookable. preferredDate is "YYYY-MM-DD HH:MM", so comparing the first ten
+  // characters as strings is enough for ISO dates and avoids timezone drift —
+  // parsing "2026-10-01" as a Date would read it as UTC midnight, which is the
+  // previous day in Guam.
+  if (typeof b.preferredDate === "string" && b.preferredDate) {
+    const day = b.preferredDate.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day) && day > LAST_TOUR_DATE) {
+      return `ガイドツアーのご提供は ${LAST_TOUR_DATE} までとなります。10月以降のご予約は承れません。`;
+    }
   }
 
   if (b.guests !== undefined) {

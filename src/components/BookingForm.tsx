@@ -9,6 +9,7 @@ import {
   TIME_BANDS,
   endTimeFor,
   startTimesForPlan,
+  LAST_TOUR_DATE,
 } from "@/lib/pricing";
 import { PAYPAL_ENABLED, LINE_URL } from "@/lib/config";
 import PaypalCheckout from "./PaypalCheckout";
@@ -348,6 +349,7 @@ export default function BookingForm() {
           type="date"
           name="tourDate"
           required
+          max={LAST_TOUR_DATE}
           className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
         />
       </div>

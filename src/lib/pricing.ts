@@ -15,6 +15,16 @@ export interface Plan {
   blurb: string[];      // short selling points
 }
 
+// Last day Mokaru runs its own guided charter tours.
+//
+// The guide service ends 2026-09-30; every booking after that date was already
+// cancelled. Until this cap existed the date picker had no max and the server
+// checked nothing, so on 2026-09-11 it was still possible to book — and have
+// $500 authorised for — a tour in October that nobody would run. Enforced in
+// BookingForm (the picker) AND validateBooking (the server), because a max
+// attribute is a suggestion to anyone posting the form directly.
+export const LAST_TOUR_DATE = "2026-09-30";
+
 // +$20 for groups of 5–7 guests (applies to every plan, regular and peak).
 export const EXTRA_GUEST_SURCHARGE = 20;
 
