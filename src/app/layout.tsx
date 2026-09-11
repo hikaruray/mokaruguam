@@ -13,26 +13,35 @@ const notoSansJP = Noto_Sans_JP({
   display: "swap",
 });
 
+// Site-wide metadata. These strings are the site's default title, description
+// and social card on EVERY page that does not override them, which is why the
+// old charter wording reached 106 of 107 built pages.
+//
+// Rewritten 2026-09-11 for the Oct 1 pivot: the business stops running its own
+// guided charters on 2026-09-30 and becomes booking arrangement — partner
+// activities (the guest pays us nothing) and restaurant reservations ($10, and
+// nothing if the table can't be had). Nothing here may imply we drive, guide,
+// or own a vehicle.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "グアム完全貸切ガイドチャーター｜Mokaru Guam（モカルグアム）",
+    default: "グアムのレストラン予約代行・ツアー手配｜Mokaru Guam（モカルグアム）",
     template: "%s｜Mokaru Guam",
   },
   description:
-    "グアム唯一の完全貸切ガイドチャーター。日本語ガイド＋専用車で、行きたい場所を自由に。3時間$170〜、人数が増えるほどおトク。まずはリクエスト予約から。",
+    "グアムにいる日本人が、レストランやアクティビティの予約を代わりにお取りします。渡航前にメールだけで手配。レストランの予約代行は1件$10、お取りできなければ料金はいただきません。",
   keywords: [
-    "グアム 貸切",
-    "グアム チャーター",
-    "グアム 日本語ガイド",
-    "グアム 観光 車",
-    "グアム プライベートツアー",
+    "グアム レストラン 予約代行",
+    "グアム 予約 代行",
+    "グアム 日本語 予約",
+    "グアム アクティビティ 手配",
+    "グアム ツアー 手配",
     "Mokaru Guam",
   ],
   openGraph: {
-    title: "Mokaru Guam｜グアム完全貸切ガイドチャーター",
+    title: "Mokaru Guam｜グアムのレストラン予約代行・ツアー手配",
     description:
-      "あなただけの貸切で、行きたい場所を自由に。日本語ガイド＋専用車でグアムを満喫。",
+      "着いてから探さない。グアムにいる日本人が、渡航前に日本語で予約をお取りします。",
     url: SITE_URL,
     siteName: "Mokaru Guam",
     locale: "ja_JP",
@@ -41,8 +50,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Mokaru Guam｜グアム完全貸切ガイドチャーター",
-    description: "日本語ガイド＋専用車で、あなただけのグアムを。",
+    title: "Mokaru Guam｜グアムのレストラン予約代行・ツアー手配",
+    description: "グアムにいる日本人が、代わりに予約します。",
     images: [OG_IMAGE],
   },
 };

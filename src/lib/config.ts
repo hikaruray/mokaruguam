@@ -5,7 +5,11 @@
 // lost during development.
 
 export const SITE_NAME = "Mokaru Guam";
-export const SITE_NAME_JA = "グアム完全貸切ガイドチャーター｜Mokaru Guam";
+// Renders in <title> on every page, so it is the single line that describes the
+// business to search results. Rewritten 2026-09-11: the charter service ends
+// 2026-09-30 and the business becomes booking arrangement (partner activities +
+// restaurant reservations).
+export const SITE_NAME_JA = "グアムのレストラン予約代行・ツアー手配｜Mokaru Guam";
 
 // Single source of truth for the site's public origin. Used for OGP and links.
 //   • Vercel preview/prod: https://mokaruguam.vercel.app
@@ -49,7 +53,7 @@ export const COMPANY = {
   operator: "Yasushi Nishihira",
   address: "176-16 Perez Way, Tamuning, Guam 96913",
   phone: "+1 671-777-1019",
-  phoneNote: "お問い合わせはメール／LINEにて承ります。電話は緊急時のみ対応。",
+  phoneNote: "お問い合わせはメールにて承ります。電話は緊急時のみ対応。",
 };
 
 // Owner always receives a copy (BCC) for record-keeping.
@@ -59,6 +63,14 @@ export const OWNER_COPY_EMAIL = "ynishihira@gmail.com";
 export const FROM_EMAIL = "Mokaru Guam <tour@mokaruguam.com>";
 
 // LINE official account URL.
+//
+// 2026-09-11: LINE is being removed as a customer-facing channel (the pivot runs
+// on email only). The constant STAYS because the privacy policy still describes
+// how past LINE enquiries are handled — the account continues to exist, so
+// deleting the clause would be less accurate than keeping it. What is removed is
+// every CTA, button and email line that invites a new enquiry through it.
+// Do not re-add it to Header, Footer, MobileCta, Booking, BookingForm,
+// BookingCta, /reserve, /cancel or the booking emails.
 export const LINE_URL = "https://lin.ee/OfniH2h";
 
 // VELTRA listing URL.

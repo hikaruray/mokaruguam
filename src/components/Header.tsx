@@ -1,11 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { LINE_URL } from "@/lib/config";
 
 // Nav targets. Section anchors use "/#id" so they work from any subpage
 // (they jump to the home page section). Subpages are real routes.
 const NAV = [
-  { href: "/plans", label: "料金・プラン" },
+  { href: "/plans", label: "できること・料金" },
   { href: "/spots", label: "人気スポット" },
   { href: "/reviews", label: "お客様の声" },
   { href: "/faq", label: "よくある質問" },
@@ -39,24 +38,16 @@ export default function Header() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          {/* Secondary: LINE is a question/consultation channel, not booking.
-              Lower emphasis (outline, LINE green). Hidden on the smallest screens
-              where the sticky bottom bar covers the actions. */}
-          <a
-            href={LINE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden rounded-full border border-[#06c755] px-3.5 py-1.5 text-sm font-medium text-[#06c755] transition hover:bg-[#06c755]/10 sm:inline-block"
-          >
-            質問・相談はLINEで
-          </a>
-          {/* Primary: booking request — brand orange, most prominent.
+          {/* The LINE consultation button was removed 2026-09-11. The pivot runs
+              on email only, so a second channel would be an inbox nobody
+              watches. Do not re-add it — see the note on LINE_URL in config.ts. */}
+          {/* Primary: the arrangement request — brand orange, most prominent.
               Points to the dedicated /reserve page. */}
           <Link
             href="/reserve"
             className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-dark"
           >
-            リクエスト予約
+            手配を依頼する
           </Link>
         </div>
       </div>

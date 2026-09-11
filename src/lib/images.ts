@@ -34,7 +34,7 @@ export const OG_IMAGE = {
   url: "/og.jpg",
   width: 1200,
   height: 630,
-  alt: "グアムの夕陽と海｜Mokaru Guam 完全貸切ガイドチャーター",
+  alt: "グアムの夕陽と海｜Mokaru Guam レストラン予約代行・ツアー手配",
 } as const;
 
 export const IMAGES = {

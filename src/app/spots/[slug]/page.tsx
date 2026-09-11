@@ -87,10 +87,6 @@ export default async function SpotPage({
           </ul>
         </div>
 
-        <p className="mt-6 text-sm text-muted">
-          ※ 写真はイメージ（仮）です。本番は実際のツアー写真に差し替えます。
-        </p>
-
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             href="/#booking"

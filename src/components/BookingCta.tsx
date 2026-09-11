@@ -1,11 +1,17 @@
 import Link from "next/link";
-import { LINE_URL } from "@/lib/config";
 
-// Reusable booking call-to-action band for the bottom of every subpage.
-// Primary = booking request (brand orange). Secondary = LINE question channel.
+// Reusable call-to-action band for the bottom of every subpage.
+//
+// 2026-09-11: the LINE secondary button was removed with the pivot (email is
+// the only channel). The default copy now describes the arrangement service
+// rather than a charter booking. See the note on LINE_URL in config.ts.
+//
+// "48時間以内に状況をご連絡します" is deliberate — we promise a STATUS, not a
+// result. The restaurant may not answer within 48 hours, and a promise of
+// "確定のご連絡" would be broken by the shop's own pace, not ours.
 export default function BookingCta({
-  heading = "気になったら、まずはリクエスト予約から。",
-  sub = "希望日時・人数・行きたいスポットを送るだけ。空き状況を確認してご連絡します（48時間以内）。この時点では料金は発生しません。",
+  heading = "気になったら、手配を依頼するだけ。",
+  sub = "ご希望の日時・人数・お店やツアー名を送るだけ。48時間以内に状況をご連絡します。この時点では料金は発生しません。",
 }: {
   heading?: string;
   sub?: string;
@@ -20,16 +26,14 @@ export default function BookingCta({
             href="/reserve"
             className="rounded-full bg-brand px-7 py-3.5 text-sm font-bold text-white transition hover:bg-brand-dark"
           >
-            リクエスト予約・空き確認
+            手配を依頼する
           </Link>
-          <a
-            href={LINE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-[#06c755] px-6 py-3.5 text-sm font-medium text-[#06c755] transition hover:bg-[#06c755]/10"
+          <Link
+            href="/plans"
+            className="rounded-full border border-white/40 px-6 py-3.5 text-sm font-medium text-white transition hover:bg-white/10"
           >
-            質問・相談はLINEで
-          </a>
+            できること・料金を見る
+          </Link>
         </div>
       </div>
     </section>
