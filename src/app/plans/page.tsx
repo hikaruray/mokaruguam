@@ -92,7 +92,8 @@ export default function PlansPage() {
                 <p className="text-xs font-bold text-brand">{p.company}（提携先）</p>
                 <h3 className="mt-1 text-lg font-bold">{p.activity}</h3>
                 <p className="mt-2 text-sm text-muted">
-                  所要 {p.duration} ／{" "}
+                  {/* Duration only when the operator publishes one. */}
+                  {p.duration && <>所要 {p.duration} ／ </>}
                   <b className="text-ink">{p.priceFrom}</b>
                   <span className="block text-xs">（{p.priceNote}）</span>
                 </p>
