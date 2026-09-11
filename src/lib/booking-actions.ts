@@ -3,8 +3,9 @@
 //
 // Rules (booking-payment-design.md):
 //   • pending + authorized (仮押さえ) → void the hold, status=cancelled.
-//   • confirmed + captured (決済確定) → refund per the tour-date policy
-//       (8日以上=全額 / 7〜4日=50% / 3日以内=なし), status=cancelled.
+//   • confirmed + captured (決済確定) → refund per lib/refund-policy.ts, which
+//       applies the tour-date ladder (8日以上=全額 / 7〜4日=50% / 3日以内=なし)
+//       to tours and no refund at all to a completed restaurant arrangement.
 //   • already declined/cancelled, or no PayPal → status=cancelled, no charge op.
 // Idempotent: PayPal "already voided/refunded" is treated as success by the
 // lib/paypal.ts helpers, and an already-cancelled booking is a no-op success.
@@ -22,7 +23,7 @@ import {
   refundCapture,
   isPaypalConfigured,
 } from "./paypal";
-import { refundRateForDate } from "./pricing";
+import { refundDecision } from "./refund-policy";
 import { sendMail } from "./email";
 import { cancelledEmail } from "./booking-emails";
 
@@ -83,10 +84,15 @@ export async function cancelBooking(
     await setBookingPayment(id, { payment: "voided" });
     refund = { rate: 0, amount: 0, tier: "仮押さえの解除（課金なし）" };
   } else if (hasCapture) {
-    const { rate, tier } =
-      mode === "full"
-        ? { rate: 1, tier: "全額返金（自社都合・天候）" }
-        : refundRateForDate(booking.preferredDate);
+    // Which rule applies depends on WHAT was bought, not only on when. The
+    // decision and its reasoning live in lib/refund-policy.ts so that the code
+    // moving the money has one address — the last time it was spread out, the
+    // terms were rewritten and this was missed.
+    const { rate, tier } = refundDecision(
+      booking.requestType,
+      booking.preferredDate,
+      mode,
+    );
     const refundAmount = Math.round(charged * rate * 100) / 100;
     if (rate > 0) {
       await refundCapture(

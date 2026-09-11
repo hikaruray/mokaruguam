@@ -5,7 +5,7 @@
 // by lib/email.ts. Tone: reassuring and unambiguous about money — the customer
 // should always know exactly whether they were charged / refunded.
 
-import type { BookingRequest } from "./store";
+import { requestTypeOf, chargedAmount, type BookingRequest } from "./store";
 import { LINE_URL } from "./config";
 
 // Booking confirmed (予約確定 → payment captured).
@@ -80,8 +80,21 @@ export function cancelledEmail(
       `キャンセルポリシーに基づき、返金率 ${Math.round(refund.rate * 100)}%（$${refund.amount.toFixed(2)}）で返金手続きを行いました。`,
       `ご利用の決済方法に、数営業日でご返金が反映されます。`,
     ];
+  } else if (b.payment === "captured" && requestTypeOf(b) === "restaurant") {
+    // Charged, no refund — but for a completely different reason than a tour,
+    // so it must not cite the tour's 3-day rule. The arrangement fee bought the
+    // act of getting the table, and that work is done. We still tell the
+    // restaurant ourselves: leaving the guest to do it means a no-show in our
+    // name, which costs more than the $10.
+    moneyLines = [
+      `▼ 手配料について`,
+      `お席のお手配が完了しているため、手配料 $${chargedAmount(b).toFixed(2)} のご返金はいたしかねます。あらかじめご了承ください。`,
+      ``,
+      `▼ お店へのご連絡`,
+      `キャンセルのご連絡は、当社からお店へお伝えします。お客様からご連絡いただく必要はございません。`,
+    ];
   } else if (b.payment === "captured") {
-    // Charged, but 0% refund tier — the charge stands.
+    // Charged, but 0% refund tier — the charge stands. Tours only.
     moneyLines = [
       `▼ 返金について`,
       `キャンセルポリシー（実施日の3日前以降）により、今回はご返金の対象外です。`,

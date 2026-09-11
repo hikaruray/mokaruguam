@@ -102,6 +102,29 @@ export async function POST(request: Request) {
     return Response.json({ error: invalid }, { status: 400 });
   }
 
+  // --- Gate 0: a new request must say which kind it is ------------------
+  //
+  // The database allows request_type to be NULL, but only because the four
+  // bookings taken before the pivot have no answer to give. A request arriving
+  // today always has one, so a missing value here means the form did not send
+  // it — a bug, not an old row.
+  //
+  // Letting it through would fail OPEN. Everything downstream reads a missing
+  // type as "tour" (requestTypeOf), and a tour costs the guest nothing, so a
+  // restaurant booking whose type went missing would skip the $10 entirely and
+  // slip past the authorisation check below. Refusing costs one error message;
+  // accepting silently gives the arrangement away.
+  const requestType =
+    body.requestType === "tour" || body.requestType === "restaurant"
+      ? body.requestType
+      : null;
+  if (requestType === null) {
+    return Response.json(
+      { error: "ご依頼の種類を選択してください。" },
+      { status: 400 },
+    );
+  }
+
   const plan = PLANS.find((p) => p.id === planId);
   const planName = plan ? plan.name : "（未選択）";
 
@@ -119,7 +142,7 @@ export async function POST(request: Request) {
     // disagree, the equality check below rejects every order the browser just
     // approved — the guest sees a failure on a card that was fine.
     const calc = amountForRequest(
-      body.requestType,
+      requestType, // validated by gate 0, not the raw body value
       planId,
       Number(guests),
       preferredDate,
@@ -181,6 +204,7 @@ export async function POST(request: Request) {
       name,
       email,
       phone,
+      requestType,
       planId: planId ?? "",
       planName,
       preferredDate,

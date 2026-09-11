@@ -28,11 +28,20 @@ export type PaymentStatus =
   | "voided"     // hold released without charge (お断り→解除)
   | "refunded";  // captured then refunded (キャンセル→返金)
 
+// Which kind of arrangement a booking is. NULL on every row taken before
+// 2026-10-01 — those are charter bookings from when there was only one kind.
+// Read them with requestTypeOf() below, never with a bare `?? "tour"` scattered
+// through the code, so there is exactly one place that decides what a missing
+// value means.
+export type RequestType = "tour" | "restaurant";
+
 export interface BookingRequest {
   id: string;
   name: string;
   email: string;
   phone: string;
+  // null = taken before the pivot. See requestTypeOf().
+  requestType: RequestType | null;
   planId: string;       // e.g. "middle" (see lib/pricing.ts)
   planName: string;     // human label at time of request
   preferredDate: string; // free-text preferred date/time (e.g. "7/20 午後")
@@ -65,6 +74,14 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     name: String(row.name),
     email: String(row.email),
     phone: String(row.phone ?? ""),
+    // Kept as null when absent rather than defaulted here. The column does not
+    // exist yet on rows taken before 2026-10-01, and "we never asked" has to
+    // stay distinguishable from "they answered" — the refund branch turns on
+    // exactly that distinction.
+    requestType:
+      row.request_type === "tour" || row.request_type === "restaurant"
+        ? row.request_type
+        : null,
     planId: String(row.plan_id ?? ""),
     planName: String(row.plan_name ?? ""),
     preferredDate: String(row.preferred_date ?? ""),
@@ -84,6 +101,25 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     refundRate: row.refund_rate != null ? Number(row.refund_rate) : null,
     createdAt: String(row.created_at),
   };
+}
+
+/**
+ * What kind of arrangement this booking is, for code that has to branch on it.
+ *
+ * A booking with no request_type is a charter booking taken before 2026-10-01,
+ * when a tour was the only thing the site sold. Reading those as "tour" keeps
+ * their cancellation and refund behaviour byte-for-byte identical to what it
+ * was before the pivot — which is the whole reason the column was left NULL
+ * rather than backfilled.
+ *
+ * This default is safe HERE, where it decides how to treat an old booking.
+ * It is NOT safe at the API entrance, where a missing type means the incoming
+ * request never said what it was: defaulting there would turn a paid
+ * restaurant booking into a free tour. That path refuses instead — see
+ * amountForRequest() in lib/pricing.ts.
+ */
+export function requestTypeOf(booking: BookingRequest): RequestType {
+  return booking.requestType ?? "tour";
 }
 
 /**
@@ -173,6 +209,12 @@ export async function addBooking(
         name: data.name,
         email: data.email,
         phone: data.phone,
+        // Written explicitly, like every other column here. If the migration
+        // has not run, PostgREST rejects the whole insert with 42703 rather
+        // than quietly dropping the field — which is the failure we want,
+        // because a saved booking with no type cannot be priced or refunded
+        // correctly afterwards.
+        request_type: data.requestType,
         plan_id: data.planId,
         plan_name: data.planName,
         preferred_date: data.preferredDate,
@@ -196,6 +238,7 @@ export async function addBooking(
     name: data.name,
     email: data.email,
     phone: data.phone,
+    requestType: data.requestType,
     planId: data.planId,
     planName: data.planName,
     preferredDate: data.preferredDate,
