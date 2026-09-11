@@ -53,7 +53,8 @@ import { applyCorrections } from "./legacy-corrections";
 // not listed here 404s, so this list also guarantees the legacy route can never
 // shadow a real page (/plans, /reserve, /spots, /admin, /api, …).
 export const LEGACY_SLUGS = [
-  "bayviewhotel", "before-departure", "bus-rentacar",
+  // before-departure withdrawn 2026-09-12 — see EXCLUDED_STALE_PROMISE below.
+  "bayviewhotel", "bus-rentacar",
   "business", "capitalhotel", "chose-hotel", "common-sense", "crossing-reef",
   "crowneplaza", "dive-spot", "dont-forget", "drivers", "emergencies",
   "family-friendly", "foreign-exchange", "fort-apugan", "grandplazahotel",
@@ -135,7 +136,24 @@ export const EXCLUDED_STALE_PRICING = ["linesupport"];
 // Promise perks the current business does not offer (e.g. repeater-discount
 // advertises "2nd visit 10% off / 3rd 15% / up to 20% off"; 24hour-support
 // promises round-the-clock cover). Reviving these invites customer disputes.
-export const EXCLUDED_STALE_PROMISE = ["repeater-discount", "24hour-support"];
+//
+// before-departure joined them on 2026-09-12, for the pivot, on the same test
+// the other exclusions were decided by: is the article ABOUT the thing that is
+// going away? Its title is「MokaruなららLINEで相談OK！」and all 21 of its LINE
+// mentions are the subject, not an aside — so there is no version of it that is
+// both honest and still the same article. It also advertises
+// 「人気レストランの予約代行（無料！）」, which is now $10, and airport transfers,
+// which ended in July. Corrections would leave an empty shell with the old
+// title still ranking.
+//
+// 🔵 Deliberately NOT a 410 like airport-shuttle. This one is only withheld,
+// so it can come back if LINE is ever revived — a 410 tells Google to forget
+// the URL and takes months to undo.
+export const EXCLUDED_STALE_PROMISE = [
+  "repeater-discount",
+  "24hour-support",
+  "before-departure",
+];
 
 export type LegacySlug = (typeof LEGACY_SLUGS)[number];
 

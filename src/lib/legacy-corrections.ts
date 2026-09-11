@@ -40,8 +40,23 @@
 
 /** One text substitution inside a restored article. */
 export interface Correction {
-  /** Exact substring of the RAW snapshot HTML (corrections run before cleanHtml). */
-  find: string;
+  /**
+   * Exact substring of the RAW snapshot HTML (corrections run before cleanHtml).
+   * Exactly one of `find` / `findRe` is required.
+   */
+  find?: string;
+  /**
+   * Regex alternative, for removing a whole BLOCK whose inner text differs per
+   * article but whose delimiters do not.
+   *
+   * 🔴 It keeps the same contract as `find`: the match count is asserted, and a
+   * mismatch fails the build. A pattern that silently matched nothing would be
+   * strictly worse than an exact string, because it would look like the edit
+   * had been applied.
+   *
+   * Must carry the `g` flag, or it cannot be counted.
+   */
+  findRe?: RegExp;
   /** Replacement. Empty string deletes the passage. */
   replace: string;
   /** Why this is wrong as written — the reason has to survive, not just the fix. */
@@ -71,6 +86,45 @@ const PRICE_SUFFIX =
 const START_SHORT = "午前 8:30／9:00／9:30、午後 12:30／13:00／13:30、夕方 16:30／17:00／17:30";
 const START_MIDDLE = "午前 8:30／9:00／9:30、午後 14:00／14:30／15:00";
 const START_LONG = "午前 8:30／9:00／9:30";
+
+// ---------------------------------------------------------------------------
+// The in-article promotion block (2026-09-12, the Oct 1 pivot)
+// ---------------------------------------------------------------------------
+// Fifteen articles end with a promotional block the old blog appended by hand:
+// a separator, an ✈️ heading naming モカル, a few bullets, and a 🌺 詳しくは
+// こちら link. Between them they advertise services the company does not
+// provide and in several cases never did:
+//
+//   24時間LINEサポート / 空港送迎 / 移住サポート（ビザ・住まい探し）/
+//   開業サポート（営業許可申請）/ ホテルのクレーム代行 / 求人紹介 /
+//   「LINEで予約」/「24h以内に空き状況を即時回答」
+//
+// LINE stops being a customer channel on 2026-10-01, and the guided tours these
+// blocks upsell stop on 2026-09-30.
+//
+// 🔴 REMOVED, NOT REWORDED, and that is the whole point.
+//
+// Rewording fifteen hand-written pitches produces fifteen slightly different
+// descriptions of one offer, maintained nowhere, drifting apart the first time
+// the terms change. lib/legacy-cta.ts ALREADY renders the correct offer under
+// every one of these articles, written once and audited twice. Deleting the old
+// block leaves exactly one statement of what we sell, in the file that owns it.
+//
+// The articles themselves are untouched. Every one keeps its real subject —
+// tipping, reef safety, night markets — which is what earns the traffic.
+//
+// One rule rather than fifteen exact strings: the inner text differs per
+// article, the delimiters do not. The count is still asserted per article, so a
+// re-exported snapshot whose markup shifted fails the build instead of quietly
+// shipping the pitch.
+const PROMO_BLOCK: Correction = {
+  findRe:
+    /\s*<hr class="wp-block-separator has-alpha-channel-opacity"\/>\s*<h2 class="wp-block-heading">✈️[\s\S]*?🌺\s*詳しくはこちら[\s\S]*?<\/p>/g,
+  replace: "",
+  why:
+    "記事末尾の販促ブロック。24時間LINEサポート・空港送迎・移住/開業サポートなど、" +
+    "提供しないサービスを宣伝している。正しい案内は legacy-cta.ts が全記事の下に出す。",
+};
 
 export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // -------------------------------------------------------------------------
@@ -684,25 +738,15 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
     ],
   },
 
-  touts: {
-    body: [
-      {
-        why: "Closing pitch offers the discontinued airport transfer. The rest of the sentence (LINE, guiding) is still true.",
-        find: "<p>モカルの日本語ガイドサービスなら、怪しいキャッチに遭遇しても即LINEで相談可能。空港送迎から観光サポートまで、日本語で安心対応！</p>",
-        replace: "<p>モカルの日本語ガイドサービスなら、怪しいキャッチに遭遇しても即LINEで相談可能。観光中のサポートまで、日本語で安心対応！</p>",
-      },
-    ],
-  },
+  // 2026-09-12: both of these previously carried a one-sentence correction that
+  // cut the discontinued airport transfer out of their closing pitch. Verified
+  // that both sentences live INSIDE the promo block, and each appears exactly
+  // once in the article — so the whole block going takes them with it, and the
+  // old corrections would now match zero times and fail the build. Removed as
+  // redundant, not because the claim became acceptable.
+  touts: { body: [PROMO_BLOCK] },
 
-  drivers: {
-    body: [
-      {
-        why: "'空港〜観光地まで' promises the discontinued airport pickup. Replaced with what we actually do — a guide driving a dedicated vehicle.",
-        find: "<li>日本語ガイドが空港〜観光地まで安全運転でご案内</li>",
-        replace: "<li>日本語ガイドが専用車で観光地まで安全運転でご案内</li>",
-      },
-    ],
-  },
+  drivers: { body: [PROMO_BLOCK] },
 
   "ladies-safety": {
     body: [
@@ -716,6 +760,10 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: "\n\n\n\n<li>女性専用ツアーや夜間送迎プランあり</li>",
         replace: "",
       },
+      // 販促ブロックの削除は最後に走らせる。上の各 find は手つかずの
+      // スナップショットに対して書かれているため、先にブロックを消すと
+      // 0件になってビルドが落ちる。
+      PROMO_BLOCK,
     ],
   },
 
@@ -726,6 +774,10 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: "<li>モカルの24時間LINEサポートなら、<strong>クレームの伝え方をサポート</strong>します！（プランによる）</li>",
         replace: "<li>モカルのLINEサポートなら、<strong>クレームの伝え方をサポート</strong>します！（プランによる）</li>",
       },
+      // 販促ブロックの削除は最後に走らせる。上の各 find は手つかずの
+      // スナップショットに対して書かれているため、先にブロックを消すと
+      // 0件になってビルドが落ちる。
+      PROMO_BLOCK,
     ],
   },
 
@@ -745,6 +797,10 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: "<li><strong>24時間対応</strong>で、現地トラブルのサポートが可能　（プランによる）</li>",
         replace: "<li><strong>LINEでご相談いただけます</strong>（プランによる）</li>",
       },
+      // 販促ブロックの削除は最後に走らせる。上の各 find は手つかずの
+      // スナップショットに対して書かれているため、先にブロックを消すと
+      // 0件になってビルドが落ちる。
+      PROMO_BLOCK,
     ],
   },
 
@@ -823,6 +879,20 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
       },
     ],
   },
+
+  // ---------------------------------------------------------------------
+  // 販促ブロックの削除だけ。記事本文には手を入れていない（PROMO_BLOCK 参照）
+  // ---------------------------------------------------------------------
+  "business": { body: [PROMO_BLOCK] },
+  "living-costs": { body: [PROMO_BLOCK] },
+  "visas": { body: [PROMO_BLOCK] },
+  "common-sense": { body: [PROMO_BLOCK] },
+  "crossing-reef": { body: [PROMO_BLOCK] },
+  "how-to-live": { body: [PROMO_BLOCK] },
+  "tips": { body: [PROMO_BLOCK] },
+  "insurance": { body: [PROMO_BLOCK] },
+  "sunburn": { body: [PROMO_BLOCK] },
+  "guam-jobs": { body: [PROMO_BLOCK] },
 };
 
 /**
@@ -843,17 +913,39 @@ export function applyCorrections(
   let out = text;
   for (const c of list) {
     const expected = c.count ?? 1;
-    const found = out.split(c.find).length - 1;
+    const label = c.findRe ? String(c.findRe) : JSON.stringify(c.find?.slice(0, 120));
+
+    if ((c.find === undefined) === (c.findRe === undefined)) {
+      throw new Error(
+        `legacy-corrections: [${slug}] ${which} correction must have exactly one of find / findRe.`,
+      );
+    }
+
+    let found: number;
+    if (c.findRe) {
+      if (!c.findRe.global) {
+        throw new Error(
+          `legacy-corrections: [${slug}] findRe needs the g flag to be counted: ${label}`,
+        );
+      }
+      found = (out.match(c.findRe) ?? []).length;
+    } else {
+      found = out.split(c.find!).length - 1;
+    }
+
     if (found !== expected) {
       throw new Error(
         `legacy-corrections: [${slug}] ${which} correction matched ${found}x, expected ${expected}x.\n` +
-          `  find: ${JSON.stringify(c.find.slice(0, 120))}\n` +
+          `  find: ${label}\n` +
           `  why:  ${c.why}\n` +
           `The snapshot text changed. Re-check the article and update the find, ` +
           `or drop the correction if the sentence is gone.`,
       );
     }
-    out = out.split(c.find).join(c.replace);
+
+    out = c.findRe
+      ? out.replace(c.findRe, c.replace)
+      : out.split(c.find!).join(c.replace);
   }
   return out;
 }
