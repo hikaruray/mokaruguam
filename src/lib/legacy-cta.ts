@@ -43,8 +43,18 @@ type Theme = "sights" | "food" | "shopping" | "hotel" | "transport" | "family" |
 
 // What it costs, stated the same way everywhere. "Nothing if we can't get it"
 // is the whole proposition for the restaurant side, so it is never dropped.
+//
+// Two things the CEO re-audit corrected here on 2026-09-11, both because this
+// note renders under all 90 articles with no surrounding context:
+//   • It used to end "ツアーの手配は、お客様のお支払いはありません", which reads
+//     as the TOUR being free. What is free is our arranging of it; the tour
+//     itself is paid to the operator. A promise stronger than the product is
+//     the failure this codebase has already had once.
+//   • It stated "nothing if we can't get it" without the other half — that
+//     once the table IS held, the $10 is not refunded. A refusal to refund has
+//     to appear everywhere the fee is described, not only in the terms.
 const FEE_NOTE =
-  "レストランの予約代行は1件 $10。お席がお取りできなかった場合、料金はいただきません。ツアーの手配は、お客様のお支払いはありません。";
+  "レストランの予約代行は1件 $10。お席がお取りできなかった場合、料金はいただきません（お手配の完了後にお客様のご都合でキャンセルされる場合のご返金はいたしかねます）。ツアーは、お手配の手数料をいただきません（ツアー代金は実施会社へ直接お支払いいただきます）。";
 
 const THEMES: Record<Theme, { heading: string; lead: string }> = {
   // Article is about a specific place worth visiting.
