@@ -5,7 +5,7 @@ import { verifyCancelToken } from "@/lib/cancel-token";
 import { getBooking, requestTypeOf } from "@/lib/store";
 import { daysUntilTour } from "@/lib/pricing";
 import { refundDecision } from "@/lib/refund-policy";
-import { LINE_URL } from "@/lib/config";
+import { CONTACT_EMAIL } from "@/lib/config";
 import CancelConfirm from "./CancelConfirm";
 
 export const dynamic = "force-dynamic";
@@ -31,17 +31,14 @@ export default async function CancelPage({
         <PageHero eyebrow="Cancel" title="予約のキャンセル" />
         <section className="mx-auto max-w-2xl px-5 py-12">
           <div className="rounded-2xl border border-line bg-white p-6 text-sm text-muted">
-            キャンセルリンクが無効か、予約が見つかりませんでした。
-            お手数ですが、
+            キャンセルリンクが無効か、ご予約が見つかりませんでした。 お手数ですが{" "}
             <a
-              href={LINE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="font-bold text-brand hover:underline"
             >
-              LINE
-            </a>
-            またはメール（tour@mokaruguam.com）までご連絡ください。
+              {CONTACT_EMAIL}
+            </a>{" "}
+            までご連絡ください。
           </div>
         </section>
       </PageShell>
@@ -98,7 +95,7 @@ export default async function CancelPage({
           <div className="mt-6 rounded-2xl border border-line bg-sand p-5 text-sm text-muted">
             この予約は既に
             {booking.status === "cancelled" ? "キャンセル" : "お断り"}
-            済みです。新たな手続きは不要です。ご不明な点は LINE またはメールでご連絡ください。
+            済みです。新たな手続きは不要です。ご不明な点は {CONTACT_EMAIL} までご連絡ください。
           </div>
         ) : (
           <>
@@ -149,16 +146,14 @@ export default async function CancelPage({
         <p className="mt-6 text-center text-xs text-muted">
           ご不明な点は{" "}
           <a
-            href={LINE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`mailto:${CONTACT_EMAIL}`}
             className="font-bold text-brand hover:underline"
           >
-            LINE
+            {CONTACT_EMAIL}
           </a>{" "}
           または{" "}
           <Link href="/guide" className="font-bold text-brand hover:underline">
-            予約の流れ・キャンセルポリシー
+            ご依頼の流れ・キャンセルについて
           </Link>{" "}
           をご覧ください。
         </p>

@@ -266,8 +266,19 @@ export default function BookingForm() {
               ツアー代金は当日、実施会社へお支払いください。
             </li>
           )}
+          {/* 🔴 「いつでもキャンセルいただけます」on its own, two lines under
+              「お取りできなかった場合は料金をいただきません」, reads as "you can
+              back out free at any time". That is true right up until the table
+              is held, and false afterwards — which is the moment it matters. */}
           <li>
-            🧾 確認メールをお送りしました。メール内の<b className="text-ink">キャンセルリンク</b>から、いつでもキャンセルいただけます。
+            🧾 確認メールをお送りしました。メール内の<b className="text-ink">キャンセルリンク</b>からキャンセルいただけます。
+            {restaurant && (
+              <>
+                {" "}
+                お席のお手配が<b className="text-ink">完了したあと</b>のキャンセルは、手配料のご返金はいたしかねます
+                （お店へのご連絡は当社が代行します）。
+              </>
+            )}
           </li>
           <li>
             ✉️ ご不明な点は{" "}

@@ -3,7 +3,6 @@ import {
   FROM_EMAIL,
   CONTACT_EMAIL,
   OWNER_COPY_EMAIL,
-  LINE_URL,
   SITE_URL,
 } from "@/lib/config";
 import { addBooking } from "@/lib/store";
@@ -401,37 +400,87 @@ export async function POST(request: Request) {
     `— Mokaru Guam サイトのリクエストフォームより`,
   ].join("\n");
 
-  // --- Customer confirmation (reassuring; includes the cancel link) -----
+  // --- Customer acknowledgement (design §8, mail #1) --------------------
+  //
+  // 🔴 This is sent to EVERY request, immediately. Three things it used to say
+  // were wrong from 2026-10-01, and each was a written promise:
+  //
+  //   「ガイド・車両の空き状況をご連絡します」— we own neither any more. What
+  //   we check is whether the shop or the partner has room.
+  //
+  //   「実施日の8日以上前=全額返金…」— that is the TOUR ladder. A restaurant
+  //   guest was handed a written promise of a full refund 8 days out, which
+  //   contradicts the terms, the cancel route and lib/refund-policy.ts all at
+  //   once. The audit found the same defect on two screens; this is the copy
+  //   of it that arrives by email and cannot be corrected afterwards.
+  //
+  //   「LINE でお気軽に」— the pivot runs on email only.
+  //
+  // 🔴 「48時間以内に状況を」is deliberate: a STATUS, not a result. The shop
+  // answers on its own schedule and we must not promise theirs.
   const cancel = cancelUrl(saved.id, SITE_URL);
-  const custSubject = `【Mokaru Guam】リクエストを受け付けました（まだ請求されていません）`;
+  const isRestaurant = requestType === "restaurant";
+  const custSubject = isRestaurant
+    ? `【Mokaru Guam】ご依頼を受け付けました（まだ請求されていません）`
+    : `【Mokaru Guam】ご依頼を受け付けました`;
+
+  const flow = isRestaurant
+    ? [
+        `1. これからお店にお席の空きを確認します。48時間以内に状況をご連絡します。`,
+        `2. お席が取れた時点で手配料 $${amountStr} のお支払いが確定します。`,
+        `3. お取りできなかった場合、料金はいただきません（カードのお預かりを解除します）。`,
+        `4. お食事代はお店で直接お支払いください。`,
+      ]
+    : [
+        `1. これから実施会社に空き状況を確認します。48時間以内に状況をご連絡します。`,
+        `2. 当社へのお支払いはありません。ツアー代金は当日、実施会社へお支払いください。`,
+        `3. お手配できなかった場合も、料金は一切発生しません。`,
+      ];
+
+  // The cancellation line differs by what was bought, for the same reason the
+  // cancel page and the Admin buttons now differ: the arrangement fee buys the
+  // act of getting the table, and that work cannot be resold once it is done.
+  const cancelLines = isRestaurant
+    ? [
+        `▼ キャンセルについて`,
+        `下記リンクからキャンセルいただけます：`,
+        cancel,
+        `お席のお手配が完了したあとのキャンセルは、手配料のご返金はいたしかねます。お店へのご連絡は当社が代行しますので、お客様からご連絡いただく必要はありません。`,
+      ]
+    : [
+        `▼ キャンセルについて`,
+        `下記リンクからキャンセルいただけます：`,
+        cancel,
+        `当社へのお支払いがないため、キャンセル料も発生しません。実施会社の規定がある場合は、お手配の際にご案内します。`,
+      ];
+
   const custText = [
     `${name} 様`,
     ``,
-    `この度はリクエスト予約をありがとうございます。`,
-    `内容を受け付けました。${authorized ? "現時点ではお支払いは仮押さえのみで、まだ請求されていません。" : "この時点ではまだ料金は発生していません。"}`,
+    `この度はご依頼をありがとうございます。内容を受け付けました。`,
+    authorized
+      ? `現時点では手配料のお預かり（仮押さえ）のみで、まだ請求されていません。`
+      : `この時点では料金は発生していません。`,
     ``,
-    `▼ ご予約内容`,
-    `プラン:   ${planName}`,
+    `▼ ご依頼の内容`,
+    `種類:     ${isRestaurant ? "レストランの予約代行" : "アクティビティ・ツアーの手配"}`,
+    ...(partnerName
+      ? [`${isRestaurant ? "お店:     " : "お手配先: "}${partnerName}`]
+      : []),
     `ご希望日時: ${preferredDate}`,
-    `ご宿泊先: ${hotel.trim()}`,
+    `ご滞在先: ${hotel.trim()}`,
     `人数:     ${guests}名${guestBreakdown ? `（${guestBreakdown}）` : ""}`,
-    authorized ? `お支払い（予定）: $${amountStr}（仮押さえ中）` : ``,
+    ...(authorized ? [`手配料:   $${amountStr}（お預かり中・未請求）`] : []),
     ``,
     `▼ このあとの流れ`,
-    `1. 48時間以内に、ガイド・車両の空き状況をご連絡します。`,
-    `2. 予約が確定すると同時にお支払いが確定します。お手配できない場合は自動で解除・返金されますのでご安心ください。`,
-    `3. ご不明な点は LINE でお気軽に：${LINE_URL}`,
+    ...flow,
     ``,
-    `▼ キャンセルについて`,
-    `下記リンクからいつでもキャンセルいただけます：`,
-    cancel,
-    `キャンセルポリシー：実施日の8日以上前=全額返金／7〜4日前=50%／3日前以降=返金なし。`,
+    ...cancelLines,
     ``,
+    `ご不明な点は ${CONTACT_EMAIL} までご返信ください。`,
     `受付ID: ${saved.id}`,
     `— Mokaru Guam`,
-  ]
-    .filter((l) => l !== ``)
-    .join("\n");
+  ].join("\n");
 
   const apiKey = process.env.RESEND_API_KEY;
 

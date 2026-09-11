@@ -6,7 +6,7 @@
 // should always know exactly whether they were charged / refunded.
 
 import { requestTypeOf, chargedAmount, type BookingRequest } from "./store";
-import { LINE_URL } from "./config";
+import { CONTACT_EMAIL } from "./config";
 
 // Booking confirmed (予約確定 → payment captured for a restaurant, or the
 // arrangement simply agreed for a tour).
@@ -57,7 +57,7 @@ export function confirmedEmail(
       ...paymentLine,
       ``,
       closingLine,
-      `ご不明な点や当日のご連絡は LINE でお気軽に：${LINE_URL}`,
+      `ご不明な点や当日のご連絡は ${CONTACT_EMAIL} までご返信ください。`,
       ``,
       `受付ID: ${b.id}`,
       `— Mokaru Guam`,
@@ -127,27 +127,53 @@ export function reauthorizedOwnerEmail(
 }
 
 // Booking declined (お断り → authorization voided, no charge).
+//
+// 🔴 Branches, like confirmedEmail. It used not to, and so told a restaurant
+// guest their table had fallen through「ガイド・車両の都合により」— citing a
+// guide and a vehicle the company stopped having on 2026-09-30. This is the one
+// message that arrives when we have failed at something, and explaining that
+// failure with a reason that cannot be true is the worst place to do it. Email
+// cannot be taken back.
 export function declinedEmail(b: BookingRequest): {
   subject: string;
   text: string;
 } {
+  const isRestaurant = requestTypeOf(b) === "restaurant";
+  const isLegacyCharter = b.requestType === null;
+
+  const reason = isRestaurant
+    ? `誠に恐れ入りますが、ご希望のお日にち・お時間でお席をご用意できませんでした。`
+    : isLegacyCharter
+      ? `誠に恐れ入りますが、ご希望の日時はガイド・車両の都合によりお手配ができませんでした。`
+      : `誠に恐れ入りますが、実施会社の空き状況によりお手配ができませんでした。`;
+
+  const moneyLine = isRestaurant
+    ? `手配料はいただきません。カードのお預かりは解除しており、ご請求は発生しておりません。`
+    : isLegacyCharter
+      ? `カードの仮押さえは解除しており、ご請求は発生しておりません。ご安心ください。`
+      : `当社へのお支払いはもとより発生しておりません。ご請求は一切ございません。`;
+
+  const nextLine = isRestaurant
+    ? `別のお店・別のお時間であればお取りできる場合がございます。よろしければご返信ください。`
+    : `別の日程や他の実施会社であればご案内できる場合がございます。よろしければご返信ください。`;
+
   return {
-    subject: "【Mokaru Guam】ご予約についてのお知らせ",
+    subject: "【Mokaru Guam】ご依頼についてのお知らせ",
     text: [
       `${b.name} 様`,
       ``,
-      `この度はリクエスト予約をいただきありがとうございました。`,
-      `誠に恐れ入りますが、ご希望の日時はガイド・車両の都合によりお手配ができませんでした。`,
+      `この度はご依頼をいただきありがとうございました。`,
+      reason,
       ``,
       `▼ お支払いについて`,
-      `カードの仮押さえは解除しており、ご請求は発生しておりません。ご安心ください。`,
+      moneyLine,
       ``,
-      `別の日程であればご案内できる場合がございます。ぜひ LINE よりお気軽にご相談ください：${LINE_URL}`,
+      nextLine,
       ``,
-      `▼ 対象のリクエスト`,
-      `プラン:     ${b.planName}`,
+      `▼ 対象のご依頼`,
+      `${isLegacyCharter ? "プラン:    " : "お手配先:  "} ${b.partnerName || b.planName}`,
       `ご希望日時: ${b.preferredDate}`,
-      ...(b.hotel ? [`ご宿泊先:   ${b.hotel}`] : []),
+      ...(b.hotel ? [`ご滞在先:   ${b.hotel}`] : []),
       `受付ID:     ${b.id}`,
       `— Mokaru Guam`,
     ].join("\n"),
@@ -213,7 +239,7 @@ export function cancelledEmail(
       ``,
       ...moneyLines,
       ``,
-      `またのご利用を心よりお待ちしております。ご不明な点は LINE でお気軽に：${LINE_URL}`,
+      `またのご利用を心よりお待ちしております。ご不明な点は ${CONTACT_EMAIL} までご返信ください。`,
       `— Mokaru Guam`,
     ].join("\n"),
   };
