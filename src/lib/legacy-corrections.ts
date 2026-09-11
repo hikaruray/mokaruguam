@@ -123,35 +123,139 @@ const PROMO_BLOCK: Correction = {
     "提供しないサービスを宣伝している。正しい案内は legacy-cta.ts が全記事の下に出す。",
 };
 
+// ---------------------------------------------------------------------------
+// "Book by LINE" step lists (2026-09-12)
+// ---------------------------------------------------------------------------
+// Four articles end a section with the booking procedure for the charter: send
+// "ツアー希望" on LINE, get availability and a quote back within 24 hours, pay a
+// deposit, meet in the hotel lobby. Every step of that is wrong from
+// 2026-10-01 — LINE is not a customer channel, there is no deposit, nobody is
+// meeting anyone in a lobby, and what we now promise is a STATUS within 48
+// hours rather than an answer within 24.
+//
+// The sections are removed. They are procedures, not prose: there is nothing
+// to salvage once the procedure changes, and the current one is stated on
+// /reserve and under every article by legacy-cta.ts.
+const BOOKING_STEPS: Correction = {
+  findRe:
+    /\s*<h3 class="wp-block-heading">[^<]*予約[^<]*<\/h3>\s*<ol class="wp-block-list">[\s\S]*?LINE[\s\S]*?<\/ol>/g,
+  replace: "",
+  why:
+    "チャーターの予約手順（LINEで送信→24時間以内に見積り→デポジット→ロビー集合）。" +
+    "10/1から全項目が誤り。現在の流れは /reserve と legacy-cta.ts が示す。",
+};
+
 export const CORRECTIONS: Record<string, ArticleCorrections> = {
-  // -------------------------------------------------------------------------
+  "rainy-day": {
+    body: [
+      {
+        // All three bullets are about our car and our guide — the seats, the
+        // guide handling nappy stops, the air conditioning. Nothing survives
+        // the removal of the vehicle, so the section goes rather than being
+        // whittled down to an empty heading.
+        why: "「子連れ＆ベビーカーも安心」の節。3項目とも自社の車とガイド前提。",
+        findRe:
+          /\s*<hr class="wp-block-separator has-alpha-channel-opacity"\/>\s*<h3 class="wp-block-heading">👶 子連れ＆ベビーカーも安心<\/h3>\s*<ul class="wp-block-list">[\s\S]*?<\/ul>/g,
+        replace: "",
+      },
+      BOOKING_STEPS,
+    ],
+  },
 
-  // -------------------------------------------------------------------------
+  hydration: {
+    body: [
+      {
+        why: "「Mokaru Guam 貸切ガイドができること」の節。車内の水・動線・ベビーカー・エスコートと、全項目が自社の車とガイド前提。",
+        findRe:
+          /\s*<h3 class="wp-block-heading">3️⃣ Mokaru Guam 貸切ガイドができること<\/h3>\s*<ul class="wp-block-list">[\s\S]*?<\/ul>/g,
+        replace: "",
+      },
+      BOOKING_STEPS,
+    ],
+  },
+  "night-market-2": {
+    body: [
+      {
+        why: "チャイルドシート・ベビーカーの無料貸出。車を出さなくなる。段差の少ないルートの案内も同様。",
+        find: "<li><strong>子連れ・ベビーカーもOK</strong><br>チャイルドシート＆折り畳みベビーカー無料貸出。段差の少ないルートを案内するので、<strong>グアム 子連れ 観光／ベビーカー 観光</strong>もラクラク。</li>",
+        replace:
+          "<li><strong>子連れ・ベビーカーもOK</strong><br>会場は平坦で、ベビーカーでも回れます。ただし夜は混み合うので、早めの時間に行くほうが動きやすいです。</li>",
+      },
+      BOOKING_STEPS,
+    ],
+  },
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------
+  // 自社の車・チャイルドシート・ベビーカーの提供（2026-09-12）
+  // ---------------------------------------------------------------------
+  // 「専用車」「チャイルドシート完備」「ベビーカー無料貸出」は、自社で車を
+  // 出していた前提のサービス。10/1以降は車を持たないので、どれも果たせない。
+  //
+  // 🔵 グアムの法律（6歳未満はチャイルドシート義務）や、ホテルのフロントが
+  // 24時間対応であること等、自社と無関係な記述には手を触れていない。
+  safety: {
+    body: [
+      {
+        find: "<p>📌 <strong>Mokaruのツアー参加者は、日本語LINEサポートも利用可能！</strong>",
+        replace: "<p>📌 <strong>心配なことは、出発前に調べておきましょう。</strong>",
+        why: "ツアー参加者向けのLINEサポートの案内。ツアーの提供が終わる。",
+      },
+      {
+        why: "「運転に不安があるならMokaruの専用車送迎を」。送迎の提供をやめる。",
+        find: "<p>📌 <strong>運転に不安がある方は、Mokaruの専用車送迎を利用するのがおすすめ！</strong></p>",
+        replace:
+          "<p>📌 <strong>運転に不安がある方は、送迎のついたツアーを選ぶか、移動手段を先に手配しておくのがおすすめです。</strong></p>",
+      },
+      {
+        why: "同上。終了するツアーへのリンクつきの誘導。",
+        find: '<p>📩 <strong>「安全にグアムを楽しみたい！」という方は、<a href="/private-tour-3h/"><mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-vivid-cyan-blue-color">Mokaruの専用車送迎や日本語サポート付きツアー</mark></a>をぜひご利用ください😊✨</strong></p>',
+        replace: "",
+      },
+    ],
+  },
 
-  // -------------------------------------------------------------------------
-  // The heaviest edit in this file. The article's subject — a multi-day
-  // "Total" plan with airport transfers — is a product that no longer exists.
-  // Owner approved reframing it onto the ワンデープラン (12h, $500), which is
-  // the closest live product; consecutive days are simply several ワンデー
-  // bookings, which is true today and needs no new product.
+  "special-requests": {
+    body: [
+      {
+        find: "<p>📩 <strong>「こんな場所に行ける？」と思ったら、まずはLINEでご相談ください！あなたのグアム旅行を全力サポートします😊✨</strong></p>",
+        replace: "",
+        why: "LINEへの誘導。正しい依頼先は legacy-cta.ts が記事の下に出す。",
+      },
+      {
+        why: "「完全プライベートの専用車＆日本語ガイド付き」。どちらも提供しなくなる。",
+        find: "<p>Mokaruなら、<strong>完全プライベートの専用車＆日本語ガイド付きで、自由に行きたい場所へ！</strong></p>",
+        replace: "",
+      },
+      {
+        why: "同上。",
+        find: "<p>Mokaruの専用車＆カスタムツアーなら、<strong>グアム全域どこでもOK！</strong></p>",
+        replace: "",
+      },
+    ],
+  },
 
-  // -------------------------------------------------------------------------
+  "two-lovers-point": {
+    body: [
+      {
+        why: "「専用車で快適にご案内」＋終了するツアーへのリンク。行き方の説明そのものは残す。",
+        find: '<p>恋人岬へは、<strong>レンタカーやツアーで訪れるのが一般的</strong>ですが、<a href="/private-tour-3h/"><mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-vivid-cyan-blue-color">Mokaruのカスタマイズツアー</mark></a>なら、<strong>ご希望の時間に合わせて専用車で快適にご案内</strong>できます！</p>',
+        replace:
+          "<p>恋人岬へは、<strong>レンタカーやツアーで訪れるのが一般的</strong>です。路線バスは通っていないので、移動手段は先に決めておきましょう。</p>",
+      },
+    ],
+  },
 
-  // -------------------------------------------------------------------------
+  "low-tide": {
+    body: [
+      {
+        why: "チャイルドシート・ベビーカーの完備。車を出さなくなる。",
+        find: "<li>チャイルドシート＆<strong>ベビーカー 観光</strong>セット完備で<strong>グアム 子連れ 観光</strong>も快適</li>",
+        replace: "",
+      },
+    ],
+  },
 
-  // -------------------------------------------------------------------------
 
-  // -------------------------------------------------------------------------
-
-  // -------------------------------------------------------------------------
-
-  // -------------------------------------------------------------------------
-
-  // -------------------------------------------------------------------------
-
-  // -------------------------------------------------------------------------
   // ALREADY LIVE since the 2026-07-17 restore. bus-rentacar and guam-traffic
   // both slipped through the stale-pricing exclusion: they quote our own tours
   // off the old rate card and sell a 6-hour plan that has never existed in
@@ -177,6 +281,12 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   "guam-traffic": {
     body: [
       {
+        why: "「Mokaruの送迎サービスのメリット」の節。専用車・定額・日本語対応と、全項目が自社の車前提。",
+        findRe:
+          /\s*<h3 class="wp-block-heading"><strong>🚙 Mokaruの送迎サービスのメリット<\/strong><\/h3>\s*<p>✅ <strong>専用車なので他の人と乗り合いなし！快適移動<\/strong>[\s\S]*?<\/p>/g,
+        replace: "",
+      },
+      {
         why: "自社の送迎・貸切の料金表。2026-09-30で提供が終わるので、価格を直すのではなく削除する。",
         find: "<p>📌 <strong>Mokaruの送迎プラン（1台あたりの料金）</strong><br>🚗 <strong>空港送迎（片道）：$25～ （セダンタイプは４名まで。ヴァンタイプは６名まで）</strong><br>🚗 <strong>観光エリア送迎（ホテル⇔ショッピング）：３時間$１３０～</strong><br>🚗 <strong>カスタムプラン（貸切ツアー）：6時間$300～</strong></p>",
         replace: "",
@@ -197,6 +307,11 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
 
   "bus-rentacar": {
     body: [
+      {
+        why: "自社の車の宣伝（乗り合いなし・日本語ドライバー）。移動手段の提供をやめる。",
+        find: "<p>✅ <strong>1台あたりの料金なので、グループ旅行ならお得！</strong><br>✅ <strong>専用車だから他の人と乗り合いなし＆快適！</strong><br>✅ <strong>ドライバーが日本語対応OKで安心！</strong></p>",
+        replace: "",
+      },
       {
         why: "自社の送迎・貸切の料金表。上の guam-traffic と同じ理由で削除する。",
         find: "<p>📌 <strong>Mokaruの送迎プラン（1台あたりの料金）</strong><br>🚗 <strong>空港送迎（片道）：$25～  $45</strong><br>🚗 <strong>ホテル⇔観光地のショートプラン：$130～</strong><br>🚗 <strong>貸切ツアー（6時間）：$300～</strong></p>",
@@ -237,42 +352,6 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // These are the same promises that keep 24hour-support offline — the 07-17
   // exclusion caught the article about the perk and missed the articles that
   // mention it in passing.
-
-  "mokaru-support": {
-    body: [
-      {
-        why: "Section ① is entirely the discontinued airport transfer.",
-        find: '<hr class="wp-block-separator has-alpha-channel-opacity"/>\n\n\n\n<h2 class="wp-block-heading"><strong>🛫 ① 空港送迎付きだから、到着後すぐに快適な旅がスタート！</strong></h2>\n\n\n\n<p>グアム到着後、タクシーやレンタカーの手配に手間取る心配なし！<br><strong>Mokaruの日本語ガイドが空港でお出迎えし、ホテルまでスムーズにご案内します。</strong></p>\n\n\n\n<p>💡 <strong>空港送迎のメリット</strong><br>✅ <strong>飛行機の到着時間に合わせてピックアップ🚗✨</strong><br>✅ <strong>英語のやり取り不要！スムーズにホテルチェックイン</strong>🏨<br>✅ <strong>旅行プランの最終確認もその場でOK！</strong></p>\n\n\n\n<p>📌 <strong>「ホテルまでの移動が不安…」という方も、日本語サポート付きで安心！</strong></p>\n\n\n\n',
-        replace: "",
-      },
-      // Renumber ②–⑤ → ①–④ now that ① is gone.
-      {
-        why: "Renumber after deleting section ①.",
-        find: "<strong>🗺 ② 現地の最新情報",
-        replace: "<strong>🗺 ① 現地の最新情報",
-      },
-      {
-        why: "Renumber after deleting section ①.",
-        find: "<strong>🚗 ③ 迷わず快適！",
-        replace: "<strong>🚗 ② 迷わず快適！",
-      },
-      {
-        why: "Renumber after deleting section ①.",
-        find: "<strong>📩 ④ トラブル時も安心！",
-        replace: "<strong>📩 ③ トラブル時も安心！",
-      },
-      {
-        why: "Renumber after deleting section ①.",
-        find: "<strong>🌙 ⑤ 夜のグアムも安心して楽しめる！",
-        replace: "<strong>🌙 ④ 夜のグアムも安心して楽しめる！",
-      },
-      {
-        why: "Summary repeats the airport transfer as a selling point.",
-        find: "✅ <strong>空港送迎で到着後もスムーズ！</strong><br>",
-        replace: "",
-      },
-    ],
-  },
 
   "before-departure": {
     body: [
@@ -331,7 +410,20 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // once in the article — so the whole block going takes them with it, and the
   // old corrections would now match zero times and fail the build. Removed as
   // redundant, not because the claim became acceptable.
-  touts: { body: [PROMO_BLOCK] },
+  touts: {
+    body: [
+      {
+        // Advice about avoiding touts, not an offer — but "LINEサポート" next
+        // to モカル reads as ours. Generalised rather than deleted: telling a
+        // reader to fall back on Japanese-speaking help is sound.
+        why: "「日本語対応のガイドやLINEサポートを活用する」。自社の窓口と読めるが、10/1でLINEは窓口でなくなる。",
+        find: "<li><strong>困ったときは日本語対応のガイドやLINEサポートを活用する</strong></li>",
+        replace:
+          "<li><strong>困ったときは、日本語が通じる窓口（滞在先のフロントや日本語対応の店）を頼る</strong></li>",
+      },
+      PROMO_BLOCK,
+    ],
+  },
 
   drivers: { body: [PROMO_BLOCK] },
 
@@ -357,9 +449,37 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   "hotel-complaint": {
     body: [
       {
-        why: "'24時間LINEサポート' promises round-the-clock cover. LINE itself is real, so only the 24-hour claim goes.",
+        // 🔴 2026-09-12: July took the "24-hour" out and left the LINE support
+        // in, which was right then and wrong now. Removed outright.
+        why: "自社のLINEサポートでクレームの伝え方を代行する、という約束。10/1でLINEが窓口でなくなる。",
         find: "<li>モカルの24時間LINEサポートなら、<strong>クレームの伝え方をサポート</strong>します！（プランによる）</li>",
-        replace: "<li>モカルのLINEサポートなら、<strong>クレームの伝え方をサポート</strong>します！（プランによる）</li>",
+        replace: "",
+      },
+      {
+        why: "同じ節の締め。相談窓口としてのLINEへの誘導。",
+        find: "<li>クレーム対応の相談もLINEで気軽に</li>",
+        replace: "",
+      },
+      {
+        // The heading has to move with the item under it. Left alone it would
+        // announce a LINE support service and then introduce one line about
+        // emailing the hotel — which is how a section ends up reading as though
+        // something was quietly cut out of it.
+        why: "見出しが「LINEサポートを活用」のまま。下の項目を書き換えたので、見出しも中身に合わせる。",
+        find:
+          '<h4 class="wp-block-heading">3. フロントで言いにくければLINEサポートを活用</h4>',
+        replace:
+          '<h4 class="wp-block-heading">3. フロントで言いにくければ、書いて伝える</h4>',
+      },
+      {
+        // 🔵 This one stays, reworded. It is advice about how to complain to a
+        // HOTEL — use their own chat or email if speaking up at the desk is
+        // hard — not an offer of ours. Deleting it would remove the useful part
+        // along with the word LINE.
+        why: "ホテルへの伝え方の助言で、自社の窓口の話ではない。誤読を避けるため「LINE」を外して一般化する。",
+        find: "<li>日本語が通じにくいホテルの場合、<strong>LINEやメールで伝える</strong>のも手</li>",
+        replace:
+          "<li>日本語が通じにくいホテルの場合、<strong>メールやホテルのチャットで伝える</strong>のも手（文章なら翻訳して確認できます）</li>",
       },
       // 販促ブロックの削除は最後に走らせる。上の各 find は手つかずの
       // スナップショットに対して書かれているため、先にブロックを消すと
@@ -371,38 +491,36 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   "nightmarket-troubles": {
     body: [
       {
-        why: "Promises 24-hour cover. LINE is a real channel, so the line keeps its point without the promise.",
+        // 🔴 2026-09-12: this correction, and the one below it, both used to
+        // rewrite a 24-hour promise into "ask us on LINE" — which was right in
+        // July and wrong from October, when LINE stops being a channel. The
+        // same lesson as bus-rentacar: a correction is a standing claim and
+        // goes stale with what it describes. Both now remove rather than
+        // reword. There is no version of "contact us for help while you are in
+        // trouble" that this business can promise on a blog page.
+        why: "盗難・トラブル時のサポートの約束。7月は24時間の部分だけ外してLINEを残したが、そのLINEも10/1で終わる。",
         find: "<li>盗難やトラブル時も24時間対応のサポートあり</li>",
-        replace: "<li>盗難やトラブル時もLINEでご相談いただけます</li>",
+        replace: "",
       },
       {
         // The 2026-07-19 sweep fixed the claim at the foot of this article and
         // missed this one higher up — same article, same promise, found on
         // 2026-09-03 by grepping the live pages rather than the source. Worth
         // noting for the next sweep: one hit per article is not the end of it.
-        why: "Same 24-hour promise as above, in the 'ask Mokaru on LINE' step. It is the claim that keeps 24hour-support offline, and this is the worst page to make it on — a reader here is already in trouble and would rely on it.",
-        find: "<li><strong>24時間対応</strong>で、現地トラブルのサポートが可能　（プランによる）</li>",
-        replace: "<li><strong>LINEでご相談いただけます</strong>（プランによる）</li>",
+        //
+        // 🔴 The worst page in the archive to make a support promise on: a
+        // reader who has got this far has just been robbed. The two steps above
+        // it — shout for help, call 911 and the consulate — are the ones that
+        // matter, and they are untouched.
+        why: "「3. LINEでモカルに相談」の節ごと削除。24時間対応の現地トラブルサポートは提供しない。",
+        findRe:
+          /\s*<h4 class="wp-block-heading">3\. LINEでモカルに相談<\/h4>\s*<ul class="wp-block-list">[\s\S]*?<\/ul>/g,
+        replace: "",
       },
       // 販促ブロックの削除は最後に走らせる。上の各 find は手つかずの
       // スナップショットに対して書かれているため、先にブロックを消すと
       // 0件になってビルドが落ちる。
       PROMO_BLOCK,
-    ],
-  },
-
-  "mokaru-vision": {
-    body: [
-      {
-        why: "Promises '24時間対応のAIサポート'. Written as a vision piece, but it reads as a current service and there is no AI support — the Japanese-speaking guide half is true and stays.",
-        find: "<p>そんな声に応えるため、Mokaruでは<strong>LINEサポートを導入！</strong><br>旅行前から、<strong>24時間対応のAIサポート＋日本語ガイドのサポート</strong>で、お客様の安心を守ります。</p>",
-        replace: "<p>そんな声に応えるため、Mokaruでは<strong>LINEサポートを導入！</strong><br>旅行前から、<strong>日本語ガイドのサポート</strong>で、お客様の安心を守ります。</p>",
-      },
-      {
-        why: "Lists booking restaurants for the guest as a LINE service (see the booking-agent note below).",
-        find: "✅ <strong>滞在中 → 緊急時の対応（レストラン予約、トラブルサポートなど）</strong>",
-        replace: "✅ <strong>滞在中 → 緊急時の対応（トラブルサポートなど）</strong>",
-      },
     ],
   },
 
@@ -427,18 +545,14 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // Confirmed still offered and therefore left alone: child seats, cooler box,
   // interpreting/negotiating, shoot accompaniment, holding luggage (要相談).
 
-  "mokaru-highlights": {
-    body: [
-      {
-        why: "Advertises the free restaurant booking-agent service, which is not offered.",
-        find: "✔ <strong>レストランの予約代行</strong>（人気店は予約必須！）<br>",
-        replace: "",
-      },
-    ],
-  },
-
   "family-friendly": {
     body: [
+      {
+        why: "自社の車を「移動式授乳＆おむつ替えスペース」として使えるという案内。車を出さなくなる。",
+        find: "<p>グアムの観光地やレストランには、**おむつ替え台や授乳スペースが少ない場所も…**💦<br>でも、<strong>Mokaruの専用車を「移動式授乳＆おむつ替えスペース」として活用できます！</strong></p>",
+        replace:
+          "<p>グアムの観光地やレストランには、おむつ替え台や授乳スペースが少ない場所もあります💦<br>大きなショッピングモール（マイクロネシアモール、GPO）は設備が整っているので、外を歩く予定の途中に一度挟んでおくと安心です。</p>",
+      },
       {
         why: "Advertises booking restaurants on the guest's behalf. Recommending them is real, so the sentence keeps its point.",
         find: "<p>Mokaruなら、<strong>お子様連れでも安心のレストランをご提案＆予約代行！</strong></p>",
@@ -464,6 +578,12 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: "<li>大人数ならミニバスの<strong>グアム チャーター</strong>手配可</li>",
         replace: "<li>大人数の場合はミニバスの<strong>グアム チャーター</strong>もご相談ください（要相談）</li>",
       },
+      {
+        why: "チャイルドシート・ベビーカーの無料提供。車を出さなくなる。",
+        find: "<li><strong>グアム 子連れ 観光／グアム ベビーカー 観光</strong>対応 → チャイルドシート・ベビーカー無料</li>",
+        replace: "",
+      },
+      BOOKING_STEPS,
     ],
   },
 
@@ -502,9 +622,7 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
     ],
   },
 
-  // ---------------------------------------------------------------------
   // 販促ブロックの削除だけ。記事本文には手を入れていない（PROMO_BLOCK 参照）
-  // ---------------------------------------------------------------------
   "business": { body: [PROMO_BLOCK] },
   "living-costs": { body: [PROMO_BLOCK] },
   "visas": { body: [PROMO_BLOCK] },
