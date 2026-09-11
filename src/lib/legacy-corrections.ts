@@ -72,20 +72,17 @@ export interface ArticleCorrections {
   body: Correction[];
 }
 
-// Appended wherever an article restates one of our own prices. Prices are now
-// tiered and seasonal, so a bare number is a half-truth even when it matches
-// the base rate — which is exactly how these articles went stale in the first
-// place. /plans is the only page that can be right all year.
-const PRICE_SUFFIX =
-  "（1〜4名の料金。5〜7名は+$20、繁忙期は別料金です。最新の料金は<a href=\"/plans\">料金ページ</a>をご覧ください）";
-
-// Current start times, from START_TIMES in pricing.ts. Kept as prose here
-// because these are sentences in an article, not data — but if pricing.ts ever
-// changes, these lines are wrong and nothing will catch it. Grep for this
-// comment when editing START_TIMES.
-const START_SHORT = "午前 8:30／9:00／9:30、午後 12:30／13:00／13:30、夕方 16:30／17:00／17:30";
-const START_MIDDLE = "午前 8:30／9:00／9:30、午後 14:00／14:30／15:00";
-const START_LONG = "午前 8:30／9:00／9:30";
+// 🔵 PRICE_SUFFIX and the START_* constants were deleted on 2026-09-12.
+//
+// They existed to restate the charter's rate card and start times inside the
+// articles that quoted them — every one of which is now either rewritten
+// (legacy-rewrites.ts) or has had its price block removed. Nothing references
+// them, and nothing should: the product they described ends 2026-09-30.
+//
+// Worth noticing rather than quietly deleting. They were a maintenance
+// obligation — a comment above START_* asked whoever edited START_TIMES in
+// pricing.ts to come and update prose over here, which nothing enforced. That
+// obligation is gone along with the product.
 
 // ---------------------------------------------------------------------------
 // The in-article promotion block (2026-09-12, the Oct 1 pivot)
@@ -132,40 +129,6 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
-  middleplanpost: {
-    body: [
-      {
-        why: "Old rate card: 5h is $250.",
-        find: "<strong>Middleプラン（5時間／$230）</strong>",
-        replace: "<strong>Middleプラン（5時間／$250）</strong>",
-      },
-      {
-        why: "Old rate card, and '最大7名まで' at one price contradicts the current 1–4 / 5–7 tiers.",
-        find: "<li>料金：$230（車1台＋日本語ガイド1名／最大7名まで）</li>",
-        replace: `<li>料金：$250（車1台＋日本語ガイド1名）${PRICE_SUFFIX}</li>`,
-      },
-      {
-        why: "Start times no longer match START_TIMES in pricing.ts (the booking form will not offer these).",
-        find: "<li>開始時間：午前 9:00〜14:00、午後 16:00〜21:00　（上記以外の時間をご希望の場合は事前にご相談ください）</li>",
-        replace: `<li>開始時間：${START_MIDDLE}　（上記以外の時間をご希望の場合は事前にご相談ください）</li>`,
-      },
-      {
-        why: "Per-person figure was computed off the old rate: 5 guests now pay $250+$20 = $270, i.e. $54 each.",
-        find: "<strong>1人あたり$46程度</strong>",
-        replace: "<strong>1人あたり$54程度</strong>",
-      },
-      {
-        why: "Unfilled placeholder from the original draft — it shipped as literal '[MiddlePlanページリンク]' text.",
-        find: "iddleプランの詳細・ご予約はこちら → [MiddlePlanページリンク]",
-        replace: "iddleプランの詳細・ご予約はこちら",
-      },
-      {
-        why: "Same unfilled placeholder.",
-        find: "Longプランの詳細はこちら → [LongPlanページリンク]",
-        replace: "Longプランの詳細はこちら",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
   // The heaviest edit in this file. The article's subject — a multi-day
@@ -173,382 +136,20 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // Owner approved reframing it onto the ワンデープラン (12h, $500), which is
   // the closest live product; consecutive days are simply several ワンデー
   // bookings, which is true today and needs no new product.
-  totalplanpost: {
-    title: [
-      {
-        why: "The multi-day Total plan was retired; ワンデープラン (12h) is the live equivalent.",
-        find: "MokaruのTotalプラン（12時間×2日～）",
-        replace: "Mokaruのワンデープラン（12時間）",
-      },
-    ],
-    body: [
-      {
-        why: "Retired product and old rate card.",
-        find: "<strong>Totalプラン（12時間×2日～／$450／日）</strong>",
-        replace: "<strong>ワンデープラン（12時間／$500）</strong>",
-      },
-      {
-        why:
-          "Two problems once this became the one-day plan: it distinguished itself from " +
-          "'the 1-day plan' (it now IS that plan), and '到着から出発まで' describes an " +
-          "arrival-to-departure job that started with an airport pickup we no longer do.",
-        find: "短時間プランや1日観光プランとは異なり、到着から出発までの旅程をまるごとサポートできるため、",
-        replace: "短時間プランとは異なり、朝から夜まで1日の旅程をまるごとサポートできるため、",
-      },
-      {
-        why: "Retired product name in the section heading.",
-        find: '<h2 class="wp-block-heading">Totalプランの基本概要</h2>',
-        replace: '<h2 class="wp-block-heading">ワンデープランの基本概要</h2>',
-      },
-      {
-        why: "'2日間以上から' was a condition of the retired plan. The live plan is a single day; consecutive days are separate bookings.",
-        find: "<li>所要時間：1日12時間（2日間以上から）</li>",
-        replace: "<li>所要時間：12時間（連日でのご利用も承ります。その場合は日数分のご予約となります）</li>",
-      },
-      {
-        why: "Old rate card and flat '最大7名' pricing.",
-        find: "<li>料金：$450／日（車1台＋日本語ガイド1名／最大7名まで）</li>",
-        replace: `<li>料金：$500／日（車1台＋日本語ガイド1名）${PRICE_SUFFIX}</li>`,
-      },
-      {
-        why: "Lists airport transfers as an included service; discontinued.",
-        find: "<li>サービス内容：観光、食事、ショッピング、空港送迎、イベント同行、通訳サポートなどフル対応</li>",
-        replace: "<li>サービス内容：観光、食事、ショッピング、イベント同行、通訳サポートなどフル対応</li>",
-      },
-      {
-        why: "Promises airport-to-wedding coverage; discontinued.",
-        find: "<strong>空港送迎～挙式～観光まで丸ごと任せられる安心感</strong>",
-        replace: "<strong>挙式から観光まで丸ごと任せられる安心感</strong>",
-      },
-      {
-        why:
-          "The centrepiece was a 3-day itinerary (Day1 arrival → Day2 sightseeing → Day3 south), " +
-          "which only made sense for the retired multi-day plan: as written it quietly asks for " +
-          "3 × $500. Day 1 also opened with an airport pickup we no longer do. Owner's call " +
-          "(2026-07-19): keep Day 2's content as the single-day model course and drop Day 1 and " +
-          "Day 3. Day 2's four lines are unchanged — only the day scaffolding around them goes.",
-        find:
-          '<h2 class="wp-block-heading">モデルスケジュール例</h2>\n\n\n\n' +
-          '<h3 class="wp-block-heading">Day1（到着日）</h3>\n\n\n\n' +
-          '<ul class="wp-block-list">\n<li>空港お迎え → ホテルチェックイン → 軽めの観光 → ローカルレストランで夕食</li>\n</ul>\n\n\n\n' +
-          '<h3 class="wp-block-heading">Day2（観光＋ショッピング）</h3>\n\n\n\n' +
-          '<ul class="wp-block-list">\n<li>午前：恋人岬・アプガン砦・ハガニア散策</li>\n\n\n\n' +
-          "<li>昼：ローカルレストランでランチ</li>\n\n\n\n" +
-          "<li>午後：ショッピング（Kマート・GPO・マイクロネシアモール）</li>\n\n\n\n" +
-          "<li>夕方：サンセット鑑賞 → ディナー</li>\n</ul>\n\n\n\n" +
-          '<h3 class="wp-block-heading">Day3（南部観光）</h3>\n\n\n\n' +
-          '<ul class="wp-block-list">\n<li>アガット戦争記念公園・ソレダッド砦・ベアズロック・天然プールなど南部半周</li>\n\n\n\n' +
-          "<li>午後：ビーチでシュノーケリング</li>\n\n\n\n" +
-          "<li>夜：自由解散 or レストラン同行</li>\n</ul>\n\n\n\n" +
-          "<p>このように、日ごとにテーマを変えてアレンジできるのがTotalプラン最大の魅力です。</p>",
-        replace:
-          '<h2 class="wp-block-heading">モデルコース例（12時間）</h2>\n\n\n\n' +
-          '<h3 class="wp-block-heading">観光＋ショッピング＋サンセット</h3>\n\n\n\n' +
-          '<ul class="wp-block-list">\n<li>午前：恋人岬・アプガン砦・ハガニア散策</li>\n\n\n\n' +
-          "<li>昼：ローカルレストランでランチ</li>\n\n\n\n" +
-          "<li>午後：ショッピング（Kマート・GPO・マイクロネシアモール）</li>\n\n\n\n" +
-          "<li>夕方：サンセット鑑賞 → ディナー</li>\n</ul>\n\n\n\n" +
-          "<p>行き先も順番も自由に組み替えられます。連日でご利用いただく場合は、日ごとにテーマを変えてアレンジすることも可能です。</p>",
-      },
-      {
-        why: "Airport transfers listed as a support item; discontinued.",
-        find: "<li>空港送迎（到着・出発）</li>\n\n\n\n<li>ホテル移動・チェックインサポート</li>",
-        replace: "<li>ホテル移動・チェックインサポート</li>",
-      },
-      {
-        why: "Retired product name.",
-        find: "<p><strong>「困った時にすぐ相談できる専属ガイドがいる」</strong> という安心感が、Totalプランの最大の価値です。</p>",
-        replace: "<p><strong>「困った時にすぐ相談できる専属ガイドがいる」</strong> という安心感が、ワンデープランの最大の価値です。</p>",
-      },
-      {
-        why: "Plan comparison heading refers to the retired lineup.",
-        find: '<h2 class="wp-block-heading">Short・Middle・Longとの違い</h2>',
-        replace: '<h2 class="wp-block-heading">3時間・5時間・8時間プランとの違い</h2>',
-      },
-      {
-        why: "Retired product in the comparison list.",
-        find: "<li><strong>Total（12時間×2日～）</strong>：滞在をまるごと専属サポート、イベントや特別シーンにも対応</li>",
-        replace: "<li><strong>ワンデー（12時間）</strong>：朝から夜まで、滞在をまるごと専属サポート。連日のご利用も可能</li>",
-      },
-      {
-        why: "Retired product name.",
-        find: "<p>「旅行中ずっとサポートが欲しい」「観光だけでなく滞在そのものをプロに任せたい」方にTotalプランは最適です。</p>",
-        replace: "<p>「旅行中ずっとサポートが欲しい」「観光だけでなく滞在そのものをプロに任せたい」方にワンデープランは最適です。</p>",
-      },
-      {
-        why: "Terms block restates the old rate and the retired 2-day minimum.",
-        find: "<li>$450／日（12時間）</li>\n\n\n\n<li>2日間以上からのご利用</li>\n\n\n\n<li>車両1台＋日本語ガイド1名の料金（最大7名）</li>",
-        replace: `<li>$500／日（12時間）${PRICE_SUFFIX}</li>\n\n\n\n<li>連日でのご利用も承ります（日数分のご予約となります）</li>\n\n\n\n<li>車両1台＋日本語ガイド1名の料金</li>`,
-      },
-      {
-        why: "Retired product name in the summary.",
-        find: "<p>MokaruのTotalプラン（12時間×2日～）は、<strong>滞在をまるごと専属ガイドがサポートする究極のプライベートプラン</strong> です。",
-        replace: "<p>Mokaruのワンデープラン（12時間）は、<strong>滞在をまるごと専属ガイドがサポートする究極のプライベートプラン</strong> です。",
-      },
-      {
-        why: "'到着から出発まで' promises the arrival-to-departure coverage that started with an airport pickup.",
-        find: "<p>「到着から出発まで全部任せたい」「観光も食事もショッピングも、そして安心も手に入れたい」という方にぴったりです。</p>",
-        replace: "<p>「朝から夜まで全部任せたい」「観光も食事もショッピングも、そして安心も手に入れたい」という方にぴったりです。</p>",
-      },
-      {
-        why: "Retired product name plus an unfilled placeholder link.",
-        find: "Totalプランの詳細・ご予約はこちら → [TotalPlanページリンク]",
-        replace: "ワンデープランの詳細・ご予約はこちら",
-      },
-      {
-        why: "Lists booking restaurants for the guest among the family services. Child seats and on-site support are real and stay.",
-        find: "ホテル移動、ベビーカーやチャイルドシートの準備、レストラン予約、観光地でのサポートなど、きめ細やかに対応します。",
-        replace: "ホテル移動、ベビーカーやチャイルドシートの準備、観光地でのサポートなど、きめ細やかに対応します。",
-      },
-      {
-        why: "Support list pairs the booking agent with interpreting. Interpreting is offered (owner, 2026-07-19); the booking agent is not.",
-        find: "<li>レストラン予約・通訳サポート</li>",
-        replace: "<li>通訳サポート</li>",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  "select-tour": {
-    body: [
-      {
-        why: "Lists the retired multi-day Total plan as part of the lineup.",
-        find: "<strong>コンパクトに楽しむShortPlan（3時間）から、半日ツアーのMiddleプラン（５時間）、1日しっかりのLongPlan（8時間）、滞在まるごとサポートするTotalPlan（12時間×2日～）まで</strong>",
-        replace: "<strong>コンパクトに楽しむShortPlan（3時間）から、半日ツアーのMiddleプラン（５時間）、1日しっかりのLongPlan（8時間）、朝から夜まで満喫できるワンデープラン（12時間）まで</strong>",
-      },
-      {
-        why: "Old rate card: 3h is $170.",
-        find: "<strong>ShortPlan（3時間／$130）</strong>",
-        replace: `<strong>ShortPlan（3時間／$170）</strong>${PRICE_SUFFIX}`,
-      },
-      {
-        why: "Start times no longer match START_TIMES in pricing.ts.",
-        find: "<li>午前：9:00（前後30分調整可）</li>\n\n\n\n<li>午後：13:00（前後30分調整可）</li>\n\n\n\n<li>夕方：18:00（前後30分調整可）</li>",
-        replace: `<li>${START_SHORT}</li>`,
-      },
-      {
-        why: "Old rate card: 5h is $250.",
-        find: "<strong>MiddlePlan（5時間／$230）</strong>",
-        replace: `<strong>MiddlePlan（5時間／$250）</strong>${PRICE_SUFFIX}`,
-      },
-      {
-        why: "Unfilled placeholder from the original draft.",
-        find: " MiddlePlanの詳細はこちらから → [MiddlePlanページ]",
-        replace: " MiddlePlanの詳細はこちらから",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  "1dayplan": {
-    body: [
-      {
-        why: "The live ワンデープラン is 12 hours (durationHours: 12 in pricing.ts). 12–14h was the old plan's range.",
-        find: '<h2 class="wp-block-heading">1. 12〜14時間あれば島をぐるっと 1 周できる</h2>',
-        replace: '<h2 class="wp-block-heading">1. 12時間あれば島をぐるっと 1 周できる</h2>',
-      },
-      {
-        why: "24-hour support is a promise the business does not make — it is why the 24hour-support article stays offline. Restoring it here reintroduces exactly that claim.",
-        find: "<li><strong>LINE 24h サポート付</strong><br>ツアー前後の質問も即レス。万が一のトラブル時は電話一本で駆けつけます。</li>\n\n\n\n",
-        replace: "",
-      },
-      {
-        why: "Airport transfers discontinued (owner, 2026-07-19).",
-        find: "<li><strong>空港送迎付</strong><br>到着した時も日本帰国時も安心かつ余裕をもって移動ができます。</li>\n",
-        replace: "",
-      },
-      {
-        why: "Old duration range and the $50 extension rate; per-person $125 still holds ($500 / 4).",
-        find: "<tr><td><strong>1 Day</strong></td><td>12–14h</td><td><strong>$500</strong></td><td>1人 $125</td><td>60min $５0</td></tr>",
-        replace: "<tr><td><strong>1 Day</strong></td><td>12h</td><td><strong>$500</strong></td><td>1人 $125</td><td>要相談</td></tr>",
-      },
-      {
-        why: "The rate table states one flat price; add the tier/season caveat. Child seats and the cooler stay — the owner confirmed those are still provided.",
-        find: "<p>チャイルドシート・ベビーカー無料<br>クーラーボックス＋氷を完備（要冷蔵チョコも安心）</p>",
-        replace: `<p>チャイルドシート・ベビーカー無料<br>クーラーボックス＋氷を完備（要冷蔵チョコも安心）<br>上記は1〜4名の料金です。5〜7名は+$20、繁忙期は別料金です（<a href="/plans">料金ページ</a>）</p>`,
-      },
-      {
-        why: "Repeat-customer discounts do not exist (owner decision 2026-07-17: no discounts). This is the same claim that keeps repeater-discount offline.",
-        find: "<p>リピーター割引あり。Short / Long との連日組み合わせもお得です。＊予約状況によりご希望に添えない場合もあります＊</p>",
-        replace: "<p>連日でのご利用も承ります。Short / Long との組み合わせもご相談ください。＊予約状況によりご希望に添えない場合もあります＊</p>",
-      },
-      {
-        why: "Q&A premised on 14 hours; the plan is 12.",
-        find: "<p><strong>Q. 14 時間フルで使わないと損？</strong></p>",
-        replace: "<p><strong>Q. 12 時間フルで使わないと損？</strong></p>",
-      },
-      {
-        why: "Answer restates the retired 12-hour-vs-14-hour framing.",
-        find: "<p>いいえ。12 時間で切り上げても料金は同じ。時間に縛られずゆったりどうぞ。せっかくのお休みに時間を気にしてはもったいない</p>",
-        replace: "<p>いいえ。早めに切り上げても料金は同じ。時間に縛られずゆったりどうぞ。せっかくのお休みに時間を気にしてはもったいない</p>",
-      },
-      {
-        why: "The site standardised on replying within 48 hours.",
-        find: "<li>24h 以内に空き状況と見積りをご返信</li>",
-        replace: "<li>48時間以内に空き状況と見積りをご返信</li>",
-      },
-      {
-        why: "Sells the free booking agent plus surprise staging (cake, sunset boat, beach photos) as reasons to pick this plan. Neither is offered (owner, 2026-07-19), and the whole bullet is those two claims.",
-        find: "\n\n\n\n<li><strong>レストラン予約・サプライズ演出</strong> もOK<br>誕生日ケーキ、サンセットボート、ビーチフォト手配など柔軟対応。</li>",
-        replace: "",
-      },
-      {
-        why: "Answer to 'can I have dinner at a steakhouse?' offers the booking agent. What we do run — driving there and helping at the table — stays.",
-        find: "<p>予約代行＋送迎込みOK。コース選びもご相談ください。</p>",
-        replace: "<p>送迎込みでご案内します。当日はガイドが注文をサポートしますので、コース選びもご相談ください。</p>",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  "1day-plan": {
-    body: [
-      {
-        why: "The live ワンデープラン is 12 hours; '最大７名' at one price contradicts the current tiers.",
-        find: "<li>所要時間：約12〜14時間</li>",
-        replace: "<li>所要時間：12時間</li>",
-      },
-      {
-        why: "Flat '最大７名' pricing predates the 1–4 / 5–7 tiers and the peak season.",
-        find: "<li>料金：<strong>$500</strong><strong>／車両</strong><strong>1</strong><strong>台（最大</strong><strong>７</strong><strong>名まで</strong><strong>）</strong></li>",
-        replace: `<li>料金：<strong>$500／車両1台</strong>${PRICE_SUFFIX}</li>`,
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  longplanpost: {
-    body: [
-      {
-        why: "Old rate card: 8h is $345.",
-        find: "<strong>Longプラン（8時間／$300）</strong>",
-        replace: "<strong>Longプラン（8時間／$345）</strong>",
-      },
-      {
-        why: "Old rate card and flat '最大7名' pricing.",
-        find: "<li>料金：$300（車1台＋日本語ガイド1名／最大7名まで）</li>",
-        replace: `<li>料金：$345（車1台＋日本語ガイド1名）${PRICE_SUFFIX}</li>`,
-      },
-      {
-        why: "Start times no longer match START_TIMES in pricing.ts — the 8h plan now starts in the morning only.",
-        find: '<li>7:00〜15:00（早朝発）</li>\n\n\n\n<li>10:00〜18:00（昼前発）</li>\n\n\n\n<li>12:00〜20:00（昼発・サンセット＆ディナー付き）</li>',
-        replace: `<li>${START_LONG}</li>`,
-      },
-      {
-        why: "Per-person figure computed off the old rate: 6 guests now pay $345+$20 = $365, i.e. about $61 each.",
-        find: "例えば6名で利用すれば、1人あたり <strong>$50</strong> で8時間の貸切観光＋日本語ガイド付き。",
-        replace: "例えば6名で利用すれば、1人あたり <strong>約$61</strong> で8時間の貸切観光＋日本語ガイド付き。",
-      },
-      {
-        why: "Recommends the retired multi-day Total plan, including its airport transfers.",
-        find: "<p>「1日では足りない」「滞在中ずっと専属ガイドをお願いしたい」という方には、<strong>Totalプラン（12時間×2日～）</strong> がおすすめです。<br>観光・ショッピング・食事・空港送迎まで、滞在を丸ごと専属でサポートする特別なプランです。家族旅行や芸能人・インフルエンサーの方、結婚式や撮影同行などにも最適。</p>",
-        replace: "<p>「1日では足りない」「滞在中ずっと専属ガイドをお願いしたい」という方には、<strong>ワンデープラン（12時間）</strong> がおすすめです。<br>観光・ショッピング・食事まで、朝から夜まで専属でサポートする特別なプランです。家族旅行や芸能人・インフルエンサーの方、結婚式や撮影同行などにも最適。連日でのご利用も承ります。</p>",
-      },
-      {
-        why: "Unfilled placeholder from the original draft.",
-        find: " Longプランの詳細・ご予約はこちら → [LongPlanページリンク]",
-        replace: " Longプランの詳細・ご予約はこちら",
-      },
-      {
-        why: "Retired product name plus an unfilled placeholder.",
-        find: "Totalプランの詳細はこちら → [TotalPlanページリンク]",
-        replace: "ワンデープランの詳細はこちら",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  "long-plan": {
-    body: [
-      {
-        why: "The live 8時間プラン is 8 hours, not a 7–8 range.",
-        find: "**MokaruのLongプラン（約7〜8時間）**",
-        replace: "**MokaruのLongプラン（8時間）**",
-      },
-      {
-        why: "The live 8時間プラン is 8 hours, not a 7–8 range.",
-        find: "<li>所要時間：約7〜8時間</li>",
-        replace: "<li>所要時間：8時間</li>",
-      },
-      {
-        why: "Old rate card and flat '最大７名' pricing.",
-        find: "<li>料金：<strong>$300</strong><strong>／車両</strong><strong>1</strong><strong>台（最大</strong><strong>７</strong><strong>名まで</strong><strong>）</strong></li>",
-        replace: `<li>料金：<strong>$345／車両1台</strong>${PRICE_SUFFIX}</li>`,
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  "long-tour": {
-    body: [
-      {
-        why: "Start times no longer match START_TIMES in pricing.ts. The three alternative departures below are removed with their sections.",
-        find: '<h3 class="wp-block-heading">7:00–15:00（早朝出発）</h3>',
-        replace: '<h3 class="wp-block-heading">午前出発（8:30／9:00／9:30）</h3>',
-      },
-      {
-        why: "The 8h plan no longer has a late-morning departure option.",
-        find: '<h3 class="wp-block-heading">10:00–18:00（ゆったり昼前スタート）</h3>',
-        replace: '<h3 class="wp-block-heading">ゆったり回るコース</h3>',
-      },
-      {
-        why: "The 8h plan no longer has a midday departure option.",
-        find: '<h3 class="wp-block-heading">12:00–20:00（昼出発・サンセット＆ディナー付き）</h3>',
-        replace: '<h3 class="wp-block-heading">サンセット＆ディナーを組み込むコース</h3>',
-      },
-      {
-        why: "Heading offered a choice of start times that no longer exists.",
-        find: '<h2 class="wp-block-heading">開始時間を選べます（所要8時間）</h2>',
-        replace: `<h2 class="wp-block-heading">組み立て方はいろいろ（所要8時間・出発は${START_LONG}）</h2>`,
-      },
-      {
-        why: "Per-person figure off the old rate, and the plan is 8 hours: $345 / 4 guests ≈ $86.",
-        find: "4人なら1人 $75で7時間自由行動。タクシーを何度も使うより断然安い。",
-        replace: `4人なら1人 約$86で8時間自由行動。タクシーを何度も使うより断然安い。${PRICE_SUFFIX}`,
-      },
-      {
-        why: "Points at a different LINE account (lin.ee/TIVeYdb) than the one the business uses today (LINE_URL in config.ts).",
-        find: "https://lin.ee/TIVeYdb",
-        replace: "https://lin.ee/OfniH2h",
-      },
-      {
-        why: "The site standardised on replying within 48 hours.",
-        find: "<li>24h以内に空き状況と見積り回答</li>",
-        replace: "<li>48時間以内に空き状況と見積り回答</li>",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  "about-mokaru": {
-    body: [
-      {
-        why: "The live 3時間プラン is 3 hours, not a 3–4 range.",
-        find: "<strong>① Shortプラン（３〜４時間）｜グアムの定番観光を満喫！</strong>",
-        replace: "<strong>① Shortプラン（3時間）｜グアムの定番観光を満喫！</strong>",
-      },
-      {
-        why: "Old rate card (full-width digits in the source): 3h starts at $170.",
-        find: "<p>📌 <strong>料金目安：$１３０～（人数やプランによって変動）</strong></p>",
-        replace: `<p>📌 <strong>料金目安：$170〜</strong>${PRICE_SUFFIX}</p>`,
-      },
-      {
-        why: "The live 8時間プラン is 8 hours, not a 7–8 range.",
-        find: "<strong>② Longプラン（７〜８時間）｜グアムをしっかり観光＆ショッピング！</strong>",
-        replace: "<strong>② Longプラン（8時間）｜グアムをしっかり観光＆ショッピング！</strong>",
-      },
-      {
-        why: "Old rate card: 8h starts at $345.",
-        find: "<p>📌 <strong>料金目安：$300～（人数やプランによって変動）</strong></p>",
-        replace: `<p>📌 <strong>料金目安：$345〜</strong>${PRICE_SUFFIX}</p>`,
-      },
-      {
-        why: "An entire plan built on airport transfers, which are discontinued (owner, 2026-07-19).",
-        find: '<h3 class="wp-block-heading"><strong>③ エーアポートシャトルプラン</strong>　⁻　ホテル⇔空港を快適に移動</h3>\n\n\n\n<p>💡 <strong>こんな方におすすめ！</strong><br>☑ タクシー・レンタカーを利用するのが不安<br>☑ ホテルのチェックイン・チェックアウトのお手伝いが必要</p>\n\n\n\n<p>📌 <strong>料金目安：$２５～（片道送迎）</strong></p>\n\n\n\n<hr class="wp-block-separator has-alpha-channel-opacity"/>\n\n\n\n',
-        replace: "",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
   // ALREADY LIVE since the 2026-07-17 restore. bus-rentacar and guam-traffic
@@ -557,17 +158,39 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // pricing.ts, plus airport transfers. Found 2026-07-19 while reviving the
   // other twelve — the exclusion list was built from the plan articles and
   // never swept the practical guides, which quote prices in passing.
+  // 🔴 2026-09-12: these two corrections were themselves out of date.
+  //
+  // In July they replaced the retired airport-transfer prices with the CURRENT
+  // charter rate card ($170/$250/$345) — correct then, wrong from 2026-10-01,
+  // when the charter ends. A correction is not a one-time fix; it is a standing
+  // claim, and it goes stale with the thing it describes.
+  //
+  // They are now deletions rather than substitutions. We are not a way of
+  // getting around Guam any more, so listing ourselves in an article comparing
+  // ways of getting around Guam — at any price — would be misleading. What we
+  // do sell is stated under every article by legacy-cta.ts.
+  //
+  // 🔵 This is also why the build output has to be grepped for the CURRENT
+  // product's words, not only the old one's. Searching for「Shortプラン」would
+  // have reported zero while these two pages still quoted the rate card, and
+  // it did: the miss was found by grepping「貸切プラン」and「$170」afterwards.
   "guam-traffic": {
     body: [
       {
-        why: "Quotes the retired airport transfer and the old $130 rate (full-width digits) for our own tours.",
+        why: "自社の送迎・貸切の料金表。2026-09-30で提供が終わるので、価格を直すのではなく削除する。",
         find: "<p>📌 <strong>Mokaruの送迎プラン（1台あたりの料金）</strong><br>🚗 <strong>空港送迎（片道）：$25～ （セダンタイプは４名まで。ヴァンタイプは６名まで）</strong><br>🚗 <strong>観光エリア送迎（ホテル⇔ショッピング）：３時間$１３０～</strong><br>🚗 <strong>カスタムプラン（貸切ツアー）：6時間$300～</strong></p>",
-        replace: `<p>📌 <strong>Mokaruの貸切プラン（1台あたりの料金）</strong><br>🚗 <strong>3時間プラン：$170〜（セダンは4名まで、ヴァンは7名まで）</strong><br>🚗 <strong>5時間プラン：$250〜</strong><br>🚗 <strong>8時間プラン：$345〜</strong>${PRICE_SUFFIX}</p>`,
+        replace: "",
       },
       {
-        why: "Comparison table sells the retired airport transfer at the old $25 rate.",
-        find: "<td><strong>Mokaru送迎</strong> 🚙</td><td>安全＆快適に移動したい人向け</td><td>$25～（空港送迎）</td><td>日本語対応＆専用車で安心</td><td>事前予約が必要</td>",
-        replace: "<td><strong>Mokaru貸切チャーター</strong> 🚙</td><td>安全＆快適に観光したい人向け</td><td>$170～（3時間・1台）</td><td>日本語ガイド＆専用車で安心</td><td>事前予約が必要</td>",
+        why: "移動手段の比較表に自社の行が入っている。移動手段の提供をやめるので、行ごと削除する（セルだけ消すと空の行が残る）。",
+        findRe: /<tr><td><strong>Mokaru送迎<\/strong>[\s\S]*?<\/tr>/g,
+        replace: "",
+      },
+      {
+        why: "「どの移動手段がいい？と迷ったらMokaruに相談」＝移動手段の相談窓口としての導線。提供しないサービスへの誘導になる。",
+        findRe:
+          /\s*<p>📩 <strong>「どの移動手段がいい？」と迷ったら、Mokaruに相談！<\/strong>[\s\S]*?<\/p>/g,
+        replace: "",
       },
     ],
   },
@@ -575,9 +198,27 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   "bus-rentacar": {
     body: [
       {
-        why: "Quotes the retired airport transfer, the old $130 rate, and a 6-hour plan that is not in PLANS. Replaced with the live lineup.",
+        why: "自社の送迎・貸切の料金表。上の guam-traffic と同じ理由で削除する。",
         find: "<p>📌 <strong>Mokaruの送迎プラン（1台あたりの料金）</strong><br>🚗 <strong>空港送迎（片道）：$25～  $45</strong><br>🚗 <strong>ホテル⇔観光地のショートプラン：$130～</strong><br>🚗 <strong>貸切ツアー（6時間）：$300～</strong></p>",
-        replace: `<p>📌 <strong>Mokaruの貸切プラン（1台あたりの料金）</strong><br>🚗 <strong>3時間プラン：$170〜</strong><br>🚗 <strong>5時間プラン：$250〜</strong><br>🚗 <strong>8時間プラン：$345〜</strong>${PRICE_SUFFIX}</p>`,
+        replace: "",
+      },
+      {
+        why: "「効率よく観光したいならMokaruの送迎がベスト」＝提供をやめる移動手段の推奨。",
+        find:
+          "<p>💡 <strong>「効率よく観光したい」「英語が不安」なら、Mokaruの送迎がベスト！</strong></p>",
+        replace: "",
+      },
+      {
+        // The午前 leg of a day-route is built around our own transport. The
+        // destinations are real and worth keeping — Talofofo Falls and the
+        // Inarajan natural pool are exactly why someone reads this article —
+        // so the leg is rewritten to name the places without naming a lift we
+        // will not be giving anyone.
+        why: "1日ルートの午前が自社送迎前提。行き先（タロフォフォの滝・イナラハン天然プール）は残し、移動手段の指定だけ外す。",
+        find:
+          "<p>🚙 <strong>Mokaru送迎（ホテル発）</strong><br>↓<br>🏞 <strong>タロフォフォの滝＆イナラハン天然プール</strong> → 大自然の絶景スポットを巡る！<br>↓<br>🚖 <strong>（Mokaru送迎）ホテルへ戻る</strong></p>",
+        replace:
+          "<p>🏞 <strong>タロフォフォの滝＆イナラハン天然プール</strong> → 大自然の絶景スポットを巡る！<br>※ どちらも南部で、バスは通っていません。レンタカーか、送迎のあるツアーを手配して向かうことになります。</p>",
       },
     ],
   },
@@ -822,6 +463,41 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         why: "States a minibus charter is available for large groups. Our vehicles top out at 7 (MAX_GUESTS in pricing.ts); the owner will take it case by case, so it must read as a request rather than a standing offer.",
         find: "<li>大人数ならミニバスの<strong>グアム チャーター</strong>手配可</li>",
         replace: "<li>大人数の場合はミニバスの<strong>グアム チャーター</strong>もご相談ください（要相談）</li>",
+      },
+    ],
+  },
+
+  // 🔵 Corrected, NOT rewritten, and the distinction is the point.
+  //
+  // transportation is a genuinely good article about getting around Guam — the
+  // trolley runs about hourly and costs 7 dollars a ride, a taxi to a main
+  // hotel is around 25 dollars, there is essentially no hailing one in the
+  // street. All of that stays true on 2026-10-01 and is exactly what a trip
+  // planner searches for.
+  //
+  // What has to go is the sales comparison bolted onto the end: a section
+  // costing out the five-hour charter at 230 dollars against those options, a
+  // list of reasons to choose it, and a conclusion recommending it. The product
+  // ends 2026-09-30. Cutting three sections out of a useful article is what
+  // corrections are for; the plan ARTICLES were rewritten because there was
+  // nothing left once the product went.
+  transportation: {
+    body: [
+      {
+        findRe:
+          /\s*<hr class="wp-block-separator has-alpha-channel-opacity"\/>\s*<h3 class="wp-block-heading">Mokaru Middleプラン[\s\S]*?<\/ol>/g,
+        replace: "",
+        why:
+          "5時間チャーター（230ドル）の料金比較と「Mokaruならではの強み」。2026-09-30で終了する商品の宣伝で、" +
+          "料金も旧レート。移動手段の解説そのものは正しいので残す。",
+      },
+      {
+        findRe:
+          /\s*<p>グアム旅行中の移動手段は複数ありますが、[\s\S]*?Mokaruのプライベートチャーターがおすすめです。<\/p>/g,
+        replace:
+          '\n\n\n\n<p>グアムの移動手段は、それぞれに向き不向きがあります。タモン周辺だけならトローリーバスと徒歩で足りますが、恋人岬や南部まで足を延ばすなら、待ち時間の少ない手段を確保しておくほうが確実です。人数が増えるほど、1回ごとに人数分かかる移動手段は割高になります。</p>\n\n\n\n<p>行き先を決めてから移動手段を選ぶのではなく、使える移動手段から行き先を決めるほうが、グアムでは失敗しません。</p>',
+        why:
+          "まとめが「だからMokaruのプライベートチャーターを」で終わっていた。記事の主題（移動手段の比較）で締めるよう書き換え。",
       },
     ],
   },

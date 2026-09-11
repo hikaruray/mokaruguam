@@ -50,25 +50,25 @@ export const PARTNERS: Partner[] = [
   },
   // Added 2026-09-12, after the owner confirmed the agreement is signed.
   //
-  // 🟡 NAME: the owner referred to this partner as "Sunny Divers"; their own
-  // site brands as GENTLY BLUE / ジェントリーブルー. The site's name is used
-  // here, because that is what a guest will see when they look the shop up and
-  // what the shop will recognise in a booking request. If the contract is in
-  // the other name, this needs changing in both places — here and in the
-  // subject line of the mail we send them.
+  // NAME: the owner also refers to this partner as "Sunny Divers", but confirmed
+  // on 2026-09-12 that Gently Blue is the name to use. It is what their own site
+  // brands as, what a guest sees when they look the shop up, and what the shop
+  // will recognise in a booking request — so it is also the name that belongs in
+  // the subject line of the mail we send them.
   //
   // Prices and activity names are taken verbatim from gentlyblue.com/top
-  // (read 2026-09-12). The shop also runs PADI certification courses — Open
-  // Water, Deep, Boat, Buoyancy, Underwater Naturalist — which are not listed
-  // here because most carry no published price and a multi-day course is not
-  // what a holiday booking request looks like. Ask by email for those.
+  // (read 2026-09-12), and the owner confirmed they are per person. The shop
+  // also runs PADI certification courses — Open Water, Deep, Boat, Buoyancy,
+  // Underwater Naturalist — which are not listed here because most carry no
+  // published price and a multi-day course is not what a holiday booking
+  // request looks like. Ask by email for those.
   {
     id: "gently-blue-intro",
     company: "Gently Blue（ジェントリーブルー）",
     activity: "体験ダイビング（1ビーチダイブ）",
     // 🔴 No duration: the shop does not publish one. Not estimated.
     priceFrom: "$80.00",
-    priceNote: "Gently Blue の料金",
+    priceNote: "Gently Blue の料金（お一人あたり）",
     blurb:
       "ライセンスがなくても参加できる体験ダイビングです。ビーチから入るので、初めての方でも落ち着いて潜れます。",
   },
@@ -77,7 +77,7 @@ export const PARTNERS: Partner[] = [
     company: "Gently Blue（ジェントリーブルー）",
     activity: "ウミガメ体験ダイビング（1ビーチ＆1ボート）",
     priceFrom: "$160.00",
-    priceNote: "Gently Blue の料金",
+    priceNote: "Gently Blue の料金（お一人あたり）",
     blurb:
       "ビーチとボートを1本ずつ潜る体験ダイビング。ウミガメに会えることを狙ったコースです。",
   },
