@@ -207,9 +207,17 @@ export async function authorizeOrder(
   return { authorizationId: authorization.id, status: authorization.status };
 }
 
-// Read an authorization back (used to recover an existing capture id when a
-// capture call reports the authorization was already captured).
-async function getAuthorization(authorizationId: string): Promise<{
+// Read an authorization back. Two callers:
+//   • captureAuthorization(), to recover an existing capture id when PayPal
+//     reports the authorization was already captured.
+//   • the /repay page, to find out whether a hold is still alive before
+//     offering to take another one. Asking PayPal rather than trusting our own
+//     `payment` column is the whole point there: if the column is stale we
+//     would put a second $10 hold on a card that already has a live one.
+//
+// Status values worth knowing: CREATED (live), PENDING (under review, still
+// capturable), EXPIRED, VOIDED, CAPTURED, PARTIALLY_CAPTURED, DENIED.
+export async function getAuthorization(authorizationId: string): Promise<{
   status: string;
   captureId: string | null;
 }> {
@@ -258,7 +266,7 @@ export async function captureAuthorization(
 }
 
 // Void an authorization (お断り → 仮押さえ解除・課金なし).
-// IDEMPOTENT: if PayPal reports it was already voided, treat as success.
+// IDEMPOTENT: if PayPal reports the hold is already gone, treat as success.
 export async function voidAuthorization(
   authorizationId: string,
 ): Promise<{ alreadyDone: boolean }> {
@@ -273,7 +281,19 @@ export async function voidAuthorization(
   } catch (err) {
     if (
       err instanceof PaypalApiError &&
-      err.hasIssue("PREVIOUSLY_VOIDED", "AUTHORIZATION_VOIDED")
+      // 🔴 AUTHORIZATION_EXPIRED belongs here with the voided cases, and its
+      // absence was not cosmetic. An expired hold is already released — there
+      // is nothing left to void and nothing to charge — but PayPal answers the
+      // void call with an error, which used to surface as a 502 from the admin
+      // decline action. The booking never reached `declined` and the guest was
+      // never told we could not arrange it: the one path where a person is
+      // waiting for an answer ended in silence. Treating it as done lets the
+      // decline finish and the email go out.
+      err.hasIssue(
+        "PREVIOUSLY_VOIDED",
+        "AUTHORIZATION_VOIDED",
+        "AUTHORIZATION_EXPIRED",
+      )
     ) {
       return { alreadyDone: true };
     }

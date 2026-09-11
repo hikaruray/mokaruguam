@@ -65,6 +65,67 @@ export function confirmedEmail(
   };
 }
 
+// A replacement hold was taken after the first one expired (/repay).
+//
+// 🔴 This email must not read like a confirmation. Nothing is arranged yet at
+// the moment it is sent: under design §6-4-1 the hold has to exist BEFORE we
+// ring the restaurant, so at this point we have the guest's money on hold and
+// no table. Wording that implied otherwise would have them turn up to a seat
+// nobody reserved.
+export function reauthorizedEmail(
+  b: BookingRequest,
+  amount: number,
+): { subject: string; text: string } {
+  return {
+    subject: "【Mokaru Guam】お支払い手続きを承りました（お手配はこれからです）",
+    text: [
+      `${b.name} 様`,
+      ``,
+      `お支払いのお手続きをいただき、ありがとうございます。`,
+      `手配料 $${amount.toFixed(2)} をカードにお預かり（仮押さえ）しました。この時点ではまだ請求されていません。`,
+      ``,
+      `▼ ご依頼の内容`,
+      ...(b.partnerName ? [`お手配先:   ${b.partnerName}`] : []),
+      `ご希望日時: ${b.preferredDate}`,
+      `人数:       ${b.guests}名`,
+      ``,
+      `▼ このあとの流れ`,
+      `1. これからお店へお席の確保をご依頼します。`,
+      `2. お席が取れた時点で手配料のお支払いが確定し、確定のご連絡をお送りします。`,
+      `3. お席をご用意できなかった場合は、仮押さえを解除します。ご請求は発生しません。`,
+      ``,
+      `受付ID: ${b.id}`,
+      `— Mokaru Guam`,
+    ].join("\n"),
+  };
+}
+
+// The same event, told to the owner — this is the go-ahead to ring the
+// restaurant, and nothing else tells them it arrived.
+export function reauthorizedOwnerEmail(
+  b: BookingRequest,
+  amount: number,
+): { subject: string; text: string } {
+  return {
+    subject: `【再オーソリ成立】${b.name} 様／${b.partnerName || "レストラン予約代行"}`,
+    text: [
+      `カードのお預かりを取り直せました。お店への予約はここから進めてください。`,
+      ``,
+      `お名前:   ${b.name}`,
+      `連絡先:   ${b.email} / ${b.phone}`,
+      `お手配先: ${b.partnerName || "（未記入）"}`,
+      `希望日時: ${b.preferredDate}`,
+      `人数:     ${b.guests}名`,
+      `手配料:   $${amount.toFixed(2)}（仮押さえ中・未請求）`,
+      ``,
+      `お席が取れたら管理画面で「確定」を押すと手配料が確定します。`,
+      `取れなかった場合は「お断り」で仮押さえを解除してください。`,
+      ``,
+      `受付ID: ${b.id}`,
+    ].join("\n"),
+  };
+}
+
 // Booking declined (お断り → authorization voided, no charge).
 export function declinedEmail(b: BookingRequest): {
   subject: string;

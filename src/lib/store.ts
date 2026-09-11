@@ -69,6 +69,13 @@ export interface BookingRequest {
   amount: number | null;
   paypalOrderId: string | null;         // PayPal order (intent=AUTHORIZE)
   paypalAuthorizationId: string | null; // authorization to capture/void later
+  // Holds this booking used to carry, oldest first. A PayPal hold lives about
+  // three days; when one dies before the table is confirmed the guest
+  // re-authorises through /repay and paypalAuthorizationId is replaced. There
+  // is only room for one, so the ones it replaced are appended here — without
+  // them "which hold was this booking actually charged on" has no answer when
+  // reconciling against PayPal. Append, never overwrite.
+  previousAuthorizationIds: string[];
   paypalCaptureId: string | null;       // capture id (needed to refund later)
   refundAmount: number | null;          // USD refunded on cancellation (if any)
   refundRate: number | null;            // 0..1 refund rate applied on cancel
@@ -107,6 +114,11 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     amount: row.amount != null ? Number(row.amount) : null,
     paypalOrderId: (row.paypal_order_id as string) ?? null,
     paypalAuthorizationId: (row.paypal_authorization_id as string) ?? null,
+    // Empty rather than null when the column is absent: every read of this is a
+    // list to append to, and a null would have to be handled at each one.
+    previousAuthorizationIds: Array.isArray(row.previous_authorization_ids)
+      ? (row.previous_authorization_ids as string[])
+      : [],
     paypalCaptureId: (row.paypal_capture_id as string) ?? null,
     refundAmount:
       row.refund_amount != null ? Number(row.refund_amount) : null,
@@ -209,6 +221,7 @@ export async function addBooking(
     | "amount"
     | "paypalOrderId"
     | "paypalAuthorizationId"
+    | "previousAuthorizationIds"
     | "paypalCaptureId"
     | "refundAmount"
     | "refundRate"
@@ -280,6 +293,7 @@ export async function addBooking(
     amount,
     paypalOrderId,
     paypalAuthorizationId,
+    previousAuthorizationIds: [],
     paypalCaptureId: null,
     refundAmount: null,
     refundRate: null,
@@ -384,6 +398,76 @@ export async function setBookingPayment(
     if (patch.refundAmount !== undefined)
       booking.refundAmount = patch.refundAmount;
     if (patch.refundRate !== undefined) booking.refundRate = patch.refundRate;
+  }
+  await writeFile(db);
+}
+
+/**
+ * Attach a REPLACEMENT PayPal hold to an existing booking (/repay).
+ *
+ * WHY THIS IS NOT setBookingPayment
+ * PaymentPatch carries payment, capture id and the two refund fields. The order
+ * and authorization ids are written once, by addBooking's INSERT, and there was
+ * no way to write them again — which is fine while a booking has exactly one
+ * hold for its whole life, and stops being fine the moment a dead hold has to
+ * be replaced by a live one.
+ *
+ * Both ids move together on purpose. Writing only the authorization leaves the
+ * row pointing at the order the FIRST hold came from, and reconciliation then
+ * reads a hold and an order that never belonged to each other.
+ *
+ * The id being replaced is APPENDED to previousAuthorizationIds, never dropped:
+ * it is the only record of which hold PayPal actually settled against.
+ */
+export async function setBookingAuthorization(
+  id: string,
+  next: { paypalOrderId: string; paypalAuthorizationId: string },
+): Promise<void> {
+  const current = await getBooking(id);
+  if (!current) throw new Error(`Booking not found: ${id}`);
+
+  // 🔴 Refuse rather than overwrite a capture. Reaching here on a captured row
+  // means the money is already taken, and replacing the hold would set the
+  // booking up to be charged a second time for the same table. The /repay
+  // routes check this too; it is repeated at the write because this is the last
+  // place that can still say no.
+  if (current.payment === "captured" || current.paypalCaptureId) {
+    throw new Error(
+      `Refusing to re-authorise a captured booking (${id}) — that would double-charge.`,
+    );
+  }
+
+  const superseded = current.paypalAuthorizationId;
+  const previous =
+    superseded && !current.previousAuthorizationIds.includes(superseded)
+      ? [...current.previousAuthorizationIds, superseded]
+      : current.previousAuthorizationIds;
+
+  const supabase = getSupabase();
+
+  if (supabase) {
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        payment: "authorized",
+        paypal_order_id: next.paypalOrderId,
+        paypal_authorization_id: next.paypalAuthorizationId,
+        previous_authorization_ids: previous,
+      })
+      .eq("id", id);
+    if (error) {
+      throw new Error(`Failed to save re-authorisation: ${error.message}`);
+    }
+    return;
+  }
+
+  const db = await readFile();
+  const booking = db.bookings.find((b) => b.id === id);
+  if (booking) {
+    booking.payment = "authorized";
+    booking.paypalOrderId = next.paypalOrderId;
+    booking.paypalAuthorizationId = next.paypalAuthorizationId;
+    booking.previousAuthorizationIds = previous;
   }
   await writeFile(db);
 }

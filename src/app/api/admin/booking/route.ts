@@ -9,10 +9,13 @@ import {
   captureAuthorization,
   voidAuthorization,
   isPaypalConfigured,
+  PaypalApiError,
 } from "@/lib/paypal";
 import { cancelBooking } from "@/lib/booking-actions";
 import { sendMail } from "@/lib/email";
 import { confirmedEmail, declinedEmail } from "@/lib/booking-emails";
+import { repayUrl } from "@/lib/cancel-token";
+import { SITE_URL } from "@/lib/config";
 
 // Update a booking's status from the Admin dashboard, and drive the matching
 // PayPal action (booking-payment-design.md: authorize → capture/void/refund).
@@ -125,10 +128,16 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     }
+    // The way back. Without a link here the owner knows the confirmation was
+    // refused and has nothing to do about it, so the booking sits pending until
+    // someone remembers it — see the 🔴 note below on the order of operations.
+    const link = repayUrl(booking.id, SITE_URL);
     return Response.json(
       {
         error:
-          "この依頼にはカードのお預かりがありません。確定すると手配料を請求できないため、確定できません。お客様に再度のお手続きをご案内してください。",
+          booking.payment === "expired"
+            ? `カードのお預かりが期限切れです。お客様に下記のリンクから再度のお手続きをご案内してください。お手続きが済むまで、お店へのご予約はお控えください（席だけ取れて手配料を請求できない状態を避けるため）。\n${link}`
+            : `この依頼にはカードのお預かりがありません。確定すると手配料を請求できないため、確定できません。お客様に下記のリンクから再度のお手続きをご案内してください。\n${link}`,
       },
       { status: 409 },
     );
@@ -137,9 +146,37 @@ export async function POST(request: Request) {
   try {
     if (action === "confirm") {
       if (hasAuthorization) {
-        const { captureId } = await captureAuthorization(
-          booking.paypalAuthorizationId!,
-        );
+        let captureId: string;
+        try {
+          ({ captureId } = await captureAuthorization(
+            booking.paypalAuthorizationId!,
+          ));
+        } catch (err) {
+          // 🔴 The hold died before we got here. This is the ONE capture
+          // failure that is not a fault to retry, and it has to be told apart
+          // from the others: a plain 502 left the row saying "仮押さえ" — money
+          // apparently waiting — so the owner would press 確定 again tomorrow
+          // and get the same 502, with nothing on screen ever explaining why.
+          //
+          // Recording it as expired makes the dead hold visible, and hands the
+          // owner the one action that does work: send the guest to /repay.
+          // Gate 3 is untouched — the booking stays pending, because there is
+          // no money behind it.
+          if (
+            err instanceof PaypalApiError &&
+            err.hasIssue("AUTHORIZATION_EXPIRED")
+          ) {
+            await setBookingPayment(id, { payment: "expired" });
+            const link = repayUrl(booking.id, SITE_URL);
+            return Response.json(
+              {
+                error: `カードのお預かりが期限切れのため、手配料を請求できませんでした。確定していません。お客様に下記のリンクから再度のお手続きをご案内してください。お手続きが済むまで、お店へのご予約はお控えください。\n${link}`,
+              },
+              { status: 409 },
+            );
+          }
+          throw err;
+        }
         await setBookingPayment(id, {
           payment: "captured",
           paypalCaptureId: captureId,

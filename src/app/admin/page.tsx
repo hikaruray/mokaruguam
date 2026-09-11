@@ -6,6 +6,8 @@ import {
 } from "@/lib/store";
 import BookingActions from "./BookingActions";
 import TourSchedule, { type ScheduleRow } from "./TourSchedule";
+import { repayUrl } from "@/lib/cancel-token";
+import { SITE_URL } from "@/lib/config";
 
 // Always read the latest data so new requests show immediately.
 export const dynamic = "force-dynamic";
@@ -172,6 +174,17 @@ export default async function AdminPage() {
                     {b.payment === "captured" && (
                       <span className="mt-1 block text-[11px] font-semibold text-emerald-700">
                         入金 ${amount.toFixed(2)}
+                      </span>
+                    )}
+                    {/* A dead hold is only actionable if the way back is in
+                        reach. Printing the link here means the owner can copy
+                        it into a reply without going to look for it. */}
+                    {b.payment === "expired" && (
+                      <span className="mt-1 block max-w-[14rem] text-[11px] text-amber-800">
+                        再手続きのご案内リンク：
+                        <span className="mt-0.5 block break-all font-mono text-[10px] text-slate-500">
+                          {repayUrl(b.id, SITE_URL)}
+                        </span>
                       </span>
                     )}
                     {b.payment === "refunded" && b.refundAmount != null && (

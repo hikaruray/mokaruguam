@@ -53,6 +53,11 @@ process.env.PAYPAL_CLIENT_SECRET = "not-a-real-secret";
 process.env.PAYPAL_ENV = "sandbox";
 // Keep writes inside the scratch directory rather than the repo's own data dir.
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
+// Pinned so the token assertions below can compare against literal strings.
+// Without this the signing key would fall through to ADMIN_PASSWORD, which this
+// file sets later, and the "already-sent links still work" check would be
+// comparing a value to itself.
+process.env.CANCEL_TOKEN_SECRET = "gate-check-secret";
 
 import { mkdtempSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -272,6 +277,225 @@ check(
   !/\$\d/.test(mail.text),
   "tour confirmation states no dollar figure",
   mail.text.split("\n").find((l) => l.includes("お支払い")) ?? "(no payment line)",
+);
+
+console.log("\n--- Re-authorisation links are scoped, and old ones still work ---");
+
+const {
+  makeCancelToken,
+  verifyCancelToken,
+  makeRepayToken,
+  verifyRepayToken,
+} = await import("@/lib/cancel-token");
+
+// 🔴 The literal is the point. Mixing a purpose into sign() is the obvious way
+// to scope a token, and it would invalidate every cancellation link already
+// sitting in a guest's inbox — a change with no local symptom whatsoever, since
+// the code would keep producing and accepting its own new tokens quite happily.
+// Comparing against a value computed before the change is the only thing that
+// notices.
+check(
+  makeCancelToken("bk-stable-1") ===
+    "Ymstc3RhYmxlLTE.NzQ1YTQ5MGYxMjEzMzhjMTVkNTA0MzI4YzM3NDQ4NzQ4OGIyOTljZjU0NDE1ZGU2NDNhNGFmZmM5MjczMjU3OQ",
+  "cancel tokens are byte-identical to previously issued ones",
+  makeCancelToken("bk-stable-1").slice(0, 24) + "…",
+);
+check(
+  makeRepayToken("bk-stable-1") ===
+    "Ymstc3RhYmxlLTE.NDllM2QxYTc0M2NiYzU1YTZjNWYwNWE2YjUzOWY1ZDMxYjRjNTNlYjdhMzhjMjRlYjQ5MGE1YWQxMzRjMmI3OA",
+  "repay tokens are stable too",
+  makeRepayToken("bk-stable-1").slice(0, 24) + "…",
+);
+
+// Neither link may act as the other: a cancel link must not re-authorise a
+// card, and a repay link must not cancel a booking.
+check(
+  verifyRepayToken(makeCancelToken("bk-1")) === null,
+  "a cancel link is not accepted as a repay link",
+  String(verifyRepayToken(makeCancelToken("bk-1"))),
+);
+check(
+  verifyCancelToken(makeRepayToken("bk-1")) === null,
+  "a repay link is not accepted as a cancel link",
+  String(verifyCancelToken(makeRepayToken("bk-1"))),
+);
+check(
+  verifyCancelToken(makeCancelToken("bk-1")) === "bk-1" &&
+    verifyRepayToken(makeRepayToken("bk-1")) === "bk-1",
+  "each link still verifies under its own purpose",
+  "both round-trip",
+);
+
+console.log("\n--- Who may re-enter payment at /repay ---");
+
+// NOTE ON COVERAGE: every case below is chosen so that lib/repay.ts refuses or
+// answers BEFORE it would ask PayPal whether a hold is still alive. That branch
+// runs only when payment === "authorized", and exercising it here would put a
+// real request on the network with the deliberately fake credentials at the top
+// of this file. It is not asserted, and it is not covered by anything else.
+const { loadRepayable } = await import("@/lib/repay");
+
+check(
+  (await loadRepayable("not-a-token")).ok === false,
+  "a forged token is refused",
+  "refused",
+);
+
+const tourRepay = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski" });
+check(
+  (await loadRepayable(makeRepayToken(tourRepay.id))).ok === false,
+  "a tour is refused (there is no fee to re-authorise)",
+  "refused",
+);
+
+// 🔴 The double-charge guard: captured, but the status never moved. Sending
+// this guest to /repay charges them twice for one table.
+const paidRepay = await seed({ requestType: "restaurant", partnerName: "Proa" });
+await setBookingPayment(paidRepay.id, {
+  payment: "captured",
+  paypalCaptureId: "CAP-TEST",
+});
+const paidCheck = await loadRepayable(makeRepayToken(paidRepay.id));
+check(paidCheck.ok === false, "a captured booking is refused", "refused");
+check(
+  paidCheck.ok === false && paidCheck.status === 409,
+  "and refused as a conflict, not a bad link",
+  paidCheck.ok === false ? `HTTP ${paidCheck.status}` : "allowed",
+);
+
+const { setBookingStatus } = await import("@/lib/store");
+const settledRepay = await seed({ requestType: "restaurant", partnerName: "Proa" });
+await setBookingStatus(settledRepay.id, "confirmed");
+check(
+  (await loadRepayable(makeRepayToken(settledRepay.id))).ok === false,
+  "a confirmed booking is refused",
+  "refused",
+);
+
+// The case /repay exists for: the hold died, the booking is still waiting.
+// Seeded at $7 rather than $10 on purpose — the amount offered must come from
+// the snapshot taken when the guest agreed to it, not from today's fee table.
+const deadHold = await seed({
+  requestType: "restaurant",
+  partnerName: "Proa",
+  payment: "authorized",
+  amount: 7,
+  paypalOrderId: "ORDER-1",
+  paypalAuthorizationId: "AUTH-1",
+});
+await setBookingPayment(deadHold.id, { payment: "expired" });
+const allowed = await loadRepayable(makeRepayToken(deadHold.id));
+check(allowed.ok === true, "an expired hold may be re-authorised", "allowed");
+check(
+  allowed.ok === true && allowed.amount === 7,
+  "at the amount quoted when the request was made",
+  allowed.ok === true ? `$${allowed.amount}` : "n/a",
+);
+
+console.log("\n--- A replacement hold never loses the one it replaces ---");
+
+const { setBookingAuthorization, getBooking } = await import("@/lib/store");
+
+await setBookingAuthorization(deadHold.id, {
+  paypalOrderId: "ORDER-2",
+  paypalAuthorizationId: "AUTH-2",
+});
+const after1 = await getBooking(deadHold.id);
+check(
+  after1?.paypalAuthorizationId === "AUTH-2" &&
+    after1?.paypalOrderId === "ORDER-2",
+  "both ids move together",
+  `${after1?.paypalOrderId} / ${after1?.paypalAuthorizationId}`,
+);
+check(
+  after1?.payment === "authorized",
+  "and the booking is holding money again",
+  String(after1?.payment),
+);
+check(
+  JSON.stringify(after1?.previousAuthorizationIds) === JSON.stringify(["AUTH-1"]),
+  "the superseded hold is kept",
+  JSON.stringify(after1?.previousAuthorizationIds),
+);
+
+// Twice, because the proposal branch can outlive two holds.
+await setBookingAuthorization(deadHold.id, {
+  paypalOrderId: "ORDER-3",
+  paypalAuthorizationId: "AUTH-3",
+});
+const after2 = await getBooking(deadHold.id);
+check(
+  JSON.stringify(after2?.previousAuthorizationIds) ===
+    JSON.stringify(["AUTH-1", "AUTH-2"]),
+  "and appended, not overwritten, on the next one",
+  JSON.stringify(after2?.previousAuthorizationIds),
+);
+
+// The last place that can still refuse. Everything upstream checks this, which
+// is exactly why the write itself has to as well.
+let refusedCaptured = false;
+try {
+  await setBookingAuthorization(paidRepay.id, {
+    paypalOrderId: "ORDER-X",
+    paypalAuthorizationId: "AUTH-X",
+  });
+} catch {
+  refusedCaptured = true;
+}
+check(
+  refusedCaptured,
+  "and the write refuses outright on a captured booking",
+  refusedCaptured ? "threw" : "wrote — it would have double-charged",
+);
+
+console.log("\n--- The routes refuse the same cases ---");
+
+const { POST: repayOrderPost } = await import(
+  "@/app/api/booking/repay/create-order/route"
+);
+const { POST: repayPost } = await import("@/app/api/booking/repay/route");
+
+const orderRes = await repayOrderPost(
+  post("http://localhost/api/booking/repay/create-order", {
+    token: makeRepayToken(paidRepay.id),
+  }),
+);
+check(
+  orderRes.status === 409,
+  "create-order refuses a captured booking",
+  `HTTP ${orderRes.status} (expected 409)`,
+);
+
+const finalRes = await repayPost(
+  post("http://localhost/api/booking/repay", {
+    token: makeRepayToken(paidRepay.id),
+    paypalOrderId: "ORDER-FORGED",
+  }),
+);
+check(
+  finalRes.status === 409,
+  "and so does the route that saves the hold",
+  `HTTP ${finalRes.status} (expected 409)`,
+);
+
+console.log("\n--- An expired hold gives the owner somewhere to go ---");
+
+// Gate 2 refuses the confirmation. What matters as much is that the refusal
+// carries the link: without it the owner knows only that it failed, and the
+// booking sits pending until someone remembers it.
+const expiredRow = await seed({ requestType: "restaurant", partnerName: "Proa" });
+await setBookingPayment(expiredRow.id, { payment: "expired" });
+const expiredConfirm = await admin(expiredRow.id, "confirm");
+const expiredBody = (await expiredConfirm.json()) as { error?: string };
+check(
+  expiredConfirm.status === 409,
+  "confirming an expired hold is refused",
+  `HTTP ${expiredConfirm.status} (expected 409)`,
+);
+check(
+  (expiredBody.error ?? "").includes("/repay/"),
+  "and the refusal hands over the re-payment link",
+  (expiredBody.error ?? "").split("\n").pop() ?? "(no link)",
 );
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);

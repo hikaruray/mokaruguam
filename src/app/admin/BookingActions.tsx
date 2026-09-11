@@ -57,7 +57,10 @@ export default function BookingActions({
 
   // Small red error note shown under the action buttons on failure.
   const errNote = err ? (
-    <span className="mt-1 block max-w-[10rem] text-[11px] font-medium text-rose-600">
+    // whitespace-pre-line: the expired-hold refusal puts the /repay link on its
+    // own line, and a collapsed newline would run it into the sentence before
+    // it — exactly where it has to be selectable to be copied.
+    <span className="mt-1 block max-w-[14rem] whitespace-pre-line break-all text-[11px] font-medium text-rose-600">
       {err}
     </span>
   ) : null;
