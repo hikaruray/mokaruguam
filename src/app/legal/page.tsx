@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
-import { COMPANY, CONTACT_EMAIL, LINE_URL } from "@/lib/config";
+import { COMPANY, CONTACT_EMAIL } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "特定商取引法に基づく表記",
   description:
-    "Mokaru Guam（グアム完全貸切ガイドチャーター）の特定商取引法に基づく表記。販売事業者・運営責任者・所在地・支払方法・キャンセル/返金について。",
+    "Mokaru Guam（グアムのレストラン予約代行・ツアー手配）の特定商取引法に基づく表記。販売事業者・運営責任者・所在地・支払方法・キャンセル/返金について。",
   alternates: { canonical: "/legal" },
   robots: { index: true, follow: true },
 };
@@ -25,7 +25,7 @@ export default function LegalPage() {
         <>
           {COMPANY.phone}
           <span className="mt-1 block text-xs text-muted">
-            お問い合わせはメール／LINEにて承ります。電話は緊急時のみ対応いたします。
+            お問い合わせはメールにて承ります。電話は緊急時のみ対応いたします。
           </span>
         </>
       ),
@@ -46,15 +46,7 @@ export default function LegalPage() {
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-brand hover:underline">
             {CONTACT_EMAIL}
           </a>
-          ）／
-          <a
-            href={LINE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand hover:underline"
-          >
-            LINE公式アカウント
-          </a>
+          ）
         </>
       ),
     },
@@ -62,47 +54,83 @@ export default function LegalPage() {
       term: "販売価格",
       body: (
         <>
-          各プランページに表示（3時間 $170〜／5時間 $250〜／8時間 $345〜／ワンデー
-          $500〜、USD）。
+          レストラン予約代行：<b className="text-ink">1件 $10</b>
+          （手配料。人数にかかわらず同額）。
+          <span className="mt-1 block">
+            アクティビティ・ツアーの手配：
+            <b className="text-ink">当社へのお支払いはありません</b>。
+          </span>
           <span className="mt-1 block text-xs text-muted">
             表示価格が総額です（別途消費税はかかりません）。
           </span>
           <Link href="/plans" className="mt-1 inline-block text-xs font-bold text-brand hover:underline">
-            料金・プランを見る →
+            できること・料金を見る →
           </Link>
         </>
       ),
     },
     {
       term: "商品代金以外に必要な料金",
-      body: "5〜7名は各プラン +$20／繁忙期（GW・夏休み・シルバーウィーク・年末年始）は別料金です。お客様側の決済手数料はかかりません。",
+      body: (
+        <>
+          レストランのお食事代は、当日お店へ直接お支払いください。ツアー代金は、当日、実施会社へ直接お支払いください。いずれも当社の手配料には含まれません。お客様側の決済手数料はかかりません。
+          <span className="mt-1 block text-xs text-muted">
+            8名以上のご依頼は別途お見積りとなります。
+          </span>
+        </>
+      ),
     },
     {
       term: "支払方法",
-      body: "PayPal（クレジット／デビットカード。PayPalアカウントなしでもカード決済いただけます）。",
+      body: "PayPal（クレジット／デビットカード。PayPalアカウントなしでもカード決済いただけます）。レストラン予約代行のみ。",
     },
     {
       term: "支払時期",
-      body: "リクエスト予約時にカード情報をご入力いただきます（仮押さえ＝この時点では請求されません）。予約確定と同時に全額の決済が確定します。お手配できない場合は自動で解除されます。",
+      body: "ご依頼時にカード情報をご入力いただきます（お預かり＝この時点では請求されません）。お席のお手配が完了した時点で手配料の決済が確定します。お取りできなかった場合はお預かりを解除し、料金は発生しません。",
     },
     {
       term: "役務の提供時期",
-      body: "予約確定後、お客様がご指定の日時にツアーを実施します。",
+      body: "ご依頼後、48時間以内に手配の状況をご連絡します。手配の完了時期は、お店・実施会社の回答によります。",
     },
     {
+      // 🔴 The governing statement of the refund rule. It said the tour ladder
+      // applied to everything, which from 2026-10-01 describes a service that
+      // no longer exists and contradicts what lib/refund-policy.ts actually
+      // does to a restaurant booking. Of the ten places the ladder appeared,
+      // this is the one with legal weight.
       term: "キャンセル・返金について",
       body: (
         <>
-          実施日基準（グアム時間）。8日以上前＝全額返金／7〜4日前＝50%返金／3日前以降（当日・無連絡含む）＝返金なし。天候不良・当社都合による中止＝全額返金または無料日程変更。
+          <b className="text-ink">レストラン予約代行</b>
+          ：お席のお手配が完了する前のキャンセルは、カードのお預かりを解除し、料金は発生しません。
+          <b className="text-ink">
+            お手配の完了後にお客様のご都合でキャンセルされる場合、手配料のご返金はいたしかねます
+          </b>
+          （お席を確保するという役務が完了しているためです）。お店へのキャンセルのご連絡は当社が代行します。お店側の都合・当社都合による場合は全額返金します。
+          <span className="mt-2 block">
+            <b className="text-ink">アクティビティ・ツアーの手配</b>
+            ：当社へのお支払いがないため、当社のキャンセル料は発生しません。実施会社のキャンセル規定が適用される場合は、お手配の際にご案内します。
+          </span>
+          <span className="mt-2 block text-xs text-muted">
+            2026年9月30日までにお申し込みいただいた貸切ガイドチャーターについては、お申し込み時のキャンセルポリシー（実施日の8日以上前＝全額返金／7〜4日前＝50%／3日前以降＝返金なし）を適用します。
+          </span>
           <Link href="/guide" className="mt-1 inline-block text-xs font-bold text-brand hover:underline">
-            予約の流れ・キャンセルポリシー →
+            ご依頼の流れ・キャンセルについて →
           </Link>
         </>
       ),
     },
     {
       term: "提供サービス",
-      body: "グアムの完全貸切ガイドチャーター（日本語ガイド＋専用車）。",
+      body: "グアムのレストラン予約代行、およびアクティビティ・ツアーの手配（提携する実施会社のご紹介）。",
+    },
+    {
+      // 🔴 design §10-1, the owner's decision of 2026-09-11. The governing copy
+      // lives here; /plans carries the same sentence as a summary so the guest
+      // reads it where they actually choose. One source, two places — not two
+      // wordings to keep in step.
+      term: "手配サービスについて",
+      body: "当社は手配を代行する立場であり、ツアーの実施者ではありません。ツアーに関する契約は、お客様と実施会社との間に成立します。レストランのご予約についても、当社はお席の手配を行うものであり、飲食の提供はお店が行います。",
     },
   ];
 

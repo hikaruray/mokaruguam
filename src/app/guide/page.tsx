@@ -5,57 +5,75 @@ import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 
 export const metadata: Metadata = {
-  title: "予約の流れ・キャンセルポリシー",
+  title: "ご依頼の流れ・キャンセルについて",
   description:
-    "グアム完全貸切ガイドチャーターの予約の流れ（リクエスト制）とキャンセルポリシー。空き確認は48時間以内、全額前払い。キャンセルは実施日基準で8日以上前は全額返金・7〜4日前50%・3日前以降は返金なし。",
+    "グアムのレストラン予約代行・ツアー手配のご依頼の流れとキャンセルについて。48時間以内に状況をご連絡。レストランは1件$10で、お取りできなければ料金はいただきません。ツアーの手配は当社へのお支払いなし。",
   alternates: { canonical: "/guide" },
   openGraph: {
-    title: "予約の流れ・キャンセルポリシー｜Mokaru Guam",
-    description: "リクエスト予約の流れとキャンセル規定をわかりやすくご案内します。",
+    title: "ご依頼の流れ・キャンセルについて｜Mokaru Guam",
+    description: "ご依頼から手配完了までの流れと、キャンセルの扱いをご案内します。",
     url: "/guide",
     type: "website",
     images: [OG_IMAGE],
   },
 };
 
-// Steps mirror booking-payment-design.md exactly.
+// 🔴 The steps describe what we now actually do. Step 2 used to say we check
+// ガイド・車両の空き — we own neither from 2026-10-01. Step 3 said payment is
+// taken in full on confirmation, which was the charter's rule; the arrangement
+// fee is captured when the table is held, and a tour is never charged at all.
 const STEPS = [
   {
     n: "1",
-    title: "リクエスト予約",
-    body: "希望日時・人数・行きたいスポットを送ってリクエストします。この時点では料金は発生しません。",
+    title: "ご依頼",
+    body: "ご依頼の種類（レストラン／ツアー）とご希望日時・人数をお送りください。レストランのみ、手配料 $10 をカードにお預かりします（この時点では請求されません）。",
   },
   {
     n: "2",
-    title: "空き状況の確認・お返事",
-    body: "ガイド・車両の空きを確認し、48時間以内にご連絡します。お手配できない場合は、その旨をご連絡します。",
+    title: "状況のご連絡（48時間以内）",
+    body: "お店・実施会社に空き状況を確認し、48時間以内に「状況」をご連絡します。お店の回答そのものはお店の都合によりますので、結果のお約束ではありません。",
   },
   {
     n: "3",
-    title: "予約の確定",
-    body: "お手配可能な場合、予約が確定します。お支払いは全額前払いです（確定時）。",
+    title: "お手配の完了",
+    body: "お席・ご予約が取れた時点でお手配完了のご連絡をします。レストランは、このタイミングで手配料のお支払いが確定します。",
   },
   {
     n: "4",
-    title: "当日ツアー",
-    body: "あとは当日を待つだけ。日本語ガイド＋専用車で、あなただけのグアムをお楽しみください。",
+    title: "当日",
+    body: "レストランへは直接お越しください（お席はお名前で承っています）。ツアーは実施会社のご案内に従ってください。お食事代・ツアー代金は当日、お店・実施会社へお支払いください。",
   },
 ];
 
-// Cancellation policy — numbers/conditions must match booking-payment-design.md
-// exactly. Basis: the tour date, Guam time (UTC+10).
+// 🔴 Two services, two rules. There is no shared date ladder any more.
+//
+// The old table applied the tour ladder (8日/7〜4日/3日) to everything. Applied
+// to an arrangement fee it is simply wrong: the $10 buys the act of getting the
+// table, and once the table is held that work is finished and cannot be resold,
+// so the day of the meal has no bearing on it. This page and
+// lib/refund-policy.ts have to say the same thing — the last time the wording
+// changed without the code, the fee was silently refunded in full on most
+// bookings.
 const CANCEL_ROWS = [
-  { when: "実施日の8日以上前", fee: "0%", refund: "全額返金" },
-  { when: "実施日の7〜4日前", fee: "50%", refund: "50%返金" },
   {
-    when: "実施日の3日前・2日前・前日・当日／無連絡不参加",
-    fee: "100%",
-    refund: "返金なし",
+    when: "レストラン：お手配が完了する前",
+    fee: "0%",
+    refund: "お預かりを解除（料金は発生しません）",
   },
   {
-    when: "天候不良・当社都合による中止",
+    when: "レストラン：お手配の完了後（お客様のご都合）",
+    fee: "100%",
+    refund: "手配料の返金なし",
+  },
+  {
+    when: "レストラン：お店側の都合・当社都合",
     fee: "0%",
-    refund: "全額返金 または 無料で日程変更",
+    refund: "全額返金",
+  },
+  {
+    when: "ツアー手配：すべての場合",
+    fee: "—",
+    refund: "当社のキャンセル料はありません",
   },
 ];
 
@@ -64,13 +82,13 @@ export default function GuidePage() {
     <PageShell>
       <PageHero
         eyebrow="How it works"
-        title="予約の流れ・キャンセルポリシー"
-        lead="Mokaru Guam はリクエスト予約制です。お申し込みからツアー当日までの流れと、キャンセル規定をご案内します。"
+        title="ご依頼の流れ・キャンセルについて"
+        lead="Mokaru Guam は、グアムのレストラン予約とアクティビティの手配を代行します。ご依頼からお手配完了までの流れと、キャンセルの扱いをご案内します。"
       />
 
       {/* Booking flow */}
       <section className="mx-auto max-w-4xl px-5 py-12">
-        <h2 className="text-lg font-bold">予約の流れ</h2>
+        <h2 className="text-lg font-bold">ご依頼の流れ</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {STEPS.map((s) => (
             <div
@@ -88,14 +106,27 @@ export default function GuidePage() {
 
         <div className="mt-5 rounded-2xl border border-line bg-sand p-5 text-sm text-muted">
           <p>
-            <span className="font-bold text-ink">お支払いについて：</span>{" "}
-            お支払いは全額前払いです。リクエスト時にカード等で
-            <b>仮押さえ</b>（この時点では引き落とされません）、
-            <b>予約確定時にお支払いが確定</b>します。お手配できない場合は
-            <b>自動で解除（返金）</b>されます。
+            <span className="font-bold text-ink">
+              レストラン予約代行のお支払い：
+            </span>{" "}
+            手配料は<b>1件 $10</b>（人数にかかわらず同額）。ご依頼時にカードへ
+            <b>お預かり</b>（この時点では引き落とされません）、
+            <b>お席が取れた時点でお支払いが確定</b>します。
+            <b>お取りできなかった場合はお預かりを解除</b>し、料金は発生しません。
+            お食事代は当日、お店へ直接お支払いください。
+          </p>
+          <p className="mt-2">
+            <span className="font-bold text-ink">
+              アクティビティ・ツアーの手配：
+            </span>{" "}
+            <b>当社へのお支払いはありません。</b>
+            ツアー代金は当日、実施会社へ直接お支払いください。
           </p>
           <p className="mt-2">
             クレジットカード（PayPalアカウント不要）またはPayPalでお支払いいただけます。
+          </p>
+          <p className="mt-2 text-xs">
+            8名以上のご依頼は別途お見積りとなります。メールでご相談ください。
           </p>
         </div>
       </section>
@@ -103,15 +134,17 @@ export default function GuidePage() {
       {/* Cancellation policy */}
       <section className="bg-white">
         <div className="mx-auto max-w-4xl px-5 py-12">
-          <h2 className="text-lg font-bold">キャンセルポリシー</h2>
+          <h2 className="text-lg font-bold">キャンセルについて</h2>
           <p className="mt-1 text-sm text-muted">
-            キャンセル料は実施日を基準に、下記のとおり計算します（グアム時間・UTC+10）。全額前払いのため、キャンセル時は該当分を返金します。
+            キャンセルの扱いは、ご依頼の種類によって異なります。手配料は「お席を取る」という作業に対する料金のため、
+            <b className="text-ink">日付ではなく、お手配が完了しているかどうか</b>
+            で決まります。
           </p>
           <div className="mt-4 overflow-x-auto rounded-2xl border border-line">
             <table className="w-full text-left text-sm">
               <thead className="bg-sand text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-medium">タイミング（実施日まで）</th>
+                  <th className="px-4 py-3 font-medium">ご依頼の種類・タイミング</th>
                   <th className="px-4 py-3 font-medium">キャンセル料</th>
                   <th className="px-4 py-3 font-medium">返金</th>
                 </tr>
@@ -128,9 +161,22 @@ export default function GuidePage() {
             </table>
           </div>
           <ul className="mt-4 space-y-1.5 text-xs text-muted">
-            <li>※ 上記は実施日を基準としたグアム時間（UTC+10）で判定します。</li>
-            <li>※ 天候不良・当社都合による中止の場合は、全額返金または無料での日程変更に対応します。</li>
+            <li>
+              ※ お手配の完了後にキャンセルされる場合も、
+              <b className="text-ink">お店へのご連絡は当社が代行します。</b>
+              お客様からご連絡いただく必要はありません。
+            </li>
+            <li>
+              ※ 第1希望のお店が満席だった場合、ご依頼時のご希望に応じて、代わりのお店を
+              <b className="text-ink">1件まで</b>ご提案します。ご承諾いただいてからお席をお取りします。
+            </li>
+            <li>
+              ※ 実施会社に独自のキャンセル規定がある場合は、お手配の際にご案内します。
+            </li>
             <li>※ キャンセルのご連絡は、できるだけ早めにお願いいたします。</li>
+            <li>
+              ※ 2026年9月30日までにお申し込みいただいた貸切ガイドチャーターについては、お申し込み時のキャンセルポリシー（実施日の8日以上前＝全額返金／7〜4日前＝50%／3日前以降＝返金なし）を適用します。
+            </li>
           </ul>
         </div>
       </section>
@@ -140,7 +186,7 @@ export default function GuidePage() {
         <p className="text-sm text-muted">
           内容をご確認のうえ、
           <Link href="/reserve" className="font-bold text-brand hover:underline">
-            リクエスト予約ページ
+            ご依頼フォーム
           </Link>
           からお申し込みください。
         </p>

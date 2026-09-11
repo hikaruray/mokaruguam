@@ -40,12 +40,12 @@ import { COMPANY, CONTACT_EMAIL, LINE_URL, GA_ID } from "@/lib/config";
 export const metadata: Metadata = {
   title: "プライバシーポリシー",
   description:
-    "Mokaru Guam（グアム完全貸切ガイドチャーター）のプライバシーポリシー。取得する情報、利用目的、保存期間、外部サービスへの提供、クレジットカード情報の取り扱いについて。",
+    "Mokaru Guam（グアムのレストラン予約代行・ツアー手配）のプライバシーポリシー。取得する情報、利用目的、保存期間、外部サービスへの提供、クレジットカード情報の取り扱いについて。",
   alternates: { canonical: "/privacy" },
   robots: { index: true, follow: true },
 };
 
-const UPDATED = "2026年7月19日";
+const UPDATED = "2026年10月1日";
 
 type Section = { heading: string; body: React.ReactNode };
 
@@ -81,9 +81,9 @@ export default function PrivacyPage() {
             <li>お名前</li>
             <li>メールアドレス</li>
             <li>電話番号</li>
-            <li>ご希望のプラン・ツアー実施日・開始時間</li>
+            <li>ご依頼の種類・ご希望日時・お店／実施会社のご希望</li>
             <li>ご参加人数（大人、お子様〔4〜11歳／0〜3歳〕の内訳）</li>
-            <li>行きたいスポット（自由記述）</li>
+            <li>満席だった場合のご希望・ご予算の目安・お料理の種類（レストランのご依頼のみ）</li>
             <li>備考（自由記述）</li>
           </ul>
           <p className="mt-3">
@@ -119,7 +119,7 @@ export default function PrivacyPage() {
       body: (
         <ul className="space-y-1">
           <li>ご予約の受付・空き状況の確認・確定のご連絡</li>
-          <li>ツアー当日のご案内、および事前のご相談への回答</li>
+          <li>お手配の状況・完了のご連絡、および事前のご相談への回答</li>
           <li>ご請求・ご返金の手続き</li>
           <li>キャンセルのお手続き</li>
           <li>法令にもとづく記録の保存</li>
@@ -184,18 +184,35 @@ export default function PrivacyPage() {
     },
     {
       heading: "6. 第三者への提供",
+      // 🔴 Without the first paragraph this clause becomes false on 2026-10-01.
+      //
+      // It said information goes nowhere except the services listed in clause 5
+      // — and clause 5 lists infrastructure providers (Supabase, Resend,
+      // PayPal). It does not list restaurants or partner operators, because
+      // until the pivot there were none: the tour was run in-house. From
+      // 2026-10-01 the entire business is passing a guest's name and party size
+      // to a third party, and a privacy policy that denies it is a false
+      // statement in a legal document, not a stale sentence.
       body: (
-        <p>
-          上記5に記載した業務のために必要な場合と、法令にもとづき開示が求められる場合を除き、お客様の情報を第三者へ提供することはありません。
-          <strong>お客様の情報を販売することはありません。</strong>
-        </p>
+        <>
+          <p>
+            ご予約のお手配のため、お名前・ご利用日時・人数・ご滞在先・ご要望を、
+            <strong>予約先のレストランおよび提携するツアー実施会社</strong>
+            に提供します。提供先は、そのご予約に必要な範囲でのみお客様の情報を取り扱います。
+            クレジットカード情報は当社を経由せず、提供先にも渡りません（上記5）。
+          </p>
+          <p className="mt-3">
+            上記および上記5に記載した業務のために必要な場合と、法令にもとづき開示が求められる場合を除き、お客様の情報を第三者へ提供することはありません。
+            <strong>お客様の情報を販売することはありません。</strong>
+          </p>
+        </>
       ),
     },
     {
       heading: "7. 保存期間",
       body: (
         <p>
-          ご予約に関する記録は、<strong>ツアー実施日から7年間</strong>
+          ご予約に関する記録は、<strong>ご利用日から7年間</strong>
           保存し、その後は削除します。会計および税務上の記録保存にあわせた期間です。
           この期間内であっても、削除のご希望があれば、法令上の保存義務がない範囲で対応いたします（下記8）。
         </p>
