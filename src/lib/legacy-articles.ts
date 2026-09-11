@@ -43,6 +43,7 @@
 
 import snapshot from "./legacy-content.json";
 import { applyCorrections } from "./legacy-corrections";
+import { REWRITES } from "./legacy-rewrites";
 
 // ---------------------------------------------------------------------------
 // Allow-list — the ONLY slugs this route will ever serve.
@@ -185,6 +186,28 @@ export function getLegacyArticle(slug: string): LegacyArticle | undefined {
   if (!ALLOWED.has(slug)) return undefined; // allow-list is the gate
   const entry = SNAPSHOT[slug];
   if (!entry) return undefined;
+
+  // A rewritten article replaces the body outright rather than patching it —
+  // these were product pages for a service that ends 2026-09-30, so there was
+  // no sentence to correct. The URL, and the ranking attached to it, is what we
+  // are keeping. See legacy-rewrites.ts for why, and for what the page was.
+  //
+  // The snapshot is still read above and still has to exist: the allow-list and
+  // the publish date come from it, and losing the original is the one outcome
+  // this whole module is built to prevent.
+  const rewrite = REWRITES[slug];
+  if (rewrite) {
+    return {
+      slug,
+      title: rewrite.title,
+      html: cleanHtml(rewrite.html),
+      date: entry.date,
+      // The page really did change. Inheriting the snapshot's `modified` would
+      // tell search engines it was last touched in 2025.
+      modified: rewrite.rewrittenAt,
+    };
+  }
+
   return {
     slug,
     // Corrections run on the RAW snapshot, before cleanHtml(), so their find

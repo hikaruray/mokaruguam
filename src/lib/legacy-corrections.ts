@@ -128,62 +128,8 @@ const PROMO_BLOCK: Correction = {
 
 export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // -------------------------------------------------------------------------
-  "short-plan": {
-    body: [
-      {
-        why: "Section built entirely around airport transfers, which the business no longer offers (owner, 2026-07-19). Reworded it would still promise the service, so the section goes.",
-        find: '<h2 class="wp-block-heading"><strong>3. 空港送迎＋そのままショッピングコース</strong></h2>\n\n\n\n<p><strong>「ホテルのチェックインまで時間がある」「帰国前にお土産を買いたい」</strong><strong></strong></p>\n\n\n\n<p><strong>そんな時に空港ピックアップ＋</strong><strong>3時間Shortプランの合わせ技が大人気！</strong></p>\n\n\n\n<p><strong>このプランでできること：</strong><strong></strong></p>\n\n\n\n<p><strong>空港からホテルまでの送迎</strong><strong></strong></p>\n\n\n\n<p><strong>チェックイン前にマイクロネシアモールや</strong><strong>Kマートで買い物</strong></p>\n\n\n\n<p><strong>レストランやカフェで到着直後の腹ごしらえにも対応</strong><strong></strong></p>\n\n\n\n<p><strong>✈️ 事前にスーツケースを預かってそのまま観光も可能（要相談）</strong></p>\n\n\n\n',
-        replace: "",
-      },
-      {
-        why: "Renumber: removing the airport section above would otherwise leave the article numbered 1, 2, 4.",
-        find: "<strong>4. チャモロビレッジのナイトマーケット（※水曜のみ）</strong>",
-        replace: "<strong>3. チャモロビレッジのナイトマーケット（※水曜のみ）</strong>",
-      },
-      {
-        why: "Old rate card: 3h is $170, and capacity is tiered rather than a flat 'up to 4'.",
-        find: "<p><strong>料金：</strong><strong>$130／車両1台（最大4名まで）</strong></p>",
-        replace: `<p><strong>料金：</strong><strong>$170／車両1台</strong>${PRICE_SUFFIX}</p>`,
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
-  shortplan: {
-    body: [
-      {
-        why: "Offers an airport-transfer combination we no longer run.",
-        find: "<p>「空港送迎＋ショートプラン」や「チェックアウト後の観光→空港直行」といった<strong>カスタム依頼もOK</strong>です。</p>\n\n\n\n",
-        replace: "",
-      },
-      {
-        why: "Old rate card. Per-person figure recomputed: $170 / 4 guests = $42.5.",
-        find: "<tr><td>Short（約3h）</td><td><strong>$130／台</strong></td><td><strong>$32.5</strong></td></tr>",
-        replace: "<tr><td>Short（約3h）</td><td><strong>$170／台</strong></td><td><strong>$42.5</strong></td></tr>",
-      },
-      {
-        why: "The price table states one flat rate; add the tier/season caveat next to it.",
-        find: "<li>ガソリン・駐車場・ガイド料すべて込み　（飲食・入場料・個人の買い物等は含まれていません）</li>",
-        replace:
-          '<li>ガソリン・駐車場・ガイド料すべて込み　（飲食・入場料・個人の買い物等は含まれていません）</li>\n\n\n\n<li>上記は1〜4名の料金です。5〜7名は+$20、繁忙期は別料金です（<a href="/plans">料金ページ</a>）</li>',
-      },
-      {
-        why: "$50/hour extension is off the old rate card. /plans states extensions as 要相談 with no published price.",
-        find: "<li>延長は60分 $50 で柔軟に調整可能</li>",
-        replace: "<li>ガイド指定時間を超える延長は要相談</li>",
-      },
-      {
-        why: "FAQ answer promises airport pickup, which is discontinued.",
-        find: '<p><strong>Q. 空港からピックアップでそのままShortプラン可能？</strong></p>\n\n\n\n<blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">\n<p>可能です。スーツケースは車内保管、ホテルチェックインもガイドがサポートします。</p>\n</blockquote>\n\n\n\n',
-        replace: "",
-      },
-      {
-        why: "The site standardised on replying within 48 hours (PayPal holds the authorisation ~3 days); 24h is a promise we no longer make.",
-        find: "<li>24時間以内に空き状況と見積りを返信</li>",
-        replace: "<li>48時間以内に空き状況と見積りを返信</li>",
-      },
-    ],
-  },
 
   // -------------------------------------------------------------------------
   middleplanpost: {
