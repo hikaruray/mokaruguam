@@ -69,8 +69,18 @@ export const FROM_EMAIL = "Mokaru Guam <tour@mokaruguam.com>";
 // how past LINE enquiries are handled — the account continues to exist, so
 // deleting the clause would be less accurate than keeping it. What is removed is
 // every CTA, button and email line that invites a new enquiry through it.
-// Do not re-add it to Header, Footer, MobileCta, Booking, BookingForm,
-// BookingCta, /reserve, /cancel or the booking emails.
+// Removed so far: Header, Footer, MobileCta, Booking, BookingCta. Do not
+// re-add it to any of those.
+//
+// 🔴 STILL PRESENT, and each one is scheduled work — not an oversight to be
+// "tidied up" by deleting the constant:
+//   booking-emails.ts:32,56,114   confirmed / declined / cancelled emails
+//   api/booking/route.ts:252      the request acknowledgement
+//   cancel/[token]/page.tsx:36,80,120
+//   reserve/page.tsx, BookingForm.tsx
+// Email bodies and the dynamic /cancel route never appear in the built HTML,
+// so grepping the build output reports "0 occurrences" while a guest is still
+// being pointed at LINE. These have to be grepped in the SOURCE.
 export const LINE_URL = "https://lin.ee/OfniH2h";
 
 // VELTRA listing URL.

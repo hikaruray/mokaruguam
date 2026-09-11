@@ -1,7 +1,24 @@
--- MokaruGuam — Supabase schema
+-- MokaruGuam — Supabase schema (INITIAL DDL — NOT the current table)
 -- Run this in the Supabase SQL Editor once, after creating the project.
--- Mirrors src/lib/store.ts (the `bookings` table). The app writes/reads from
--- the server using the SERVICE ROLE key, so RLS below is defense-in-depth.
+--
+-- 🔴 THIS FILE IS THE ORIGINAL CREATE TABLE, NOT A MIRROR OF THE LIVE TABLE.
+-- It has been behind since 2026-09-03: `hotel` is missing here while
+-- store.ts inserts it and production accepts it. The columns added by the
+-- Oct 1 pivot are missing too. Migrations live beside it, one file per change:
+--   2026-08-22-booking-amount.sql
+--   2026-09-03-booking-hotel.sql
+--   2026-10-01-booking-request-type.sql
+--
+-- So do NOT read this file to answer "what does the table look like now" —
+-- that mistake was made on 2026-09-11, when it was cited as proof that no
+-- CHECK constraint exists on plan_id. Ask the database:
+--   select column_name, data_type from information_schema.columns
+--    where table_name = 'bookings' order by ordinal_position;
+--   select conname, pg_get_constraintdef(oid) from pg_constraint
+--    where conrelid = 'public.bookings'::regclass;
+--
+-- The app writes/reads from the server using the SERVICE ROLE key, so the RLS
+-- below is defense-in-depth.
 
 -- ---------- Booking requests ----------
 create table if not exists public.bookings (
