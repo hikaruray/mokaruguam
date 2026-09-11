@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import { verifyCancelToken } from "@/lib/cancel-token";
-import { getBooking } from "@/lib/store";
-import { refundRateForDate, daysUntilTour } from "@/lib/pricing";
+import { getBooking, requestTypeOf } from "@/lib/store";
+import { daysUntilTour } from "@/lib/pricing";
+import { refundDecision } from "@/lib/refund-policy";
 import { LINE_URL } from "@/lib/config";
 import CancelConfirm from "./CancelConfirm";
 
@@ -49,10 +50,30 @@ export default async function CancelPage({
 
   const alreadyClosed =
     booking.status === "cancelled" || booking.status === "declined";
-  const { rate, tier } = refundRateForDate(booking.preferredDate);
+  // 🔴 refundDecision, NOT refundRateForDate.
+  //
+  // This page used to call the date ladder directly, which is the TOUR rule.
+  // On a restaurant booking it printed「返金率 100%」whenever the meal was 8 or
+  // more days away — almost every booking — and then the cancel route, which
+  // does branch on the request type, returned zero. The guest learned it was
+  // false by pressing the button.
+  //
+  // lib/refund-policy.ts exists because the terms were rewritten and the code
+  // that moves the money was not updated with them. The code that reads the
+  // amount out loud was missed the same way, one layer further out. There is
+  // one decision and both sides must ask it.
+  const { rate, tier } = refundDecision(
+    booking.requestType,
+    booking.preferredDate,
+    "policy",
+  );
   const days = daysUntilTour(booking.preferredDate);
   const isCaptured = booking.payment === "captured";
   const isAuthorized = booking.payment === "authorized";
+  // The date ladder applies to tours and to pre-pivot charters. An arrangement
+  // fee buys the act of getting the table, which is finished once the table is
+  // held, so the day of the meal has no bearing on it.
+  const laddered = requestTypeOf(booking) !== "restaurant";
 
   return (
     <PageShell>
@@ -91,13 +112,18 @@ export default async function CancelPage({
                 </p>
               ) : isCaptured ? (
                 <div className="mt-2 text-muted">
-                  <p>
-                    実施日まで{days != null ? `${days}日` : "―"}（{tier}）。
-                  </p>
-                  <p className="mt-1">
+                  {/* The days-remaining line only means something where the
+                      date decides the rate. Printing it on an arrangement fee
+                      implies a ladder that does not apply. */}
+                  {laddered && (
+                    <p>
+                      実施日まで{days != null ? `${days}日` : "―"}（{tier}）。
+                    </p>
+                  )}
+                  <p className={laddered ? "mt-1" : ""}>
                     返金率：
                     <b className="text-brand">{Math.round(rate * 100)}%</b>
-                    {rate === 0 && "（規定によりご返金はありません）"}
+                    {rate === 0 && `（${tier}）`}
                   </p>
                 </div>
               ) : (
@@ -105,9 +131,15 @@ export default async function CancelPage({
                   この予約に伴うお支払いはありません。キャンセルのみ承ります。
                 </p>
               )}
-              <p className="mt-3 text-xs text-muted">
-                キャンセルポリシー：実施日の8日以上前=全額返金／7〜4日前=50%／3日前以降（当日・無連絡含む）=返金なし。
-              </p>
+              {laddered ? (
+                <p className="mt-3 text-xs text-muted">
+                  キャンセルポリシー：実施日の8日以上前=全額返金／7〜4日前=50%／3日前以降（当日・無連絡含む）=返金なし。
+                </p>
+              ) : (
+                <p className="mt-3 text-xs text-muted">
+                  手配料は、お席のお手配が完了した時点でご返金の対象外となります。お店へのキャンセルのご連絡は当社が代行しますので、お客様からご連絡いただく必要はありません。
+                </p>
+              )}
             </div>
 
             <CancelConfirm token={token} />

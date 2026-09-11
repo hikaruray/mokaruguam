@@ -60,7 +60,7 @@ process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
 process.env.CANCEL_TOKEN_SECRET = "gate-check-secret";
 
 import { mkdtempSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -516,6 +516,157 @@ check(
   allowed.ok === true && allowed.amount === 7,
   "at the amount quoted when the request was made",
   allowed.ok === true ? `$${allowed.amount}` : "n/a",
+);
+
+console.log("\n--- What PayPal says about the hold decides what /repay does ---");
+
+// The branch that decides whether to put a second $10 on a card. It shipped
+// wrong — CAPTURED was folded in with EXPIRED as "no hold here", so a guest
+// whose payment had gone through but whose row never recorded it was shown a
+// payment form and charged again. It had no test of any kind, because testing
+// it meant calling PayPal.
+//
+// loadRepayable now takes the lookup as an argument for exactly this. The four
+// answers below are what PayPal actually returns; none of them touch a network.
+const stub =
+  (status: string, captureId: string | null = null) =>
+  async () => ({ status, captureId });
+
+const pendingHold = await seed({
+  requestType: "restaurant",
+  partnerName: "Proa",
+  payment: "authorized",
+  amount: 10,
+  paypalOrderId: "ORDER-H",
+  paypalAuthorizationId: "AUTH-H",
+});
+const holdToken = makeRepayToken(pendingHold.id);
+
+const live = await loadRepayable(holdToken, stub("CREATED"));
+check(
+  live.ok === true && live.holdIsLive === true,
+  "a live hold offers no form (nothing to pay twice)",
+  live.ok ? `holdIsLive=${live.holdIsLive}` : "refused",
+);
+
+const underReview = await loadRepayable(holdToken, stub("PENDING"));
+check(
+  underReview.ok === true && underReview.holdIsLive === true,
+  "and neither does one still under review",
+  underReview.ok ? `holdIsLive=${underReview.holdIsLive}` : "refused",
+);
+
+const expiredHold = await loadRepayable(holdToken, stub("EXPIRED"));
+check(
+  expiredHold.ok === true && expiredHold.holdIsLive === false,
+  "an expired hold does offer the form",
+  expiredHold.ok ? `holdIsLive=${expiredHold.holdIsLive}` : "refused",
+);
+
+// 🔴 The one that was wrong. PayPal says the money is taken; our column does
+// not know yet. Offering the form here charges a second time for one table.
+const alreadyPaid = await loadRepayable(
+  holdToken,
+  stub("CAPTURED", "CAP-FOUND"),
+);
+check(
+  alreadyPaid.ok === false && alreadyPaid.status === 409,
+  "a hold PayPal already captured is refused, not re-charged",
+  alreadyPaid.ok === false ? `HTTP ${alreadyPaid.status}` : "IT OFFERED THE FORM",
+);
+check(
+  alreadyPaid.ok === false && alreadyPaid.error.includes("二重"),
+  "and says why, in the words used for the other double-charge case",
+  alreadyPaid.ok === false ? alreadyPaid.error.slice(0, 24) + "…" : "n/a",
+);
+// Repaired on the way past: money that was taken now has a record.
+const repaired = await getBooking(pendingHold.id);
+check(
+  repaired?.payment === "captured" && repaired?.paypalCaptureId === "CAP-FOUND",
+  "and the capture it found is written back to the booking",
+  `${repaired?.payment} / ${repaired?.paypalCaptureId}`,
+);
+
+// No answer at all. Guessing either way is damaging, so it asks them to return.
+const noAnswer = await seed({
+  requestType: "restaurant",
+  partnerName: "Proa",
+  payment: "authorized",
+  amount: 10,
+  paypalAuthorizationId: "AUTH-N",
+});
+const unreachable = await loadRepayable(makeRepayToken(noAnswer.id), async () => {
+  throw new Error("network down");
+});
+check(
+  unreachable.ok === false && unreachable.status === 503,
+  "and an unanswerable question refuses rather than guessing",
+  unreachable.ok === false ? `HTTP ${unreachable.status}` : "it guessed",
+);
+
+console.log("\n--- The refund a screen promises is the refund that happens ---");
+
+// 🔴 A source assertion, and it is the point of this whole block.
+//
+// refundRateForDate is the TOUR ladder. refundDecision is the rule that knows
+// what was bought. Both screens that quote a refund to a human — the guest's
+// cancel page and the owner's buttons — called the ladder directly and printed
+// 「返金 100%」on restaurant bookings that refund nothing.
+//
+// The behavioural checks in check:money all passed throughout: they measure the
+// decision function, and a caller that never asks it is invisible to them. The
+// only cheap way to stop this returning is to assert nobody in these two
+// directories reaches for the ladder again.
+for (const dir of ["cancel", "admin"]) {
+  const files = await readdir(join(import.meta.dirname, "..", "src", "app", dir), {
+    recursive: true,
+  });
+  let offenders: string[] = [];
+  for (const f of files) {
+    if (!/\.tsx?$/.test(String(f))) continue;
+    const src = await readFile(
+      join(import.meta.dirname, "..", "src", "app", dir, String(f)),
+      "utf8",
+    );
+    // The import and the call, not the word in a comment explaining this rule.
+    if (/refundRateForDate\s*\(/.test(src)) offenders.push(String(f));
+  }
+  check(
+    offenders.length === 0,
+    `src/app/${dir} quotes refunds through refundDecision only`,
+    offenders.length ? `calls the tour ladder: ${offenders.join(", ")}` : "no direct ladder calls",
+  );
+}
+
+// And the behaviour behind the promise, run through cancelBooking itself
+// rather than through the decision function it calls. This is design §11's
+// acceptance condition and nothing asserted it before.
+//
+// Only the zero-refund case runs here: it is the one that moves no money, so
+// it needs no PayPal call. The tour side (a real 100% refund) does, and is not
+// covered — see the note at the top of this file.
+const { cancelBooking } = await import("@/lib/booking-actions");
+const paidTable = await seed({
+  requestType: "restaurant",
+  partnerName: "Proa",
+  status: "pending",
+  amount: 10,
+});
+await setBookingPayment(paidTable.id, {
+  payment: "captured",
+  paypalCaptureId: "CAP-TABLE",
+});
+// 30 days out: the tour ladder would call this a full refund.
+const cancelled = await cancelBooking(paidTable.id, "policy");
+check(
+  cancelled?.refund?.rate === 0,
+  "cancelling a held table 30 days out refunds nothing",
+  `rate ${cancelled?.refund?.rate} ($${cancelled?.refund?.amount})`,
+);
+check(
+  (await getBooking(paidTable.id))?.payment === "captured",
+  "and the fee stays captured rather than being marked refunded",
+  String((await getBooking(paidTable.id))?.payment),
 );
 
 console.log("\n--- A replacement hold never loses the one it replaces ---");

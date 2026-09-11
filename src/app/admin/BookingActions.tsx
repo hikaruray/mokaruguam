@@ -2,17 +2,29 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { BookingStatus } from "@/lib/store";
-import { refundRateForDate } from "@/lib/pricing";
+import type { BookingStatus, RequestType } from "@/lib/store";
+import { refundDecision } from "@/lib/refund-policy";
 
+// 🔴 refundDecision, NOT refundRateForDate.
+//
+// These buttons print the refund the owner is about to give. They used to
+// compute it with the tour date ladder regardless of what the booking was, so
+// a restaurant cancellation offered「キャンセル（返金 100%）」and then returned
+// nothing. That is worse than the same bug on the guest's page: the owner
+// tells the guest they refunded it, sees no refund in PayPal, refunds by hand,
+// and the books and the real balance stop agreeing.
 export default function BookingActions({
   id,
   status,
   tourDate,
+  // null for a charter taken before the pivot — refundDecision reads that as
+  // "the rules it was booked under", which is exactly right.
+  requestType,
 }: {
   id: string;
   status: BookingStatus;
   tourDate: string;
+  requestType: RequestType | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -20,7 +32,7 @@ export default function BookingActions({
 
   async function act(action: "confirm" | "decline" | "cancel" | "cancel-full") {
     if (action === "cancel") {
-      const { rate, tier } = refundRateForDate(tourDate);
+      const { rate, tier } = refundDecision(requestType, tourDate, "policy");
       const msg =
         `この予約をキャンセルします。\n` +
         `キャンセルポリシー：${tier}\n` +
@@ -90,7 +102,7 @@ export default function BookingActions({
   }
 
   if (status === "confirmed") {
-    const { rate } = refundRateForDate(tourDate);
+    const { rate } = refundDecision(requestType, tourDate, "policy");
     return (
       <span className="inline-flex flex-col items-end gap-1.5">
         <button
