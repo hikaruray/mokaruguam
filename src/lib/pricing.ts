@@ -15,14 +15,21 @@ export interface Plan {
   blurb: string[];      // short selling points
 }
 
-// Last day Mokaru runs its own guided charter tours.
+// Last day Mokaru ran its own guided charter tours.
 //
-// The guide service ends 2026-09-30; every booking after that date was already
-// cancelled. Until this cap existed the date picker had no max and the server
-// checked nothing, so on 2026-09-11 it was still possible to book — and have
-// $500 authorised for — a tour in October that nobody would run. Enforced in
-// BookingForm (the picker) AND validateBooking (the server), because a max
-// attribute is a suggestion to anyone posting the form directly.
+// Added 2026-09-11 because the date picker had no max and the server checked
+// nothing, so it was still possible to book — and have $500 authorised for — a
+// tour in October that nobody would run.
+//
+// The enforcement is gone from this branch (lib/spam.ts and the picker in
+// BookingForm; design §7-2). It never looked at the request type, and from
+// 2026-10-01 every date the business handles is after this one, so it would
+// have rejected all of the new business on day one. It remains in force on
+// `main` until this branch merges on the night of 2026-09-30.
+//
+// The date itself is kept because it is a fact about the business that the
+// site still states: the reviews page, the retired-plan articles and /about
+// all say the charter ended on this day. One place to change it.
 export const LAST_TOUR_DATE = "2026-09-30";
 
 // +$20 for groups of 5–7 guests (applies to every plan, regular and peak).

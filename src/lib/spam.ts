@@ -1,4 +1,3 @@
-import { LAST_TOUR_DATE } from "./pricing";
 
 // Abuse protection for the public booking endpoints.
 //
@@ -68,17 +67,21 @@ export function validateBooking(b: BookingInput): string | null {
     return "メールアドレスの形式が正しくありません。";
   }
 
-  // Tours after the last operating day cannot be run, so they must not be
-  // bookable. preferredDate is "YYYY-MM-DD HH:MM", so comparing the first ten
-  // characters as strings is enough for ISO dates and avoids timezone drift —
-  // parsing "2026-10-01" as a Date would read it as UTC midnight, which is the
-  // previous day in Guam.
-  if (typeof b.preferredDate === "string" && b.preferredDate) {
-    const day = b.preferredDate.slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(day) && day > LAST_TOUR_DATE) {
-      return `ガイドツアーのご提供は ${LAST_TOUR_DATE} までとなります。10月以降のご予約は承れません。`;
-    }
-  }
+  // REMOVED on the pivot branch — see MokaruGuam/pivot-oct1-design.md §7-2.
+  //
+  // A check used to live here rejecting any preferredDate after 2026-09-30,
+  // because the site was still selling charter tours nobody would run. It was
+  // right when it was added and it stays on `main` until this branch merges on
+  // the night of 2026-09-30.
+  //
+  // It cannot survive the merge. It never looked at the request type, and from
+  // 2026-10-01 every date the business handles is after the cutoff — the
+  // partner tours we arrange and the restaurant tables we book are all in
+  // October and later. Keeping it would reject 100% of the new business on its
+  // first day, with a message about a service that no longer exists.
+  //
+  // What it protected against goes away by itself at the same moment: the
+  // charter plans are removed from the site, so there is nothing left to sell.
 
   if (b.guests !== undefined) {
     const g = Number(b.guests);

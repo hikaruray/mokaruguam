@@ -198,6 +198,36 @@ export async function POST(request: Request) {
     }
   }
 
+  // --- Gate 1: a restaurant request without a hold is not a request -----
+  //
+  // Everything above only runs when the browser sent an approved order id. If
+  // it did not — the field was missing, the client skipped the PayPal step, the
+  // request was posted directly — execution simply falls through to here with
+  // no authorisation, and this used to save the booking and answer
+  // {"ok":true,"authorized":false}. That is not theoretical: it was reproduced
+  // against production on 2026-09-11 on the first try.
+  //
+  // A tour could survive that, because a tour was always going to be charged
+  // later or not at all. The $10 cannot: there is no later. Once the request is
+  // saved we go and get the table, and the only moment we could have taken the
+  // fee has passed. So the failure has to happen here, before anything is
+  // stored and before any work is promised.
+  if (requestType === "restaurant" && !paymentFields.paypalAuthorizationId) {
+    if (!isPaypalConfigured()) {
+      // Not the guest's fault — say so, and do not imply their card failed.
+      return Response.json(
+        {
+          error: `ただいまレストランのご予約代行を受け付けられません。お手数ですが ${CONTACT_EMAIL} までご連絡ください。`,
+        },
+        { status: 503 },
+      );
+    }
+    return Response.json(
+      { error: "お支払い情報を確認できませんでした。お手数ですが、もう一度お試しください。" },
+      { status: 402 },
+    );
+  }
+
   let saved;
   try {
     saved = await addBooking({

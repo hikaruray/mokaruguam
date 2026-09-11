@@ -9,9 +9,8 @@ import {
   TIME_BANDS,
   endTimeFor,
   startTimesForPlan,
-  LAST_TOUR_DATE,
 } from "@/lib/pricing";
-import { PAYPAL_ENABLED, LINE_URL } from "@/lib/config";
+import { PAYPAL_ENABLED, LINE_URL, CONTACT_EMAIL } from "@/lib/config";
 import PaypalCheckout from "./PaypalCheckout";
 
 type State = "idle" | "sending" | "sent" | "error";
@@ -130,8 +129,11 @@ export default function BookingForm() {
       return false;
     }
     if (v.guests > 7) {
+      // 8 or more is taken by email and quoted individually (owner decision,
+      // 2026-09-11): the flat $10 hold cannot price a party that size, and
+      // building a third payment path before 2026-10-01 is not worth it.
       setError(
-        "1台あたり最大7名です。8名以上は複数台での手配となりますので、LINEでご相談ください。",
+        `1〜7名で承っております。8名以上のご予約は別途お見積りとなりますので、${CONTACT_EMAIL} までご連絡ください。`,
       );
       return false;
     }
@@ -355,11 +357,18 @@ export default function BookingForm() {
 
       <div>
         <label className="mt-3 block text-xs font-bold">ツアー実施日</label>
+        {/* No `max`. The charter cutoff that used to cap this is removed on
+            the pivot branch (design §7-2) — from 2026-10-01 every date the
+            business handles is after it. The 30-day ceiling the design once
+            proposed for restaurants is gone too (R-4, owner decision
+            2026-09-11): a PayPal hold is guaranteed for about three days and
+            is captured when the table is confirmed, not on the day of the
+            meal, so a ceiling measured from the meal date never protected
+            anything — it only turned away guests planning two months out. */}
         <input
           type="date"
           name="tourDate"
           required
-          max={LAST_TOUR_DATE}
           className="mt-1.5 w-full rounded-lg border border-line px-3 py-2.5 text-sm"
         />
       </div>

@@ -3,6 +3,7 @@ import {
   setBookingStatus,
   setBookingPayment,
   chargedAmount,
+  requestTypeOf,
 } from "@/lib/store";
 import {
   captureAuthorization,
@@ -84,6 +85,32 @@ export async function POST(request: Request) {
     booking.payment === "authorized" &&
     Boolean(booking.paypalAuthorizationId);
 
+  // --- Gate 2: confirming a restaurant booking requires a live hold -----
+  //
+  // Confirming used to capture only `if (hasAuthorization)` and mark the
+  // booking confirmed either way. On a restaurant booking with no hold that
+  // sent the guest a confirmation saying「お支払い: $0.00（決済確定済み）」and
+  // showed the owner a confirmed booking — so nothing anywhere said the $10 had
+  // not been taken. A fault you cannot observe is worse than one that stops you.
+  //
+  // 🔴 Restricted to restaurants on purpose. Arranging a partner tour never
+  // touches PayPal, so those bookings are payment="none" by design, as is every
+  // request-only booking taken before the pivot. Without this restriction the
+  // gate would reject every confirmation from 2026-10-01 onwards.
+  if (
+    action === "confirm" &&
+    requestTypeOf(booking) === "restaurant" &&
+    !hasAuthorization
+  ) {
+    return Response.json(
+      {
+        error:
+          "この依頼にはカードのお預かりがありません。確定すると $10 を請求できないため、確定できません。お客様に再度のお手続きをご案内してください。",
+      },
+      { status: 409 },
+    );
+  }
+
   try {
     if (action === "confirm") {
       if (hasAuthorization) {
@@ -95,6 +122,12 @@ export async function POST(request: Request) {
           paypalCaptureId: captureId,
         });
       }
+      // --- Gate 3 ---
+      // Only reached when the capture above succeeded, because a throw goes to
+      // the catch and returns 502 without touching the status. Gate 2 has
+      // already ruled out the other way in: a restaurant booking arriving here
+      // with no hold at all. So a confirmed restaurant booking always has money
+      // actually captured behind it.
       await setBookingStatus(id, "confirmed");
     } else {
       // decline: release the hold (idempotent void), then mark declined.
