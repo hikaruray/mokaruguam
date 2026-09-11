@@ -17,6 +17,15 @@ import PaypalCheckout from "./PaypalCheckout";
 type State = "idle" | "sending" | "sent" | "error";
 
 interface FormValues {
+  // "tour" | "restaurant" — which kind of arrangement this is.
+  //
+  // Optional only while this form is mid-migration. The two-path form is stage
+  // 4 of the Oct 1 pivot; until it lands nothing sets this, and the payment
+  // routes correctly refuse to move money for a request whose type they do not
+  // know (see amountForRequest in lib/pricing.ts). That refusal is the point —
+  // defaulting it to "tour" here would make a paid restaurant booking silently
+  // free, and defaulting to "restaurant" would charge $10 for a tour.
+  requestType?: "tour" | "restaurant";
   name: string;
   email: string;
   phone: string;
@@ -184,6 +193,7 @@ export default function BookingForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        requestType: v.requestType,
         planId: v.planId,
         guests: v.guests,
         tourDate: v.tourDate,

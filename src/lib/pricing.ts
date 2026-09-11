@@ -183,9 +183,13 @@ export function isPeakDate(dateStr: string | null | undefined): boolean {
 }
 
 // Server-side amount by plan id + guests + tour date. Returns null for an
-// unknown plan. Used by the PayPal order route so the charge amount is computed
-// and TRUSTED on the server (peak recomputed from the date), never taken from
-// the client. Guests are clamped to 1..MAX.
+// unknown plan.
+//
+// CHARTER ONLY, and the charter ends 2026-09-30. Do not call this from the
+// payment routes — they go through amountForRequest() below, which knows about
+// both kinds of request. This stays because chargedAmount() in store.ts uses it
+// to restate what a pre-pivot booking was charged when its `amount` column
+// predates the snapshot.
 export function amountForBooking(
   planId: string,
   guests: number,
@@ -245,4 +249,82 @@ export function refundRateForDate(
   if (days >= 8) return { rate: 1, days, tier: "8日以上前（全額返金）" };
   if (days >= 4) return { rate: 0.5, days, tier: "7〜4日前（50%返金）" };
   return { rate: 0, days, tier: "3日前以降（返金なし）" };
+}
+
+// ---------------------------------------------------------------------------
+// The Oct 1 pivot: what a request costs the guest
+// ---------------------------------------------------------------------------
+// From 2026-10-01 the site takes two kinds of request, and only one of them
+// involves a payment to us:
+//
+//   tour       — we arrange a partner's activity. The guest pays the operator
+//                directly and pays us nothing; the partner pays a commission.
+//                No PayPal on this path at all.
+//   restaurant — we book a table. A flat $10 per booking, authorised when the
+//                request arrives and captured only once the table is actually
+//                held. Nothing is captured if we cannot get it.
+//
+// WHY THIS FUNCTION EXISTS
+// Both payment routes used to call amountForBooking(), which only knows the
+// four charter plans and returns null for anything else. Both routes turn null
+// into "プランが不正です。" with a 400. A restaurant request therefore died
+// before it could reach any of the payment checks — it could not even get a
+// PayPal order created. The design said "authorise $10" without saying where
+// the server was supposed to get that $10 from; this is that missing piece.
+
+// USD, per booking. Flat — see amountForRequest for why it is not per guest.
+export const RESTAURANT_FEE = 10;
+
+export type RequestType = "tour" | "restaurant";
+
+export interface RequestAmount {
+  amount: number;
+  // Shown to the guest and written into the PayPal order description.
+  label: string;
+  referenceId: string;
+  guests: number;
+  peak: boolean;
+}
+
+// Server-side amount for a request. Returns null whenever no money should move,
+// which the callers turn into a refusal — so the failure direction is "we did
+// not charge" rather than "we charged something we made up".
+//
+// Both payment routes MUST call this same function. If only one of them is
+// changed, the amount the browser was shown and the amount the server verifies
+// stop agreeing, and the equality check in /api/booking rejects every order.
+export function amountForRequest(
+  requestType: string | null | undefined,
+  planId?: string | null,
+  guests?: number | null,
+  date?: string | null,
+): RequestAmount | null {
+  if (requestType === "restaurant") {
+    // Flat per booking, NOT per guest. The $10 buys one act of arranging —
+    // the same phone call whether it seats two or seven — so it must never go
+    // through priceFor()/EXTRA_GUEST_SURCHARGE, which scale with headcount.
+    // Guests are still clamped and returned so the confirmation can restate
+    // the party size the restaurant was given.
+    const g = Math.min(MAX_GUESTS, Math.max(1, Math.floor(Number(guests) || 1)));
+    return {
+      amount: RESTAURANT_FEE,
+      label: "レストラン予約代行",
+      referenceId: "mokaru-restaurant",
+      guests: g,
+      peak: false, // peak season changes tour pricing; the arrangement fee is flat
+    };
+  }
+
+  if (requestType === "tour") {
+    // Deliberately null: arranging a partner tour is free to the guest. A
+    // caller that reaches PayPal on this path is a bug, and returning null
+    // makes it fail closed instead of authorising an invented amount.
+    return null;
+  }
+
+  // Unknown or missing request type. Never guess — guessing "tour" here would
+  // silently downgrade a paid restaurant request into a free one.
+  void planId;
+  void date;
+  return null;
 }

@@ -7,7 +7,7 @@ import {
   SITE_URL,
 } from "@/lib/config";
 import { addBooking } from "@/lib/store";
-import { PLANS, amountForBooking } from "@/lib/pricing";
+import { PLANS, amountForRequest } from "@/lib/pricing";
 import {
   authorizeOrder,
   voidAuthorization,
@@ -29,6 +29,8 @@ import { isBot, validateBooking, rateLimit, clientIp } from "@/lib/spam";
 //     with the order + authorization ids. Capture happens later on 予約確定.
 export async function POST(request: Request) {
   let body: {
+    // "tour" | "restaurant". Never defaulted here — see amountForRequest.
+    requestType?: string;
     name?: string;
     email?: string;
     phone?: string;
@@ -113,11 +115,20 @@ export async function POST(request: Request) {
   let authorizedAmount: number | null = null;
 
   if (body.paypalOrderId && isPaypalConfigured()) {
-    // preferredDate carries the tour date (from the date picker); peak is
-    // recomputed from it server-side so verification uses the correct amount.
-    const calc = amountForBooking(planId ?? "", Number(guests), preferredDate);
+    // Must be the SAME function the create-order route used. If the two ever
+    // disagree, the equality check below rejects every order the browser just
+    // approved — the guest sees a failure on a card that was fine.
+    const calc = amountForRequest(
+      body.requestType,
+      planId,
+      Number(guests),
+      preferredDate,
+    );
     if (!calc) {
-      return Response.json({ error: "プランが不正です。" }, { status: 400 });
+      return Response.json(
+        { error: "この内容ではお支払いは発生しません。" },
+        { status: 400 },
+      );
     }
     try {
       // Verify the approved order's amount matches our server-computed price,
