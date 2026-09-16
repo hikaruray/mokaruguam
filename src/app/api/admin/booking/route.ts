@@ -2,6 +2,7 @@ import {
   getBooking,
   setBookingStatus,
   setBookingPayment,
+  setBookingPartnerName,
   chargedAmount,
   requestTypeOf,
 } from "@/lib/store";
@@ -17,6 +18,8 @@ import {
   confirmedEmail,
   declinedEmail,
   partnerDispatchEmail,
+  waitingEmail,
+  proposalEmail,
 } from "@/lib/booking-emails";
 import { repayUrl } from "@/lib/cancel-token";
 import { SITE_URL } from "@/lib/config";
@@ -35,7 +38,13 @@ import { SITE_URL } from "@/lib/config";
 // via lib/booking-actions.ts. Protected by Basic Auth (src/proxy.ts).
 
 export async function POST(request: Request) {
-  let body: { id?: string; action?: string; to?: string };
+  let body: {
+    id?: string;
+    action?: string;
+    to?: string; // dispatch: the partner's or restaurant's address
+    proposal?: string; // status-proposal: the alternative we suggest
+    venue?: string; // confirm: the restaurant actually booked, if not the first choice
+  };
   try {
     body = await request.json();
   } catch {
@@ -43,7 +52,15 @@ export async function POST(request: Request) {
   }
 
   const { id, action } = body;
-  const valid = ["confirm", "decline", "cancel", "cancel-full", "dispatch"];
+  const valid = [
+    "confirm",
+    "decline",
+    "cancel",
+    "cancel-full",
+    "dispatch",
+    "status-waiting",
+    "status-proposal",
+  ];
   if (!id || !action || !valid.includes(action)) {
     return Response.json({ error: "Bad parameters." }, { status: 400 });
   }
@@ -155,6 +172,88 @@ export async function POST(request: Request) {
       );
     }
     return Response.json({ ok: true, subject: mail.subject });
+  }
+
+  // --- status mails (design §8 #3): tell the guest where things stand -------
+  //
+  // Like dispatch, these change nothing on the booking. The acknowledgement
+  // promised a status within 48 hours; these are the two statuses that are not
+  // already a result (確定 has confirmedEmail, お断り has declinedEmail).
+  if (action === "status-waiting" || action === "status-proposal") {
+    if (booking.requestType === null) {
+      return Response.json(
+        { error: "2026-09-30以前の貸切予約には状況メールを送りません。" },
+        { status: 409 },
+      );
+    }
+
+    let mail: { subject: string; text: string };
+    if (action === "status-waiting") {
+      mail = waitingEmail(booking);
+    } else {
+      // 🔴 Only when the guest asked for it. A guest who chose「キャンセル」
+      // for a full restaurant told us not to spend their money elsewhere, and a
+      // proposal mail would be exactly that, pending one reply. Decline instead.
+      if (requestTypeOf(booking) !== "restaurant" || booking.fallbackChoice !== "suggest") {
+        return Response.json(
+          {
+            error:
+              "この依頼は「満席なら提案」を選んでいません。提案せず「お断り」をご利用ください。",
+          },
+          { status: 409 },
+        );
+      }
+      // A captured row is paid for a table that exists; proposing another
+      // would be a second booking on the same fee.
+      if (booking.payment === "captured") {
+        return Response.json(
+          { error: "この依頼は手配料が決済済みです。提案メールは送れません。" },
+          { status: 409 },
+        );
+      }
+      const proposal = typeof body.proposal === "string" ? body.proposal.trim() : "";
+      if (!proposal || proposal.length > 500) {
+        return Response.json(
+          { error: "提案するお店（店名・時間など）を500文字以内で入力してください。" },
+          { status: 400 },
+        );
+      }
+      mail = proposalEmail(booking, proposal);
+    }
+
+    const { delivered } = await sendMail({
+      to: booking.email,
+      subject: mail.subject,
+      text: mail.text,
+      bccOwner: true,
+    });
+    if (!delivered) {
+      return Response.json(
+        { error: "状況メールを送信できませんでした。時間をおいて再度お試しください。" },
+        { status: 502 },
+      );
+    }
+    return Response.json({ ok: true, subject: mail.subject });
+  }
+
+  // --- confirm on a different restaurant (the proposal was accepted) -------
+  //
+  // Validated here, before any money moves, so a bad request cannot capture
+  // the fee and then fail to say where the table is.
+  const venue = typeof body.venue === "string" ? body.venue.trim() : "";
+  if (action === "confirm" && venue) {
+    if (requestTypeOf(booking) !== "restaurant" || booking.fallbackChoice !== "suggest") {
+      return Response.json(
+        { error: "お店の変更は「満席なら提案」を選んだレストランの依頼でのみ使えます。" },
+        { status: 409 },
+      );
+    }
+    if (venue.length > 200) {
+      return Response.json(
+        { error: "お店の名前は200文字以内で入力してください。" },
+        { status: 400 },
+      );
+    }
   }
 
   // Guard: a booking whose money is already captured must not be "declined".
@@ -277,6 +376,13 @@ export async function POST(request: Request) {
       // already ruled out the other way in: a restaurant booking arriving here
       // with no hold at all. So a confirmed restaurant booking always has money
       // actually captured behind it.
+      // Before the status moves, so a confirmed row never names the restaurant
+      // that was full. If this write fails the catch below answers 502 with the
+      // booking still pending — the same place a failed status write leaves it.
+      if (venue) {
+        await setBookingPartnerName(id, venue);
+        booking.partnerName = venue;
+      }
       await setBookingStatus(id, "confirmed");
     } else {
       // decline: release the hold (idempotent void), then mark declined.

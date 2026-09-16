@@ -12,6 +12,7 @@ import {
   type BookingRequest,
 } from "./store";
 import { CONTACT_EMAIL } from "./config";
+import { GUAM_UTC_OFFSET_HOURS } from "./pricing";
 
 // Booking confirmed (予約確定 → payment captured for a restaurant, or the
 // arrangement simply agreed for a tour).
@@ -129,6 +130,116 @@ export function reauthorizedOwnerEmail(
       `受付番号: ${refLabel(b)}`,
     ].join("\n"),
   };
+}
+
+// ---------------------------------------------------------------------------
+// The 48-hour status mail (design §8 #3)
+// ---------------------------------------------------------------------------
+// The acknowledgement promises「48時間以内に状況をご連絡します」— the STATE, not
+// the result. There are three states to report, and one of them already has a
+// mail: 確定 is confirmedEmail. These are the other two.
+//
+// Both are sent by hand from the admin screen and change nothing about the
+// booking. Neither may say anything that sounds like a result.
+
+// Still waiting on the restaurant or operator.
+export function waitingEmail(b: BookingRequest): { subject: string; text: string } {
+  const isRestaurant = requestTypeOf(b) === "restaurant";
+  return {
+    subject: "【Mokaru Guam】ご依頼の状況のお知らせ（お手配を進めています）",
+    text: [
+      `${b.name} 様`,
+      ``,
+      `ご依頼をいただきありがとうございます。現在の状況をお知らせします。`,
+      ``,
+      isRestaurant
+        ? `お店へご予約をお願いしており、お返事を待っているところです。`
+        : `実施会社へ空き状況を確認しており、お返事を待っているところです。`,
+      `お返事がありしだい、あらためてご連絡します。`,
+      ``,
+      `▼ お支払いについて`,
+      isRestaurant
+        ? `手配料はカードにお預かり（仮押さえ）したままで、まだご請求していません。お席が取れた時点で確定します。`
+        : `当社へのお支払いはございません。`,
+      ``,
+      `▼ ご依頼の内容`,
+      `お手配先:   ${b.partnerName}`,
+      `ご希望日時: ${b.preferredDate}`,
+      `人数:       ${b.guests}名`,
+      `受付番号:   ${refLabel(b)}`,
+      ``,
+      `ご不明な点は ${CONTACT_EMAIL} までご返信ください。`,
+      `— Mokaru Guam`,
+    ].join("\n"),
+  };
+}
+
+// First choice full; proposing the one alternative the guest asked for.
+//
+// 🔴 Two sentences in here are load-bearing, both from design §6-4-1:
+//
+//  1. THE REPLY DEADLINE, as a date. A PayPal hold lives about three days. A
+//     guest who answers on day five has let it expire, and the order the owner
+//     chose on 2026-09-11 is: get a live hold first, THEN book the table. So
+//     the deadline is not politeness; it is the hold's lifetime, told to the
+//     one person who can keep it alive.
+//
+//  2. "CARD DETAILS MAY BE ASKED FOR AGAIN AFTER YOU REPLY, AND WE BOOK ONLY
+//     ONCE THAT IS DONE." Without it, a guest who replies「それでお願いします」
+//     reasonably believes the table is theirs. It is not — and v2 of the design
+//     showed that booking first is how a table ends up held for $0.
+//
+// Asserted in check:gates by content, because a later tidy-up that shortens
+// this mail is exactly how either sentence would quietly go.
+export function proposalEmail(
+  b: BookingRequest,
+  proposal: string,
+  now: Date = new Date(),
+): { subject: string; text: string } {
+  const replyBy = guamDateLabel(now, 2);
+  return {
+    subject: "【Mokaru Guam】ご希望のお店が満席でした（代わりのご提案）",
+    text: [
+      `${b.name} 様`,
+      ``,
+      `ご依頼をいただきありがとうございます。`,
+      `誠に恐れ入りますが、ご希望のお店「${b.partnerName}」は、ご希望のお日にち・お時間で満席でした。`,
+      ``,
+      `お申し込みの際に「満席の場合はおすすめを提案してほしい」とご選択いただいていましたので、代わりに次のお店をご提案します。`,
+      ``,
+      `▼ ご提案`,
+      proposal,
+      ``,
+      `▼ お返事のお願い`,
+      `${replyBy}までに、このメールへのご返信でお知らせください。`,
+      `・このお店でよい場合：「提案のお店でお願いします」`,
+      `・見送る場合：「キャンセルします」（手配料はいただきません）`,
+      ``,
+      `※ ご返事をいただいたあと、カードのお手続きを再度お願いする場合があります（その際はご案内のリンクをお送りします）。`,
+      `お手続きが済んでから、お店へご予約を入れます。ご返事の時点ではまだお席は確保されていませんので、ご注意ください。`,
+      `お返事が${replyBy}を過ぎますと、カードのお預かりが一度無効になり、再度のご入力が必要になります。`,
+      ``,
+      `▼ お支払いについて`,
+      `現時点でご請求は発生していません。お席が取れなかった場合・見送られた場合も、手配料はいただきません。`,
+      ``,
+      `▼ ご依頼の内容`,
+      `ご希望日時: ${b.preferredDate}`,
+      `人数:       ${b.guests}名`,
+      `受付番号:   ${refLabel(b)}`,
+      ``,
+      `— Mokaru Guam`,
+    ].join("\n"),
+  };
+}
+
+// "10月17日（土）" for the Guam calendar date `days` from `now`.
+function guamDateLabel(now: Date, days: number): string {
+  const guam = new Date(now.getTime() + GUAM_UTC_OFFSET_HOURS * 3600_000);
+  const d = new Date(
+    Date.UTC(guam.getUTCFullYear(), guam.getUTCMonth(), guam.getUTCDate() + days),
+  );
+  const dow = "日月火水木金土"[d.getUTCDay()];
+  return `${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${dow}）`;
 }
 
 // The request we send the partner operator or restaurant (design §8 #7).

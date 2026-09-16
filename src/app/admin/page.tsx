@@ -228,6 +228,7 @@ export default async function AdminPage() {
                       status={b.status}
                       tourDate={b.preferredDate}
                       requestType={b.requestType}
+                      fallbackChoice={b.fallbackChoice}
                     />
                   </td>
                 </tr>

@@ -998,5 +998,100 @@ check(
   `HTTP ${unsent.status} (expected 502)`,
 );
 
+console.log("\n--- The 48-hour status mails (§8 #3) ---");
+
+const { proposalEmail, waitingEmail } = await import("@/lib/booking-emails");
+
+// 🔴 The two sentences design §6-4-1 depends on. Checked by content, because
+// shortening this mail is exactly how either would disappear.
+const suggestRow = await seed({
+  requestType: "restaurant",
+  partnerName: "Proa",
+  fallbackChoice: "suggest",
+});
+// Picked where the two calendars disagree: 2026-10-13 16:00 UTC is already
+// 10-14 02:00 in Guam. Two Guam days on is the 16th; counting from the UTC date
+// gives the 15th — the same mistake check:money once made about refunds.
+const proposal = proposalEmail(suggestRow, "Meat Street 18:30", new Date("2026-10-13T16:00:00Z"));
+check(
+  proposal.text.includes("10月16日"),
+  "proposal deadline is two GUAM days away, not two UTC days",
+  proposal.text.match(/\d+月\d+日（.）までに/)?.[0] ?? "(no deadline found)",
+);
+check(
+  proposal.text.includes("カードのお手続きを再度お願いする場合があります") &&
+    proposal.text.includes("お手続きが済んでから、お店へご予約を入れます"),
+  "proposal says card details may be needed again, and booking waits for them",
+  "both sentences present",
+);
+check(
+  proposal.text.includes("まだお席は確保されていません"),
+  "proposal says replying does not secure the table",
+  "present",
+);
+check(
+  !waitingEmail(suggestRow).text.includes("確定しました"),
+  "the waiting mail does not read as a result",
+  waitingEmail(suggestRow).subject,
+);
+
+const statusWith = (id: string, action: string, extra: Record<string, unknown> = {}) =>
+  adminWith(id, action, extra);
+
+// A guest who chose「キャンセル」for a full restaurant told us not to spend
+// their money elsewhere.
+const cancelChoiceRow = await seed({
+  requestType: "restaurant",
+  partnerName: "Proa",
+  fallbackChoice: "cancel",
+});
+const noPropose = await statusWith(cancelChoiceRow.id, "status-proposal", { proposal: "Meat Street" });
+check(
+  noPropose.status === 409,
+  "no proposal when the guest chose cancel-if-full",
+  `HTTP ${noPropose.status} (expected 409)`,
+);
+const tourPropose = await statusWith(dispatchTour.id, "status-proposal", { proposal: "x" });
+check(tourPropose.status === 409, "no proposal on a tour", `HTTP ${tourPropose.status} (expected 409)`);
+const emptyPropose = await statusWith(suggestRow.id, "status-proposal", { proposal: "  " });
+check(emptyPropose.status === 400, "no proposal without naming the alternative", `HTTP ${emptyPropose.status} (expected 400)`);
+const charterStatus = await statusWith(charterRow.id, "status-waiting");
+check(charterStatus.status === 409, "no status mail on a pre-pivot charter", `HTTP ${charterStatus.status} (expected 409)`);
+const waitUnsent = await statusWith(suggestRow.id, "status-waiting");
+check(
+  waitUnsent.status === 502,
+  "a status mail that did not go is not reported as sent",
+  `HTTP ${waitUnsent.status} (expected 502)`,
+);
+
+console.log("\n--- Confirming on the proposed restaurant ---");
+
+// 🔴 confirmedEmail reads partnerName. Before this, accepting a proposal
+// confirmed the guest onto the restaurant that had just said it was full.
+const venueOnTour = await adminWith(dispatchTour.id, "confirm", { venue: "Somewhere" });
+check(
+  venueOnTour.status === 409,
+  "a venue change is refused outside the proposal branch",
+  `HTTP ${venueOnTour.status} (expected 409)`,
+);
+// The tour row must not have been confirmed by that refused request.
+check(
+  (await getBooking(dispatchTour.id))?.status === "pending",
+  "and the refused request confirmed nothing",
+  (await getBooking(dispatchTour.id))?.status ?? "(missing)",
+);
+// The write itself, and what the guest is then told. The capture path needs
+// PayPal, so the store write and the email are checked directly.
+const { setBookingPartnerName } = await import("@/lib/store");
+await setBookingPartnerName(suggestRow.id, "Meat Street");
+const moved = await getBooking(suggestRow.id);
+check(
+  moved?.partnerName === "Meat Street" &&
+    confirmedEmail(moved, 10).text.includes("Meat Street") &&
+    !confirmedEmail(moved, 10).text.includes("Proa"),
+  "the confirmation names the restaurant booked, not the one that was full",
+  moved?.partnerName ?? "(missing)",
+);
+
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

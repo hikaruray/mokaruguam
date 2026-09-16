@@ -420,6 +420,40 @@ export async function setBookingStatus(
   await writeFile(db);
 }
 
+// Replace who we are arranging with. Used in exactly one case: a restaurant
+// request whose first choice was full, where the guest accepted the one
+// alternative we proposed.
+//
+// 🔴 Without this the confirmation email named the FIRST choice — the
+// restaurant that had just told us it was full — because confirmedEmail reads
+// partnerName and nothing ever changed it. The guest would walk to a table
+// that does not exist, holding our email saying it does.
+//
+// The first choice is overwritten rather than kept, because there is no column
+// for both and another hand-run migration before 10/1 is not worth it. It is
+// not lost: the owner's notification of the original request and the BCC of
+// the proposal mail both name it.
+export async function setBookingPartnerName(
+  id: string,
+  partnerName: string,
+): Promise<void> {
+  const supabase = getSupabase();
+
+  if (supabase) {
+    const { error } = await supabase
+      .from("bookings")
+      .update({ partner_name: partnerName })
+      .eq("id", id);
+    if (error) throw new Error(`Failed to update booking: ${error.message}`);
+    return;
+  }
+
+  const db = await readFile();
+  const booking = db.bookings.find((b) => b.id === id);
+  if (booking) booking.partnerName = partnerName;
+  await writeFile(db);
+}
+
 // Update payment state after a capture / void / refund. Accepts the new payment
 // status plus optional PayPal capture id and refund details (for the Admin
 // display). Kept separate from status so the admin action can set both.
