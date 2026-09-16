@@ -1,11 +1,17 @@
 // Lets plain node import the project's .ts files without editing them.
 //
-// Three differences between Next's resolver and node's ESM loader:
+// Four differences between Next's resolver and node's ESM loader:
 //   • Next resolves "./pricing" to "./pricing.ts"; node refuses.
 //   • Next resolves the "@/..." alias to src/...; node has never heard of it.
 //   • "server-only" is a package whose whole job is to throw when it is loaded
 //     outside a server component. Under plain node it always throws, which
 //     would make every route handler unimportable.
+//   • Next imports .json with a bare `import x from "./y.json"`; node's ESM
+//     requires `with { type: "json" }` and throws ERR_IMPORT_ATTRIBUTE_MISSING
+//     without it. legacy-articles.ts imports the 91-article snapshot that way,
+//     so check:articles could not load it. Supplying the attribute here is the
+//     same trade as the three above: absorb the difference rather than edit
+//     shipping code to suit a test.
 //
 // Rather than change shipping code to suit a test — adding extensions, dropping
 // the alias — the differences are absorbed here. The server-only stub is safe
@@ -44,6 +50,13 @@ export async function resolve(specifier, context, nextResolve) {
   }
 
   return nextResolve(specifier, context);
+}
+
+export async function load(url, context, nextLoad) {
+  if (url.endsWith(".json")) {
+    return nextLoad(url, { ...context, importAttributes: { type: "json" } });
+  }
+  return nextLoad(url, context);
 }
 
 register(pathToFileURL(import.meta.filename).href);
