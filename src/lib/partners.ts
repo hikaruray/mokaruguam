@@ -82,3 +82,18 @@ export const PARTNERS: Partner[] = [
       "ビーチとボートを1本ずつ潜る体験ダイビング。ウミガメに会えることを狙ったコースです。",
   },
 ];
+
+// What the request form is prefilled with when a guest arrives from /plans.
+//
+// 🔴 Company AND activity, not the company alone. It used to pass only
+// `company`, which was harmless while each operator had one activity — and
+// stopped being harmless the day Gently Blue was added with two. A request
+// reading「Gently Blue（ジェントリーブルー）」does not say whether the guest
+// wants the $80 beach dive or the $160 turtle dive, and the mail we send the
+// shop would have had to guess.
+//
+// The separator is a full-width slash so partnerCompany() in booking-emails
+// can take the company back off the front for the subject line.
+export function partnerRequestLabel(p: Partner): string {
+  return `${p.company}／${p.activity}`;
+}

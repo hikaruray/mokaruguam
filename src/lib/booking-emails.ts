@@ -131,6 +131,80 @@ export function reauthorizedOwnerEmail(
   };
 }
 
+// The request we send the partner operator or restaurant (design §8 #7).
+//
+// 🔴 THE SUBJECT LINE IS A FORMAT, NOT WORDING.
+//
+//   [Mokaru] 予約依頼 / Joe's Jet Ski / 2026-10-15 / 山田 / #0012
+//
+// The commission is 20% of bookings WE sent, reconciled at month end against
+// the partner's own records. That reconciliation is a search for「[Mokaru]」in
+// their inbox, and then pointing at one booking at a time by its number. Every
+// field in the subject is there so that list can be read without opening a
+// single mail. Change the order or the separators and last month's mails and
+// this month's stop lining up. check:gates asserts the exact string.
+//
+// What is deliberately NOT in this mail: the guest's email address and phone
+// number. The partner answers us (reply-to is our address), we answer the
+// guest. That keeps the booking in our records — which is what the commission
+// rests on — and keeps a guest's contact details out of an inbox they never
+// agreed to be in.
+//
+// Bilingual because the recipients are. Gently Blue is a Japanese shop; Joe's
+// Jet Ski and almost every restaurant in Tumon work in English.
+export function partnerDispatchEmail(b: BookingRequest): {
+  subject: string;
+  text: string;
+} {
+  const isRestaurant = requestTypeOf(b) === "restaurant";
+  const company = partnerCompany(b.partnerName);
+  // "2026-10-15 18:00" -> "2026-10-15". The form always sends the date first.
+  const day = b.preferredDate.trim().split(/\s+/)[0] || b.preferredDate;
+  // Family name only: the full name is in the body, and the subject is a list
+  // someone scans.
+  // U+3000 is the full-width space most Japanese keyboards type between names.
+  const surname = b.name.trim().split(/[\s　]+/)[0] || b.name;
+  const ref = refLabel(b);
+
+  return {
+    subject: `[Mokaru] 予約依頼 / ${company} / ${day} / ${surname} / ${ref}`,
+    text: [
+      `${company} ご担当者様 / Dear ${company} team,`,
+      ``,
+      `いつもお世話になっております。Mokaru Guam です。`,
+      `下記の内容でご予約をお願いできますでしょうか。`,
+      `We would like to request the following booking.`,
+      ``,
+      `受付番号 / Reference:   ${ref}`,
+      isRestaurant
+        ? `お店 / Restaurant:      ${b.partnerName}`
+        : `ご依頼 / Activity:      ${b.partnerName}`,
+      `希望日時 / Date & time: ${b.preferredDate}`,
+      `人数 / Guests:          ${b.guests}名 / ${b.guests} guest(s)`,
+      `お名前 / Guest name:    ${b.name}`,
+      ...(b.hotel ? [`ご滞在先 / Hotel:       ${b.hotel}`] : []),
+      ...(b.notes ? [`ご要望 / Requests:      ${b.notes}`] : []),
+      ``,
+      `空き状況を、このメールへのご返信でお知らせください。`,
+      `お客様へのご連絡は当社から行います。`,
+      `Please reply to this email with availability. We will pass the answer on to the guest.`,
+      ``,
+      `お問い合わせの際は受付番号 ${ref} をお伝えください。`,
+      `Please quote ${ref} in any correspondence about this booking.`,
+      ``,
+      `— Mokaru Guam`,
+      `${CONTACT_EMAIL}`,
+    ].join("\n"),
+  };
+}
+
+// The company part of a partnerName. Requests from /plans arrive as
+// 「company／activity」(partnerRequestLabel); anything typed by hand is used
+// whole. The subject needs the company, the body keeps the full string.
+export function partnerCompany(partnerName: string): string {
+  return partnerName.split("／")[0].trim() || partnerName.trim();
+}
+
 // Booking declined (お断り → authorization voided, no charge).
 //
 // 🔴 Branches, like confirmedEmail. It used not to, and so told a restaurant

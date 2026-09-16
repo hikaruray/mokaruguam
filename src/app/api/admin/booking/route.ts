@@ -13,7 +13,11 @@ import {
 } from "@/lib/paypal";
 import { cancelBooking } from "@/lib/booking-actions";
 import { sendMail } from "@/lib/email";
-import { confirmedEmail, declinedEmail } from "@/lib/booking-emails";
+import {
+  confirmedEmail,
+  declinedEmail,
+  partnerDispatchEmail,
+} from "@/lib/booking-emails";
 import { repayUrl } from "@/lib/cancel-token";
 import { SITE_URL } from "@/lib/config";
 
@@ -24,12 +28,14 @@ import { SITE_URL } from "@/lib/config";
 //   decline     → お断り     : void the authorization (仮押さえ解除・課金なし)
 //   cancel      → キャンセル : refund per the 3-tier policy (実施日基準)
 //   cancel-full → キャンセル : full refund (天候不良・自社都合の中止)
+//   dispatch    → 送客メール : send the booking request to the partner/restaurant
+//                               (no status or money change; see below)
 //
 // cancel / cancel-full share their logic with the customer self-service route
 // via lib/booking-actions.ts. Protected by Basic Auth (src/proxy.ts).
 
 export async function POST(request: Request) {
-  let body: { id?: string; action?: string };
+  let body: { id?: string; action?: string; to?: string };
   try {
     body = await request.json();
   } catch {
@@ -37,7 +43,7 @@ export async function POST(request: Request) {
   }
 
   const { id, action } = body;
-  const valid = ["confirm", "decline", "cancel", "cancel-full"];
+  const valid = ["confirm", "decline", "cancel", "cancel-full", "dispatch"];
   if (!id || !action || !valid.includes(action)) {
     return Response.json({ error: "Bad parameters." }, { status: 400 });
   }
@@ -86,6 +92,69 @@ export async function POST(request: Request) {
       },
       { status: 409 },
     );
+  }
+
+  // --- dispatch: the request mail to the partner or restaurant -----------
+  //
+  // Changes nothing about the booking. It is its own action rather than a side
+  // effect of 確定 because the order on the ground is the other way round: we
+  // ask the operator first, and confirm to the guest once they say yes.
+  //
+  // 🔴 No record of the send is kept on the row. There is no column for it and
+  // adding one means another migration the owner runs by hand before 10/1. The
+  // owner is BCC'd instead, so their inbox holds every request exactly as the
+  // partner received it — which is also the copy that matters when the
+  // commission is reconciled. Pressing it twice sends twice.
+  if (action === "dispatch") {
+    const to = typeof body.to === "string" ? body.to.trim() : "";
+    if (!to || to.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      return Response.json(
+        { error: "送信先のメールアドレスを確認してください。" },
+        { status: 400 },
+      );
+    }
+    // Charters taken before the pivot were run by us. There is nobody to send
+    // them to, and a mail headed「予約依頼」about one would be a request to a
+    // stranger to run our tour.
+    if (booking.requestType === null) {
+      return Response.json(
+        { error: "2026-09-30以前の貸切予約は送客の対象ではありません。" },
+        { status: 409 },
+      );
+    }
+    // 🔴 Design §6-4-1: the hold must exist BEFORE the restaurant is asked.
+    // Asking first and finding the hold dead afterwards is the one outcome with
+    // no good exit — a table held in the guest's name and a fee we can no
+    // longer take. The confirm gate already refuses that state; this is the
+    // same rule one step earlier, where it actually prevents the booking.
+    if (requestTypeOf(booking) === "restaurant" && booking.payment !== "authorized") {
+      return Response.json(
+        {
+          error:
+            booking.payment === "expired"
+              ? `カードのお預かりが期限切れです。お店へご依頼する前に、お客様に下記のリンクから再度のお手続きをご案内してください。\n${repayUrl(booking.id, SITE_URL)}`
+              : "この依頼にはカードのお預かりがありません。お店へご依頼する前にお支払い状況をご確認ください。",
+        },
+        { status: 409 },
+      );
+    }
+    const mail = partnerDispatchEmail(booking);
+    const { delivered } = await sendMail({
+      to,
+      subject: mail.subject,
+      text: mail.text,
+      bccOwner: true,
+    });
+    // sendMail never throws, so a failed send would otherwise look like a
+    // sent one — and the owner would wait for an answer to a mail that does
+    // not exist while the hold runs down.
+    if (!delivered) {
+      return Response.json(
+        { error: "送客メールを送信できませんでした。時間をおいて再度お試しください。" },
+        { status: 502 },
+      );
+    }
+    return Response.json({ ok: true, subject: mail.subject });
   }
 
   // Guard: a booking whose money is already captured must not be "declined".

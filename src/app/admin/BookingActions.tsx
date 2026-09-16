@@ -29,6 +29,40 @@ export default function BookingActions({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // 送客メール: the address is typed per booking. Partner and restaurant
+  // addresses are not stored anywhere, deliberately — a wrong address saved
+  // once would be reused silently on every booking after it.
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [dispatchTo, setDispatchTo] = useState("");
+  const [sentSubject, setSentSubject] = useState<string | null>(null);
+
+  async function dispatch() {
+    const to = dispatchTo.trim();
+    if (!to) return;
+    if (!confirm(`送客メールを送ります。\n送信先：${to}\n\n（オーナーにもBCCで届きます）`)) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/admin/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "dispatch", to }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(data.error || "送信に失敗しました。もう一度お試しください。");
+        return;
+      }
+      // No refresh: nothing about the booking changed. What the owner needs
+      // is proof of what went out, so the subject stays on screen.
+      setSentSubject(data.subject ?? "送信しました");
+      setDispatchOpen(false);
+    } catch {
+      setErr("通信エラーが発生しました。もう一度お試しください。");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function act(action: "confirm" | "decline" | "cancel" | "cancel-full") {
     if (action === "cancel") {
@@ -96,6 +130,40 @@ export default function BookingActions({
             お断り
           </button>
         </span>
+        {/* Pre-pivot charters were ours to run; there is nobody to send them to. */}
+        {requestType !== null &&
+          (dispatchOpen ? (
+            <span className="mt-1.5 inline-flex gap-1.5">
+              <input
+                type="email"
+                value={dispatchTo}
+                onChange={(e) => setDispatchTo(e.target.value)}
+                placeholder="提携先・お店のメール"
+                maxLength={254}
+                className="w-44 rounded-md border border-slate-200 px-2 py-1 text-xs"
+              />
+              <button
+                onClick={dispatch}
+                disabled={busy || !dispatchTo.trim()}
+                className="rounded-md bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 ring-1 ring-sky-200 transition hover:bg-sky-100 disabled:opacity-50"
+              >
+                送信
+              </button>
+            </span>
+          ) : (
+            <button
+              onClick={() => setDispatchOpen(true)}
+              disabled={busy}
+              className="mt-1.5 text-[11px] font-medium text-sky-700 underline underline-offset-2 disabled:opacity-50"
+            >
+              送客メールを送る
+            </button>
+          ))}
+        {sentSubject && (
+          <span className="mt-1 block max-w-[16rem] break-all text-[11px] text-emerald-700">
+            送信済み：{sentSubject}
+          </span>
+        )}
         {errNote}
       </span>
     );

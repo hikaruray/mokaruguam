@@ -755,7 +755,7 @@ for (const dir of ["cancel", "admin"]) {
   const files = await readdir(join(import.meta.dirname, "..", "src", "app", dir), {
     recursive: true,
   });
-  let offenders: string[] = [];
+  const offenders: string[] = [];
   for (const f of files) {
     if (!/\.tsx?$/.test(String(f))) continue;
     const src = await readFile(
@@ -907,6 +907,95 @@ check(
   (expiredBody.error ?? "").includes("/repay/"),
   "and the refusal hands over the re-payment link",
   (expiredBody.error ?? "").split("\n").pop() ?? "(no link)",
+);
+
+console.log("\n--- The request mail to a partner (送客メール) ---");
+
+// The subject is the month-end reconciliation key, so it is asserted as an
+// exact string rather than "contains the ref". A reordered field would pass a
+// loose check and break every search the partner runs against last month.
+const { partnerDispatchEmail } = await import("@/lib/booking-emails");
+const dispatchMail = partnerDispatchEmail({
+  ...(await seed({
+    requestType: "tour",
+    partnerName: "Gently Blue（ジェントリーブルー）／体験ダイビング（1ビーチダイブ）",
+    name: "山田　花子",
+    preferredDate: "2026-10-15 09:00",
+  })),
+  refNo: 12,
+});
+check(
+  dispatchMail.subject ===
+    "[Mokaru] 予約依頼 / Gently Blue（ジェントリーブルー） / 2026-10-15 / 山田 / #0012",
+  "subject is the fixed reconciliation format",
+  dispatchMail.subject,
+);
+check(
+  dispatchMail.text.includes("体験ダイビング（1ビーチダイブ）"),
+  "and the body says WHICH activity, not just which company",
+  "activity present",
+);
+// The partner answers us, not the guest. The commission rests on that.
+check(
+  !dispatchMail.text.includes("gate-check@example.invalid") &&
+    !dispatchMail.text.includes("090-0000-0000"),
+  "the guest's email and phone are not given to the partner",
+  "neither present",
+);
+
+const adminWith = (id: string, action: string, extra: Record<string, unknown>) =>
+  adminPost(
+    new Request("http://localhost/api/admin/booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", cookie: "admin=gate-check" },
+      body: JSON.stringify({ id, action, ...extra }),
+    }),
+  );
+
+const dispatchTour = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski" });
+const noAddr = await adminWith(dispatchTour.id, "dispatch", { to: "not-an-address" });
+check(noAddr.status === 400, "dispatch refuses a malformed address", `HTTP ${noAddr.status} (expected 400)`);
+
+const charterRow = await seed({ requestType: null });
+const charterDispatch = await adminWith(charterRow.id, "dispatch", { to: "ops@example.invalid" });
+check(
+  charterDispatch.status === 409,
+  "dispatch refuses a pre-pivot charter (we ran those ourselves)",
+  `HTTP ${charterDispatch.status} (expected 409)`,
+);
+
+// §6-4-1: no hold, no call to the restaurant.
+const restNoHoldDispatch = await seed({ requestType: "restaurant", partnerName: "Proa" });
+const rd = await adminWith(restNoHoldDispatch.id, "dispatch", { to: "proa@example.invalid" });
+check(rd.status === 409, "dispatch refuses a restaurant with no hold", `HTTP ${rd.status} (expected 409)`);
+
+const rdExpired = await seed({ requestType: "restaurant", partnerName: "Proa" });
+await setBookingPayment(rdExpired.id, { payment: "expired" });
+const rde = await adminWith(rdExpired.id, "dispatch", { to: "proa@example.invalid" });
+const rdeBody = (await rde.json()) as { error?: string };
+check(
+  rde.status === 409 && (rdeBody.error ?? "").includes("/repay/"),
+  "and one with an expired hold, handing over the re-payment link",
+  `HTTP ${rde.status}`,
+);
+
+const doneRow = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski" });
+await setBookingStatus(doneRow.id, "cancelled");
+const doneDispatch = await adminWith(doneRow.id, "dispatch", { to: "ops@example.invalid" });
+check(
+  doneDispatch.status === 409,
+  "dispatch refuses a booking that is no longer pending",
+  `HTTP ${doneDispatch.status} (expected 409)`,
+);
+
+// RESEND_API_KEY is unset in this harness, so the send cannot succeed. That is
+// exactly the case to check: sendMail never throws, and a route that ignored
+// its result would tell the owner a mail had gone that never did.
+const unsent = await adminWith(dispatchTour.id, "dispatch", { to: "ops@example.invalid" });
+check(
+  unsent.status === 502,
+  "a tour passes every gate, and an unsent mail is NOT reported as sent",
+  `HTTP ${unsent.status} (expected 502)`,
 );
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);

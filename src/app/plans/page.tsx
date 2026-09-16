@@ -4,7 +4,7 @@ import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { RESTAURANT_FEE } from "@/lib/pricing";
-import { PARTNERS } from "@/lib/partners";
+import { PARTNERS, partnerRequestLabel } from "@/lib/partners";
 
 export const metadata: Metadata = {
   title: "できること・料金",
@@ -101,7 +101,7 @@ export default function PlansPage() {
                 {/* 🔴 Our own form, never the operator's booking page: the
                     commission is owed on bookings we send. */}
                 <Link
-                  href={`/reserve?type=tour&partner=${encodeURIComponent(p.company)}`}
+                  href={`/reserve?type=tour&partner=${encodeURIComponent(partnerRequestLabel(p))}`}
                   className="mt-4 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark"
                 >
                   モカル経由で手配を依頼
