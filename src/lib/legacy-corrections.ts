@@ -295,28 +295,28 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
         find: '<p>📩 <strong>「安全にグアムを楽しみたい！」という方は、<a href="/private-tour-3h/"><mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-vivid-cyan-blue-color">Mokaruの専用車送迎や日本語サポート付きツアー</mark></a>をぜひご利用ください😊✨</strong></p>',
         replace: "",
       },
+      {
+        // 🔵 The advice around it stays exactly as written. Booking the ride
+        // home before you go out is the right thing to tell someone, and it is
+        // right whoever drives. Only the parenthesis naming us comes out.
+        why: "夜遊びの注意の一項が「帰りのタクシーは事前に手配（Mokaruの送迎サービスも利用可能）」。括弧の中だけが自社の送迎。",
+        find: "✅ <strong>帰りのタクシーは事前に手配（Mokaruの送迎サービスも利用可能）</strong>",
+        replace: "✅ <strong>帰りのタクシーは事前に手配（夜は流しのタクシーがほとんどいません）</strong>",
+      },
     ],
   },
 
-  "special-requests": {
-    body: [
-      {
-        find: "<p>📩 <strong>「こんな場所に行ける？」と思ったら、まずはLINEでご相談ください！あなたのグアム旅行を全力サポートします😊✨</strong></p>",
-        replace: "",
-        why: "LINEへの誘導。正しい依頼先は legacy-cta.ts が記事の下に出す。",
-      },
-      {
-        why: "「完全プライベートの専用車＆日本語ガイド付き」。どちらも提供しなくなる。",
-        find: "<p>Mokaruなら、<strong>完全プライベートの専用車＆日本語ガイド付きで、自由に行きたい場所へ！</strong></p>",
-        replace: "",
-      },
-      {
-        why: "同上。",
-        find: "<p>Mokaruの専用車＆カスタムツアーなら、<strong>グアム全域どこでもOK！</strong></p>",
-        replace: "",
-      },
-    ],
-  },
+  // 🔵 special-requests moved to legacy-rewrites.ts on 2026-09-17. Five
+  // sections, all of them「旅行会社が対応しない○○にも行ける」— and the reason
+  // given, every time, was our own car and our own guide. The three
+  // corrections that lived here deleted three of those sentences and left the
+  // other six standing, plus a title that is itself a pitch.
+  //
+  // Kept rather than retired because the QUESTION it answers is unchanged:
+  // someone finds something not in their package tour and wants to know
+  // whether it can be arranged. We can still answer that — and the honest
+  // answer now has to include what we cannot get them, which the original
+  // never said.
 
   "two-lovers-point": {
     body: [
@@ -424,6 +424,17 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
           /\s*<p>📩 <strong>「どの移動手段がいい？」と迷ったら、Mokaruに相談！<\/strong>[\s\S]*?<\/p>/g,
         replace: "",
       },
+      {
+        // 🔴 2026-09-17. The four corrections above emptied this section but
+        // left its frame: an h2 reading「④ Mokaruの専用送迎｜タクシーよりお得＆
+        // 安全！」, the paragraph under it recommending the 専用送迎サービス, and
+        // a closing line calling our transfers the best option. A reader saw
+        // the heading and the recommendation with nothing in between.
+        why: "④節の見出し・導入・締めが残っていた。中身（メリット・料金・比較表の行）だけ消しても、見出しが「自社が送迎をやっている」と宣言している。",
+        findRe:
+          /\s*<hr class="wp-block-separator has-alpha-channel-opacity"\/>\s*<h2 class="wp-block-heading"><strong>🚙 ④ Mokaruの専用送迎｜タクシーよりお得＆安全！<\/strong><\/h2>[\s\S]*?「英語が不安」ならMokaruの送迎がベスト！<\/strong><\/p>/g,
+        replace: "",
+      },
     ],
   },
 
@@ -456,6 +467,60 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
           "<p>🚙 <strong>Mokaru送迎（ホテル発）</strong><br>↓<br>🏞 <strong>タロフォフォの滝＆イナラハン天然プール</strong> → 大自然の絶景スポットを巡る！<br>↓<br>🚖 <strong>（Mokaru送迎）ホテルへ戻る</strong></p>",
         replace:
           "<p>🏞 <strong>タロフォフォの滝＆イナラハン天然プール</strong> → 大自然の絶景スポットを巡る！<br>※ どちらも南部で、バスは通っていません。レンタカーか、送迎のあるツアーを手配して向かうことになります。</p>",
+      },
+
+      // 🔴 2026-09-17. Same failure as guam-traffic directly above, in the same
+      // article family: the priced blocks were removed in July and 09-12, and
+      // the section they sat in was left standing. This page rendered an h2
+      // 「④ Mokaruの送迎で効率よく観光！貸切で快適＆自由に移動」followed by an h3
+      // 「Mokaruの送迎サービスのメリット」with NOTHING under it.
+      {
+        why: "④節（見出し・導入・空になった「メリット」見出し）を節ごと削除。中身は既に消えていて、見出しだけが自社の送迎を宣言していた。",
+        findRe:
+          /<hr class="wp-block-separator has-alpha-channel-opacity"\/>\s*<h2 class="wp-block-heading"><strong>🚙 ④ Mokaruの送迎で効率よく観光！貸切で快適＆自由に移動<\/strong><\/h2>[\s\S]*?<strong>🚙 Mokaruの送迎サービスのメリット<\/strong><\/h3>\s*/g,
+        replace: "",
+      },
+      {
+        why: "上の④を削除したので⑤の番号が飛ぶ。「送迎＆バス」も自社の送迎前提。",
+        find: '<h2 class="wp-block-heading"><strong>📍 ⑤ 送迎＆バスを活用したおすすめルート（1日コース）</strong></h2>',
+        replace: '<h2 class="wp-block-heading"><strong>📍 ④ バスとタクシーを活用したおすすめルート（1日コース）</strong></h2>',
+      },
+      {
+        why: "導入が「シャトルバスやMokaruの送迎を使えば」。移動手段の提供をやめる。",
+        find: "<strong>シャトルバスやMokaruの送迎を上手に使えば、レンタカーなしでも快適に観光できます！</strong>",
+        replace: "<strong>シャトルバスとタクシーを上手に使えば、レンタカーなしでも快適に観光できます！</strong>",
+      },
+      {
+        why: "同上。記事が扱う移動手段の並びから自社を外す。",
+        find: "<strong>タモン・タムニングエリアを中心に、シャトルバス＆送迎で楽しむ観光プラン</strong>",
+        replace: "<strong>タモン・タムニングエリアを中心に、シャトルバスとタクシーで楽しむ観光プラン</strong>",
+      },
+      {
+        why: "「グループなら送迎サービスを活用するとコスパ◎」＝自社の1台あたり料金の話。第三者のチャーターやレンタカーなら今も成り立つので、そちらに寄せる。",
+        find: "<p>📌 <strong>1人旅やカップルならタクシー、グループなら送迎サービスを活用するとコスパ◎！</strong></p>",
+        replace:
+          "<p>📌 <strong>1人旅やカップルならタクシーが手軽。グループなら人数で割れるので、車をチャーターしたほうが安く済むこともあります！</strong></p>",
+      },
+      {
+        why: "まとめの1行が「Mokaruの専用送迎なら貸切＆日本語対応」。",
+        find: "<br>🚙 <strong>Mokaruの専用送迎なら、貸切＆日本語対応で安心＆快適！</strong>",
+        replace: "",
+      },
+      {
+        why: "同じくまとめ。「送迎＋シャトルバス」の送迎は自社のもの。",
+        find: "<strong>「自由に動きたいけど、レンタカーは不安…」という方は、送迎＋シャトルバスを組み合わせるのがベスト！</strong>",
+        replace: "<strong>「自由に動きたいけど、レンタカーは不安…」という方は、タクシー＋シャトルバスを組み合わせるのがベスト！</strong>",
+      },
+      {
+        why: "同上。ルートのまとめ。",
+        find: "<p>📌 <strong>送迎＋バスを組み合わせることで、レンタカーなしでも自由に観光できる！</strong></p>",
+        replace: "<p>📌 <strong>バスとタクシーを組み合わせることで、レンタカーなしでも自由に観光できる！</strong></p>",
+      },
+      {
+        why: "「移動手段に迷っているならMokaruに相談」＝提供しない移動手段の相談窓口。正しい依頼先は legacy-cta.ts が記事の下に出す。",
+        findRe:
+          /\s*<p>📩 <strong>「移動手段に迷っている…」「効率よく観光したい！」という方は、まずはMokaruにご相談ください😊✨<\/strong><\/p>/g,
+        replace: "",
       },
     ],
   },
@@ -667,31 +732,20 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   // Confirmed still offered and therefore left alone: child seats, cooler box,
   // interpreting/negotiating, shoot accompaniment, holding luggage (要相談).
 
-  "family-friendly": {
-    body: [
-      {
-        why: "自社の車を「移動式授乳＆おむつ替えスペース」として使えるという案内。車を出さなくなる。",
-        find: "<p>グアムの観光地やレストランには、**おむつ替え台や授乳スペースが少ない場所も…**💦<br>でも、<strong>Mokaruの専用車を「移動式授乳＆おむつ替えスペース」として活用できます！</strong></p>",
-        replace:
-          "<p>グアムの観光地やレストランには、おむつ替え台や授乳スペースが少ない場所もあります💦<br>大きなショッピングモール（マイクロネシアモール、GPO）は設備が整っているので、外を歩く予定の途中に一度挟んでおくと安心です。</p>",
-      },
-      {
-        why: "Advertises booking restaurants on the guest's behalf. Recommending them is real, so the sentence keeps its point.",
-        find: "<p>Mokaruなら、<strong>お子様連れでも安心のレストランをご提案＆予約代行！</strong></p>",
-        replace: "<p>Mokaruなら、<strong>お子様連れでも安心のレストランをご提案！</strong></p>",
-      },
-      {
-        why: "'事前予約' here means we book it for you.",
-        find: "✅ <strong>ベビーチェア完備のレストランを事前予約！</strong><br>",
-        replace: "✅ <strong>ベビーチェア完備のレストランをご提案！</strong><br>",
-      },
-      {
-        why: "Same booking-agent claim in the summary.",
-        find: "→ キッズメニュー＆ベビーチェア完備のレストランを事前予約！",
-        replace: "→ キッズメニュー＆ベビーチェア完備のレストランをご提案！",
-      },
-    ],
-  },
+  // 🔵 family-friendly moved to legacy-rewrites.ts on 2026-09-17. Its title was
+  //「Mokaruが家族旅行におすすめの理由」and its five sections were the van: the
+  // child waits in the car during shopping, the car is a mobile nappy-change
+  // space, the schedule bends because our driver is yours for the day.
+  //
+  // 🔴 Three of the corrections deleted here were STALE IN THE OPPOSITE
+  // DIRECTION, and that is the useful part. In July they rewrote
+  //「レストランをご提案＆予約代行」down to「ご提案」, because back then booking a
+  // restaurant for a guest was a perk we had stopped offering. From 2026-10-01
+  // it is the main product at $10 a booking. The July correction was right in
+  // July, wrong now, and it was quietly suppressing the one sentence in the
+  // archive that described what we actually sell.
+  //
+  // A correction points at a moment. Both directions go stale.
 
   // 🔵 post-wedding-tour moved to legacy-rewrites.ts on 2026-09-17, for the
   // same reason as night-market-2 and with a sharper edge: its four numbered
@@ -734,6 +788,230 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
           '\n\n\n\n<p>グアムの移動手段は、それぞれに向き不向きがあります。タモン周辺だけならトローリーバスと徒歩で足りますが、恋人岬や南部まで足を延ばすなら、待ち時間の少ない手段を確保しておくほうが確実です。人数が増えるほど、1回ごとに人数分かかる移動手段は割高になります。</p>\n\n\n\n<p>行き先を決めてから移動手段を選ぶのではなく、使える移動手段から行き先を決めるほうが、グアムでは失敗しません。</p>',
         why:
           "まとめが「だからMokaruのプライベートチャーターを」で終わっていた。記事の主題（移動手段の比較）で締めるよう書き換え。",
+      },
+      {
+        // 🔴 2026-09-17. The two corrections above cut the comparison section
+        // and the closing pitch — and left the OPENING PARAGRAPH promising
+        // both. The article announced a comparison with Mokaru that no longer
+        // appeared anywhere below it.
+        //
+        // Worth stating plainly, because it is the third time this shape has
+        // turned up today: when a section is removed, the sentence that
+        // introduced it and the numbering around it are part of the removal.
+        why: "導入が「それらと比較したときのMokaruの強みをご紹介します」。比較の節は削除済みで、前振りだけが残っていた。",
+        find: "ここでは、グアムで利用できる主な移動手段と、それらと比較したときのMokaruの強みをご紹介します。",
+        replace: "ここでは、グアムで利用できる主な移動手段と、それぞれの費用の目安をご紹介します。",
+      },
+    ],
+  },
+
+  // ---------------------------------------------------------------------
+  // 「Mokaruの○○ツアー」「Mokaruの送迎」（2026-09-17）
+  // ---------------------------------------------------------------------
+  // 09-12 は自社の車・ガイド・LINEの語で掃いた。今回はビルド結果を
+  //「Mokaru」という語そのもので掃いて、記事本文に85箇所あることが分かった。
+  //
+  // 全部が悪いわけではない。「迷ったらMokaruにご相談ください」は今も正しい
+  // ——ホテル選びも、持ち物も、両替も、質問には答える。残すものと直すものを
+  // 分ける基準は一つだけにした：
+  //
+  //   🔴 当社が「ツアーを運行する／車を出す／ガイドが同行する」と読める語か。
+  //
+  // これに当たるのが以下。当たらない「ご相談ください」系（chose-hotel,
+  // dont-forget, emergencies, foreign-exchange, wifi-sim, guam-weather,
+  // honeymoon-couple, top3-actitivity, local-food, restaurants など）は
+  // 手を触れていない。hp-renewal も同様——創業の経緯を書いた記事で、
+  //「あなたの希望に寄り添った旅をご提案します」は10/1以降も嘘ではない。
+  "night-market": {
+    body: [
+      {
+        why: "「行き方｜Mokaruの送迎サービスがおすすめ！」＝自社の送迎の宣伝。ただし「夜の足をどうするか」は読者が本当に知りたいことなので、節は残して中身を事実に置き換える。",
+        find: '<h2 class="wp-block-heading"><strong>🚗 ナイトマーケットへの行き方｜Mokaruの送迎サービスがおすすめ！</strong></h2>',
+        replace: '<h2 class="wp-block-heading"><strong>🚗 ナイトマーケットへの行き方｜夜の足は先に決めておく</strong></h2>',
+      },
+      {
+        why: "「Mokaruの送迎付きツアーを利用すると快適」。タクシーとバスの事情そのものは正しいので残す。",
+        find: "<br>グアムはタクシーが少なく、バスも夜はほとんど運行していないため、Mokaruの<strong>送迎付きツアー</strong>を利用すると快適に楽しめます！</p>",
+        replace: "<br>グアムはタクシーが流していません。バスも夜はほとんど運行していないので、<strong>行きと帰りの手段を出かける前に決めておく</strong>のが基本です。</p>",
+      },
+      {
+        why: "自社の送迎付きツアーの売り（ホテル送迎・日本語ガイド・夜景との組み合わせ）。",
+        find: "<p>✅ <strong>ホテルまで送迎付きで安心！</strong><br>✅ <strong>現地のおすすめ屋台や楽しみ方を日本語ガイドがサポート！</strong><br>✅ <strong>ナイトマーケット＋夜景スポットの組み合わせも可能！</strong></p>",
+        replace:
+          "<p>✅ <strong>レンタカーなら駐車場は早い時間に埋まります</strong><br>✅ <strong>タクシーで行くなら、帰りの時間を決めて配車を頼んでおく</strong><br>✅ <strong>送迎のついたツアーを選べば、行き帰りを考えずに済みます</strong></p>",
+      },
+      {
+        why: "「Mokaruがぴったりのプランをご提案」＝ツアーの組み立ての誘導。依頼先は legacy-cta.ts が記事の下に出す。",
+        findRe:
+          /\s*<p>📩 <strong>「どのナイトマーケットに行く？」と迷ったら、Mokaruがぴったりのプランをご提案！まずはお気軽にご相談ください😊✨<\/strong><\/p>/g,
+        replace: "",
+      },
+      {
+        why: "まとめの1行が「Mokaruの送迎付きツアーなら移動の心配なし」。",
+        find: "<br>🚗 <strong>Mokaruの送迎付きツアーなら、移動の心配なしで楽しめる！</strong>",
+        replace: "<br>🚗 <strong>夜は足の確保がいちばんの課題。行き帰りを決めてから出かけよう！</strong>",
+      },
+    ],
+  },
+
+  "guam-budget": {
+    body: [
+      {
+        why: "移動手段別の費用の一覧に自社の専用送迎が入っている（終了するプランへのリンクつき）。他の3行は正しいので行だけ落とす。",
+        find: '<br>✅ <strong><a href="/private-tour-3h/"><mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-vivid-cyan-blue-color">Mokaruの専用送迎（ホテル⇔観光地）</mark></a>→ 予約すればスムーズ＆安心</strong>',
+        replace: "",
+      },
+      {
+        why: "節約のコツの一項が「移動が多いならMokaruの送迎ツアーを活用」。",
+        find: "<br>✅ <strong>移動が多いならMokaruの送迎ツアーを活用！効率よく回れる</strong>",
+        replace: "<br>✅ <strong>1日に何度も移動するなら、その日だけレンタカーを借りるほうが安く済むことも</strong>",
+      },
+    ],
+  },
+
+  "guam-day-plan": {
+    body: [
+      {
+        why: "1日モデルコースの起点が「ホテル発（Mokaruの送迎でラクラク移動）」。行き先と時刻は正しいので残す。",
+        find: "<p>🚗 <strong>09:00 ホテル発（Mokaruの送迎でラクラク移動）</strong><br>",
+        replace: "<p>🚗 <strong>09:00 ホテル発</strong><br>",
+      },
+      {
+        why: "「移動はMokaruの送迎を活用すると、短時間でも効率よく回れる」。",
+        find: "<p>📌 <strong>「移動はMokaruの送迎を活用すると、短時間でも効率よく回れる！」</strong></p>",
+        replace:
+          "<p>📌 <strong>恋人岬とイパオビーチはバスで結べません。この行程はレンタカーか、送迎のある手段が前提です。</strong></p>",
+      },
+    ],
+  },
+
+  "dive-spot": {
+    body: [
+      {
+        // 🔵 The first half of this sentence describes what we now sell — we
+        // book the dive shop. Only the transfer had to go.
+        why: "「ダイビングショップの予約や送迎もサポート」。予約の代行は今も行う（むしろ本業）。送迎だけが提供できない。",
+        find: "<p>Mokaruのカスタマイズツアーなら、<strong>ダイビングショップの予約や送迎もサポート可能！</strong></p>",
+        replace: "<p>Mokaruなら、<strong>ダイビングショップへのお申し込みを代わってお引き受けできます！</strong></p>",
+      },
+      {
+        why: "「ダイビングツアーや送迎のご相談」。送迎は提供しない。",
+        find: "<p>📩 <strong>グアムのダイビングツアーや送迎のご相談は、Mokaruまでお気軽にどうぞ！😊✨</strong></p>",
+        replace: "<p>📩 <strong>グアムのダイビングのお申し込みは、Mokaruまでお気軽にどうぞ！😊✨</strong></p>",
+      },
+    ],
+  },
+
+  // 観光地4本＋ビーチ・歴史・買い物。どれも「Mokaruのカスタマイズツアー／
+  // ショッピングツアーならご案内できます」で締めていた。行き方や見どころの
+  // 説明は正しいので、締めの1文だけを事実に置き換える。
+  "talafofo-falls": {
+    body: [
+      {
+        why: "「Mokaruのカスタマイズツアーなら他の観光地と自由に組み合わせ可能」＋終了するプランへのリンク。",
+        find: '<p><a href="/private-tour-3h/"><mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-vivid-cyan-blue-color">Mokaruのカスタマイズツアー</mark></a>なら、<strong>タロフォフォの滝＋他の観光地を自由に組み合わせ可能！</strong></p>',
+        replace:
+          "<p>南部はバスが通っていません。<strong>レンタカーか、送迎のついたツアーを選ぶ</strong>ことになります。同じ方向にイナラハン天然プールやソレダッド砦があるので、まとめて回ると効率的です。</p>",
+      },
+      {
+        why: "「ツアーのご相談は、Mokaruまで」＝自社ツアーの組み立ての誘導。",
+        find: "<p>📩 <strong>タロフォフォの滝への行き方やツアーのご相談は、Mokaruまでお気軽にどうぞ！😊</strong></p>",
+        replace: "<p>📩 <strong>現地ツアーのお申し込みは、Mokaruが代わってお引き受けします😊</strong></p>",
+      },
+    ],
+  },
+
+  "fort-apugan": {
+    body: [
+      {
+        why: "「Mokaruのカスタマイズツアーならコースをご案内できます」＝自社がツアーを運行し同行する、と読める。",
+        find: "<p>Mokaruのカスタマイズツアーなら、<strong>グアムの歴史と絶景をじっくり楽しめるコースをご案内できます！</strong></p>",
+        replace:
+          "<p>アプガン砦はハガニアの中心部から近く、<strong>スペイン広場やラッテストーン公園と一緒に回れます</strong>。歩いて巡れる距離なので、半日あれば十分です。</p>",
+      },
+      {
+        why: "同上。ツアー相談の誘導。",
+        find: "<p>📩 <strong>アプガン砦への行き方やツアーのご相談は、Mokaruまでお気軽にどうぞ！😊✨</strong></p>",
+        replace: "<p>📩 <strong>現地ツアーのお申し込みは、Mokaruが代わってお引き受けします😊✨</strong></p>",
+      },
+    ],
+  },
+
+  "plaza-de-espana": {
+    body: [
+      {
+        why: "「見どころをしっかり解説しながらご案内できます」＝ガイドが同行する、という約束。",
+        find: "<p>Mokaruのカスタマイズツアーなら、<strong>歴史や文化の見どころをしっかり解説しながらご案内できます！</strong></p>",
+        replace:
+          "<p>スペイン広場のまわりには、<strong>ラッテストーン公園、アプガン砦、大聖堂</strong>が徒歩圏に集まっています。歴史をたどるなら、この4か所をつなげて歩くのがいちばん分かりやすい順番です。</p>",
+      },
+      {
+        why: "同上。ツアー相談の誘導。",
+        find: "<p>📩 <strong>スペイン広場への行き方やツアーのご相談は、Mokaruまでお気軽にどうぞ！</strong> 😊✨</p>",
+        replace: "<p>📩 <strong>現地ツアーのお申し込みは、Mokaruが代わってお引き受けします</strong> 😊✨</p>",
+      },
+    ],
+  },
+
+  "guam-top5-sights": {
+    body: [
+      {
+        why: "「Mokaruのカスタマイズツアーで絶景スポット巡りも可能」＋終了するプランへのリンク。",
+        find: '<p>📩 <strong>「どこに行くべき？」と迷ったら、<a href="/private-tour-3h/"><mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-vivid-cyan-blue-color">Mokaruのカスタマイズツアー</mark></a>で絶景スポット巡りも可能！気軽にご相談ください😊✨</strong></p>',
+        replace: "<p>📩 <strong>現地ツアーのお申し込みは、Mokaruが代わってお引き受けします。気軽にご相談ください😊✨</strong></p>",
+      },
+    ],
+  },
+
+  "local-beach": {
+    body: [
+      {
+        why: "「Mokaruのカスタマイズツアーで穴場ビーチ巡りも可能」。",
+        find: "<p>📩 <strong>「どのビーチに行けばいい？」と迷ったら、Mokaruのカスタマイズツアーで穴場ビーチ巡りも可能！気軽にご相談ください😊✨</strong></p>",
+        replace:
+          "<p>📩 <strong>南部のビーチはバスが通っていません。レンタカーか、送迎のついたツアーを選んでください。ツアーのお申し込みはMokaruが代わってお引き受けします😊✨</strong></p>",
+      },
+    ],
+  },
+
+  "history": {
+    body: [
+      {
+        why: "「歴史的なグアムを巡るツアーを作りたい方はご相談を。カスタマイズします」＝ツアーを組んで運行する、という約束。",
+        find: "<p>📩 <strong>「歴史的なグアムを巡るツアーを作りたい！」という方は、Mokaruにご相談ください😊✨</strong><br>あなたにぴったりの「スペイン統治時代のグアム巡り」をカスタマイズします！</p>",
+        replace:
+          "<p>📩 <strong>スペイン統治時代の跡は、ハガニアに固まっています。</strong><br>スペイン広場、ラッテストーン公園、アプガン砦、大聖堂。徒歩でつなげられる距離なので、半日の散策で一通りたどれます。</p>",
+      },
+    ],
+  },
+
+  // ショッピング3本。どれも「Mokaruのショッピングツアーでご案内」で締める。
+  "shopping-malls": {
+    body: [
+      {
+        why: "「Mokaruのショッピングツアーでご案内」＝同行するツアーの提供。",
+        find: "<p>📩 <strong>「どこで買うのがベスト？」と迷ったら、Mokaruのショッピングツアーでご案内！気軽にご相談ください😊✨</strong></p>",
+        replace: "<p>📩 <strong>「どこで買うのがベスト？」と迷ったら、Mokaruにご相談ください😊✨</strong></p>",
+      },
+    ],
+  },
+
+  "guam-souvenir": {
+    body: [
+      {
+        why: "同上。",
+        find: "<p>📩 <strong>「どこで買うのがベスト？」と迷ったら、Mokaruがショッピングツアーをご案内！気軽にご相談ください😊✨</strong></p>",
+        replace: "<p>📩 <strong>「どこで買うのがベスト？」と迷ったら、Mokaruにご相談ください😊✨</strong></p>",
+      },
+    ],
+  },
+
+  "kmart-or-abc": {
+    body: [
+      {
+        why: "同上。",
+        find: "<p>📩 <strong>「どこで何を買うのがベスト？」と迷ったら、Mokaruのショッピングツアーで効率よくお買い物が可能！気軽にご相談ください😊✨</strong></p>",
+        replace: "<p>📩 <strong>「どこで何を買うのがベスト？」と迷ったら、Mokaruにご相談ください😊✨</strong></p>",
       },
     ],
   },
