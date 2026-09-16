@@ -146,8 +146,48 @@ const BOOKING_STEPS: Correction = {
 };
 
 export const CORRECTIONS: Record<string, ArticleCorrections> = {
+  // ---------------------------------------------------------------------
+  // 「グアム 貸切ガイド」「貸切ツアー」というSEOキーワード（2026-09-17）
+  // ---------------------------------------------------------------------
+  // 09-12の一巡では、自社の車・ガイド・LINEを「約束している文」を消した。
+  // 残っていたのは、記事の前提として埋め込まれた語句のほう——タイトル、導入、
+  // まとめ。読むと「当社が貸切ガイドを提供している」としか取れない。
+  //
+  // 🔴 見出しとタイトルに入っているものは言い換えが要る。順位のために残す
+  // 誘惑があるが、順位を守るために提供しないサービスを名乗ることになる。
+  //
+  // 🔵 記事の主題（潮汐・雨季・水分補給）は10/1以降も正しい。だから書き直し
+  // ではなく修正で足りる。night-market-2 と post-wedding-tour は逆で、主題が
+  // 商品そのものだったので legacy-rewrites.ts へ移した。
   "rainy-day": {
+    title: [
+      {
+        why: "『グアム貸切ガイド』＝終了する自社商品名。雨季のインドア案内という中身は10/1以降も正しい。",
+        find: "7〜8月スコール対策『グアム貸切ガイド』インドア満喫プラン",
+        replace: "7〜8月のスコール対策とインドア満喫プラン",
+      },
+    ],
     body: [
+      {
+        why: "導入の後半が、貸切ガイド付きプライベートツアーとエアコン完備のバンの勧誘。バス待ちの実態を書いた前半は正しいので残す。",
+        find: "<br>そこでおすすめなのが、ドアツードア移動ができる<strong>グアム 貸切ガイド</strong>付き<strong>グアム プライベートツアー（グアム 3時間 ツアー〜）</strong>。専属<strong>グアム プライベート ガイド</strong>とエアコン完備のバンで、雨でも快適に島内を回れます。",
+        replace:
+          "<br>この時期は、屋内で過ごせる場所と、雨でも足が確保できる行き先を先に決めておくと安心です。",
+      },
+      {
+        // The other three rows of this table describe the bus service honestly
+        // and stay. This cell answers "how do I get there?" with "you can't,
+        // unless you use us".
+        why: "表の1セルが「グアム チャーター専用ルート」＝自社の車でしか行けない、という案内になっている。",
+        find: "<td>そもそも公共交通なし。<strong>グアム チャーター</strong>専用ルート</td>",
+        replace: "<td>そもそも公共交通なし。レンタカーかタクシーの手配が要る</td>",
+      },
+      {
+        why: "表の直後の引用が「貸切ツアーならドア前ピックアップ」の勧誘。",
+        findRe:
+          /\s*<blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">\s*<p>どれも「行きたいけど足がない…」と諦めがちな場所。[\s\S]*?<\/blockquote>/g,
+        replace: "",
+      },
       {
         // All three bullets are about our car and our guide — the seats, the
         // guide handling nappy stops, the air conditioning. Nothing survives
@@ -158,11 +198,31 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
           /\s*<hr class="wp-block-separator has-alpha-channel-opacity"\/>\s*<h3 class="wp-block-heading">👶 子連れ＆ベビーカーも安心<\/h3>\s*<ul class="wp-block-list">[\s\S]*?<\/ul>/g,
         replace: "",
       },
+      {
+        why: "「Mokaruなら可能」「ガイドがプランを提案」＝自社の運行前提。天気が変わりやすいという観察そのものは正しいので残す。",
+        find:
+          "<p>雨季だからと言ってずっと雨かと言うとそうでもありません。一瞬の晴れ間を狙ってきれいなビーチで写真を撮ったり、観光スポットで記念撮影もMokaruなら可能です。</p>\n\n\n\n<p>天気に恵まれていなくてもガイドがお客様が楽しんでもらえるようにプランを提案いたします。</p>",
+        replace:
+          "<p>雨季だからと言ってずっと雨かと言うとそうでもありません。一瞬の晴れ間を狙って、きれいなビーチや観光スポットで写真を撮ることもできます。</p>\n\n\n\n<p>屋内の行き先をいくつか控えておけば、天気に恵まれなくても一日は埋まります。</p>",
+      },
+      {
+        why: "まとめが「Mokaru Guamの貸切サービス」の宣伝。",
+        find: "<p>雨季のバス待ちは旅の大敵。でも<strong>グアム プライベートツアー</strong>なら、スコールの合間を縫ってインドアも絶景も欲張りに楽しめます。次の7〜8月はMokaru Guamの貸切サービスで、天気に左右されない思い出作りをしませんか？ お問い合わせはお気軽に！</p>",
+        replace:
+          "<p>雨季のバス待ちは旅の大敵。それでも、屋内の行き先をいくつか用意しておけば、スコールの合間を縫ってインドアも絶景も欲張りに楽しめます。次の7〜8月は、天気に左右されない組み立てを。</p>",
+      },
       BOOKING_STEPS,
     ],
   },
 
   hydration: {
+    title: [
+      {
+        why: "「3時間プライベートツアー術」＝終了する自社商品の売り文句。暑さ対策と栄養という中身は10/1以降もそのまま正しい。",
+        find: "3時間プライベートツアー術",
+        replace: "過ごし方",
+      },
+    ],
     body: [
       {
         why: "「Mokaru Guam 貸切ガイドができること」の節。車内の水・動線・ベビーカー・エスコートと、全項目が自社の車とガイド前提。",
@@ -170,20 +230,44 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
           /\s*<h3 class="wp-block-heading">3️⃣ Mokaru Guam 貸切ガイドができること<\/h3>\s*<ul class="wp-block-list">[\s\S]*?<\/ul>/g,
         replace: "",
       },
-      BOOKING_STEPS,
-    ],
-  },
-  "night-market-2": {
-    body: [
       {
-        why: "チャイルドシート・ベビーカーの無料貸出。車を出さなくなる。段差の少ないルートの案内も同様。",
-        find: "<li><strong>子連れ・ベビーカーもOK</strong><br>チャイルドシート＆折り畳みベビーカー無料貸出。段差の少ないルートを案内するので、<strong>グアム 子連れ 観光／ベビーカー 観光</strong>もラクラク。</li>",
+        // Without this the page renders 1️⃣ 2️⃣ 4️⃣ — a visible seam showing
+        // something was cut. Removing a section means renumbering the rest.
+        why: "直前の3️⃣を削除したので番号が飛ぶ。〈グアム 3時間 ツアー〉も自社商品名。",
+        find: '<h3 class="wp-block-heading">4️⃣ インドア休憩スポットを織り交ぜた〈グアム 3時間 ツアー〉例</h3>',
+        replace: '<h3 class="wp-block-heading">3️⃣ インドア休憩をはさむ半日の回り方（例）</h3>',
+      },
+      {
+        why: "「6時間や1Dayへの延長もOK」＝貸切チャーターの時間オプション。リンク先の /long-tour も書き直し済み。",
+        findRe:
+          /\s*<blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">\s*<p>もちろん6時間や1Dayへの延長もOK。[\s\S]*?<\/blockquote>/g,
+        replace: "",
+      },
+      {
+        why: "ツアー中に人数分の水を用意する、という自社の運行前提。",
+        find: "<p>Mokaruでは人数分のお水をご用意していますが、その日の気温とプランによってはさらにビタミンC入りのドリンクをお進めすることもあります。</p>\n\n\n\n",
+        replace: "",
+      },
+      {
+        why: "「Mokaruのガイドにも飲むように指導しています」＝自社にガイドがいる前提。助言そのものは正しいので残す。",
+        find: "ココナッツウォーターや電解質の入ったドリンクを飲んでいれば間違いないのでMokaruのガイドにも飲むように指導しています。",
+        replace: "ココナッツウォーターや電解質の入ったドリンクを選んでおけば、まず間違いありません。",
+      },
+      {
+        why: "まとめが「貸切ガイド付きプライベートツアーなら解決」という宣伝。主題（水分と栄養）だけを残す。",
+        find: "<p><strong>グアム 貸切ガイド</strong>付きの<strong>グアム プライベートツアー</strong>なら、暑さ・紫外線・栄養不足を一気に解決。安心して観光に集中できます。次の旅では「水分＆栄養チャージ」を合言葉に、安全・快適な島時間を楽しみましょう！</p>",
         replace:
-          "<li><strong>子連れ・ベビーカーもOK</strong><br>会場は平坦で、ベビーカーでも回れます。ただし夜は混み合うので、早めの時間に行くほうが動きやすいです。</li>",
+          "<p>暑さ・紫外線・栄養不足は、どれも知っていれば防げるものばかりです。次の旅では「水分＆栄養チャージ」を合言葉に、安全・快適な島時間を楽しみましょう！</p>",
       },
       BOOKING_STEPS,
     ],
   },
+  // 🔵 night-market-2 was corrected here on 2026-09-12 (the child-seat bullet,
+  // the LINE booking steps) and MOVED to legacy-rewrites.ts on 2026-09-17.
+  // Patching the two wrong sentences left the other twenty in place: the model
+  // schedule is our itinerary from hotel pickup to hotel drop-off, and "why
+  // people choose us" sells a private guide and a flat charter fare. The
+  // sentences were not the problem; the frame was.
 
   // ---------------------------------------------------------------------
   // 自社の車・チャイルドシート・ベビーカーの提供（2026-09-12）
@@ -246,11 +330,49 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
   },
 
   "low-tide": {
+    title: [
+      {
+        why: "「貸切プライベートツアー」＝終了する自社商品。潮汐の記事本体は10/1以降も正しい。",
+        find: "グアムの潮汐と安全に楽しむ貸切プライベートツアー",
+        replace: "グアムの潮汐を知って安全に海で遊ぶ",
+      },
+    ],
     body: [
       {
-        why: "チャイルドシート・ベビーカーの完備。車を出さなくなる。",
-        find: "<li>チャイルドシート＆<strong>ベビーカー 観光</strong>セット完備で<strong>グアム 子連れ 観光</strong>も快適</li>",
+        why: "「ツアー対策」＝自社の貸切ツアーが対策である、と読める見出し。",
+        find: '<h3 class="wp-block-heading">3️⃣ 雨季のマリンスポーツ影響とツアー対策</h3>',
+        replace: '<h3 class="wp-block-heading">3️⃣ 雨季のマリンスポーツは潮位と風波で決まる</h3>',
+      },
+      {
+        // The paragraph before this one — marine sports are called off the
+        // night before, the meeting point moves, the bus cannot follow — is
+        // true and useful, and stays. This is the sales pitch bolted to it.
+        why: "貸切ガイド／チャーターの勧誘と、その「安全メリット」の表。表は3行とも自社ガイドの動きの話で、残せる行がない。",
+        findRe:
+          /\s*<p>そこで便利なのがMokaru Guamの <strong>▶︎ グアム 貸切ガイド／グアム チャーター<\/strong>[\s\S]*?<\/figure>/g,
         replace: "",
+      },
+      {
+        // 🔴 This replaces the 2026-09-12 correction that deleted only the
+        // child-seat bullet out of this list. The other three bullets were
+        // equally ours — we guide you to calm spots, all OUR guides speak
+        // Japanese, combine it with OUR wedding charter — and removing one
+        // left a section that still promised a guided tour.
+        why: "「子連れ・シニアも安心のサポート」の節。4項目とも自社のガイドと車の提供。ウェディングチャーターは商品そのもの。",
+        findRe:
+          /\s*<h3 class="wp-block-heading">4️⃣ 子連れ・シニアも安心のサポート<\/h3>\s*<ul class="wp-block-list">[\s\S]*?<\/ul>/g,
+        replace: "",
+      },
+      {
+        why: "締めが「ガイドと行けば安心」の勧誘。ビーチの選び分けという助言自体は残す。",
+        find: "<p>それぞれのポイントがあるのでガイドと行けば安心して楽しむことができます。</p>",
+        replace: "<p>行き先を決めてから出かけると、無駄な移動が減り、安全の面でも余裕が生まれます。</p>",
+      },
+      {
+        why: "まとめが「貸切ツアーなら安全・快適」の宣伝。潮汐の知識という主題だけを残す。",
+        find: "<p>遠浅の楽園グアムでも、<strong>潮汐の知識</strong>と<strong>柔軟な移動手段</strong>がなければリスクは避けられません。Mokaru Guamの<strong>グアム 貸切 ツアー／グアム プライベートツアー</strong>なら、潮位に合わせた安全・快適なプランで大人も子どももしっかり楽しめます。次のバケーションでは、プロのガイドと一緒に“潮を味方にする旅”を体験しませんか？</p>",
+        replace:
+          "<p>遠浅の楽園グアムでも、<strong>潮汐の知識</strong>がなければリスクは避けられません。その日の干満を調べてから海に入る——それだけで、大人も子どもも安心して楽しめます。次のバケーションでは“潮を味方にする旅”を。</p>",
       },
     ],
   },
@@ -571,21 +693,15 @@ export const CORRECTIONS: Record<string, ArticleCorrections> = {
     ],
   },
 
-  "post-wedding-tour": {
-    body: [
-      {
-        why: "States a minibus charter is available for large groups. Our vehicles top out at 7 (MAX_GUESTS in pricing.ts); the owner will take it case by case, so it must read as a request rather than a standing offer.",
-        find: "<li>大人数ならミニバスの<strong>グアム チャーター</strong>手配可</li>",
-        replace: "<li>大人数の場合はミニバスの<strong>グアム チャーター</strong>もご相談ください（要相談）</li>",
-      },
-      {
-        why: "チャイルドシート・ベビーカーの無料提供。車を出さなくなる。",
-        find: "<li><strong>グアム 子連れ 観光／グアム ベビーカー 観光</strong>対応 → チャイルドシート・ベビーカー無料</li>",
-        replace: "",
-      },
-      BOOKING_STEPS,
-    ],
-  },
+  // 🔵 post-wedding-tour moved to legacy-rewrites.ts on 2026-09-17, for the
+  // same reason as night-market-2 and with a sharper edge: its four numbered
+  // sections were a 3-hour pre-wedding tour, an afternoon post-wedding tour, a
+  // guide who comes with you, and a minibus charter. Nothing was left to patch.
+  //
+  // 🔴 One of the corrections deleted here was itself a July-style mistake.
+  // It rewrote「大人数ならミニバス手配可」into「ご相談ください（要相談）」—— a
+  // softened version of an offer we will not be able to make at all from 10/1.
+  // Softening the wording of a claim is not the same as dropping the claim.
 
   // 🔵 Corrected, NOT rewritten, and the distinction is the point.
   //

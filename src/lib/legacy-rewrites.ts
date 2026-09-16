@@ -56,6 +56,20 @@ export interface Rewrite {
 
 const REWRITTEN_AT = "2026-09-12";
 
+// A second batch, five days later.
+//
+// The 09-12 pass swept the PLAN articles — the pages whose title is a plan
+// name. These two are destination articles: one is about the Chamorro Village
+// night market, the other about touring either side of a Guam wedding. Both
+// were missed because neither quotes the rate card and neither is called
+// 「Shortプラン」. They surfaced only when the BUILD OUTPUT was grepped for the
+// bare word 「貸切」 instead of for the product's names.
+//
+// 🔵 The lesson is the sweep, not these two articles. Searching for what we
+// called the product finds the pages that sell it; searching for the plain
+// word a customer would read finds the pages that merely assume it.
+const REWRITTEN_AT_SWEEP = "2026-09-17";
+
 export const REWRITES: Record<string, Rewrite> = {
   "short-plan": {
     was: "【3時間でも大満足】MokaruのShortプランでできること — 3時間チャータープランの商品ページ。$130／車両1台。",
@@ -730,6 +744,109 @@ export const REWRITES: Record<string, Rewrite> = {
 
 <h2>まとめ</h2>
 <p>子ども連れの旅は、回った数ではなく無事に楽しく帰れたかで決まります。チャイルドシートと、おむつ替えできる場所。この2つを先に押さえておけば、あとは流れで何とかなります。</p>
+`.trim(),
+  },
+
+  // Corrected on 09-12 (the child-seat line and the LINE booking steps), then
+  // rewritten on 09-17. Looking only at the sentences was the mistake: the
+  // whole article is our itinerary. The model schedule starts「ホテル発・ガイド
+  // 自己紹介」and ends「ホテル帰着」, and "why people choose us" lists a private
+  // guide and a flat charter fare. What is actually valuable here is the market
+  // itself — Wednesday only, what to eat, when it fills up — and that is what a
+  // reader searching for チャモロビレッジ wants. It survives us.
+  "night-market-2": {
+    was:
+      "『チャモロビレッジ ナイトマーケット』を満喫するグアム貸切3時間ツアー — " +
+      "17:30ホテル発〜20:30帰着のモデル行程表、専属ガイドのドアツードア送迎、" +
+      "明朗会計の貸切チャーター、お客様の声、6時間版へのアップグレード案内。",
+    rewrittenAt: REWRITTEN_AT_SWEEP,
+    title: "チャモロビレッジのナイトマーケット｜水曜の夜だけ開く市の歩き方",
+    html: `
+<p>グアムで一度は行っておきたいのが、ハガニアの<strong>チャモロビレッジ</strong>で開かれるナイトマーケットです。<strong>毎週水曜の夜だけ</strong>。屋台のローカルフード、職人の手作り雑貨、ライブステージ。昼間の観光地とはまったく違う顔のグアムがあります。</p>
+
+<h2>開くのは水曜の夜だけ</h2>
+<p>ここが一番大事なところです。<strong>水曜以外の夜は、ただの静かな広場</strong>です。旅程を組むときは、まず滞在中の水曜がいつかを確認してください。行くつもりだった日が水曜でなかった、というのがいちばん多い失敗です。</p>
+<p>賑わい始めるのは<strong>18時ごろ</strong>から。ステージのショーが入るのは19時台で、21時をまわると店じまいを始める屋台が出てきます。<strong>18時に着いて2時間半</strong>みておけば、食べて、見て、買って、ひと通り回れます。</p>
+
+<h2>食べるもの</h2>
+<p>屋台ゾーンはチャモロ料理が中心です。</p>
+<ul>
+<li><strong>BBQリブ</strong>と<strong>レッドライス</strong> — いちばんチャモロらしい組み合わせです</li>
+<li><strong>ココナツジュース</strong> — その場で実を割ってくれます</li>
+<li>串焼き、揚げ物、ローカルのデザート</li>
+</ul>
+<p>1皿ずつ買って分け合うほうが、いろいろ食べられます。<strong>現金を用意していってください。</strong>カードが使えない屋台がふつうにあります。</p>
+
+<h2>民芸品のマーケット</h2>
+<p>食べ物のゾーンを抜けると、手作りの雑貨やアクセサリーが並びます。作った本人が売っていることが多く、素材のことを聞くと話してくれます。土産物店で買うより、ここで買ったもののほうが記憶に残ります。</p>
+
+<h2>混み方と、気をつけること</h2>
+<ul>
+<li><strong>19時台がいちばん混みます。</strong>ゆっくり見たいなら、着くのを早めてください</li>
+<li>会場は<strong>平坦</strong>なので、ベビーカーでも回れます。ただし混み合う時間帯は動かしづらくなります</li>
+<li>人が多い場所です。<strong>荷物は体の前に</strong>。バッグを椅子の背にかけたままにしない</li>
+<li>駐車場は埋まるのが早いです。夜の運転に不安があるなら、行きと帰りの足を先に決めておいてください</li>
+</ul>
+
+<h2>まとめ</h2>
+<p>チャモロビレッジのナイトマーケットは、グアムでいちばん「観光地ではない夜」に近い場所です。<strong>水曜であること</strong>、<strong>18時に着くこと</strong>、<strong>現金を持っていくこと</strong>。この3つだけ押さえておけば、あとは香りと音楽についていけば大丈夫です。</p>
+`.trim(),
+  },
+
+  // Same story, and a clearer case. All four numbered sections of this article
+  // were the product: a 3-hour pre-wedding tour, an afternoon post-wedding
+  // tour, a guide who comes with you, and a minibus charter for big parties.
+  // Remove them and there is no article left to correct.
+  //
+  // 🔵 Kept rather than retired because the SUBJECT is a good fit for what we
+  // sell now. People marrying in Guam arrive with family, spend one day on the
+  // ceremony, and have to feed everyone on the other days — which is a table
+  // for nine booked from Japan, in Japanese, before anyone gets on a plane.
+  "post-wedding-tour": {
+    was:
+      "挙式前後をもっと楽しむ！『グアム貸切ガイド』で堪能するプレ＆アフターウェディング観光プラン — " +
+      "①3時間ショートツアー ②式後のサンセット貸切ツアー ③日本人ガイド同行・ミニバスチャーター " +
+      "④ウェディングチャーターとの組み合わせ ⑤LINEでの予約手順。",
+    rewrittenAt: REWRITTEN_AT_SWEEP,
+    title: "グアム挙式の前後の日｜家族の食事とアクティビティを先に押さえる",
+    html: `
+<p>グアムでの挙式は、式そのものは式場が組み立ててくれます。<strong>決まっていないのは前後の日</strong>です。3泊のうち挙式は1日。残りの2日を、親御さんも含めた全員でどう過ごすか——ここが、あとから慌てるところです。</p>
+
+<h2>先に決めておくのは「食事」です</h2>
+<p>観光は当日の思いつきでもなんとかなりますが、<strong>人数の多い食事だけは当日では入れません</strong>。両家が集まると、6人、8人、10人という単位になります。グアムの人気店でその人数の席を夜に取るのは、当日に電話して空いている話ではありません。</p>
+<p>最低でも押さえておきたいのは次の2回です。</p>
+<ul>
+<li><strong>挙式前夜の顔合わせ</strong> — 全員がそろう最初の食事になります</li>
+<li><strong>挙式当日の夜</strong> — 式場のパーティーとは別に、身内だけで食べ直すご家族が多いです</li>
+</ul>
+<p>予約のときは、<strong>人数・時間・個室や奥のテーブルの希望・子ども用の椅子</strong>まで伝えておいてください。当日に言うと、店の側も動けません。</p>
+
+<h2>前日は、動かしすぎない</h2>
+<p>ヘアメイクのリハーサルやドレスの最終フィッティングが入る日です。ここに遠出を重ねると、本番前に疲れが残ります。</p>
+<p>おすすめは<strong>午前だけ動いて、午後はホテルに戻る</strong>組み立てです。ハガニアの街歩き、恋人岬、タモンの買い物あたりであれば、半日で収まります。南部一周は片道40分かかるので、前日ではなく<strong>翌日</strong>に回してください。</p>
+
+<h2>式の翌日が、いちばん自由に使えます</h2>
+<p>ドレスを脱いだあとの1日です。ここに時間のかかるものを置きます。</p>
+<ul>
+<li><strong>南部の景色をひと回り</strong> — 片道40分。半日みておくと余裕があります</li>
+<li><strong>海のアクティビティ</strong> — 体験ダイビング、シュノーケリング、ジェットスキーなど。<strong>朝の便のほうが海が穏やかです</strong></li>
+<li><strong>写真の撮り直し</strong> — 式の翌朝の光がいちばんきれいです</li>
+</ul>
+<p>アクティビティは<strong>参加する人と見ている人を分けて</strong>考えてください。ご年配の参列者がいる場合、全員参加を前提に組むと、待つ人が出ます。</p>
+
+<h2>年齢と体力の幅が、ふだんの旅行より大きい</h2>
+<p>結婚式の参列者は、赤ちゃんから祖父母まで一度に来ます。同じ予定に全員を入れないほうがうまくいきます。</p>
+<ul>
+<li>移動は1日2か所まで。3か所目から崩れます</li>
+<li>日中の屋外は短く。屋内の休憩を必ず1回挟む</li>
+<li>集合場所はホテルのロビー。現地集合にすると、必ず誰かが迷います</li>
+</ul>
+
+<h2>Mokaru ができること</h2>
+<p>レストランの席と、アクティビティの申し込み。この2つを、<strong>日本にいるうちに日本語で</strong>お引き受けします。人数の多い食事ほど早く埋まるので、挙式の日が決まった時点でご相談ください。</p>
+
+<h2>まとめ</h2>
+<p>挙式前後で本当に予約が要るのは、<strong>人数の多い食事</strong>と<strong>時間の決まったアクティビティ</strong>だけです。この2つを渡航前に押さえておけば、残りは当日の気分で動けます。前日は詰めない、翌日に寄せる。それだけで、式の前後が慌ただしくなくなります。</p>
 `.trim(),
   },
 };
