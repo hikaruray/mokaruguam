@@ -136,6 +136,25 @@ export default async function AdminPage() {
                     </p>
                   </td>
                   <td className="px-4 py-3 text-slate-600">
+                    {/* Audit #12. The kind decides the money rules — a $10
+                        hold that is never refunded once the table is held,
+                        versus a free arrangement — and a name like
+                        「Proa」or「Gently Blue」does not say which it is. */}
+                    <span
+                      className={`mb-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                        b.requestType === "restaurant"
+                          ? "bg-orange-100 text-orange-800"
+                          : b.requestType === "tour"
+                            ? "bg-sky-100 text-sky-800"
+                            : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      {b.requestType === "restaurant"
+                        ? "レストラン $10"
+                        : b.requestType === "tour"
+                          ? "ツアー手配（無料）"
+                          : "旧・貸切（9/30まで）"}
+                    </span>
                     <p className="font-medium">{b.partnerName || b.planName}</p>
                     <p className="text-xs text-slate-400">希望：{b.preferredDate}</p>
                     {/* 🔴 The answer the owner needs the moment the restaurant

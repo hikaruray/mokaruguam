@@ -22,10 +22,10 @@
 //      ...but a TOUR with no hold must still confirm. Gate 2 written one word
 //      wider stops every confirmation from 2026-10-01 onwards.
 //
-// Gate 3 — a failed capture never leaves the booking "confirmed" — is not
-// asserted here. It needs PayPal to fail mid-call, which this harness cannot
-// produce without reaching the network. Say so rather than let the list imply
-// coverage that does not exist.
+//   3  a capture that fails        -> 502 and still pending (409 + expired
+//      when the hold died). Asserted since 2026-09-17 by answering PayPal
+//      with a stub fetch — see "Money that DOES move". Until then this line
+//      said gate 3 was not covered, which was true and worth saying.
 
 // --- Blank the environment BEFORE importing anything from the project ------
 for (const key of [
@@ -45,9 +45,10 @@ for (const key of [
 // while the suite reported all green. In production PayPal IS configured, so
 // those are the paths that matter.
 //
-// Safe because no path asserted below makes a PayPal call: gate 1 returns
-// before authorizeOrder, gate 2 returns before captureAuthorization. These
-// strings could not authenticate against anything if one ever did.
+// Safe because nothing asserted below reaches PayPal: gates 1 and 2 return
+// before any PayPal call, and the one block that does call it replaces fetch
+// with a stub that refuses every URL outside the sandbox host. These strings
+// could not authenticate against anything if a request ever did get out.
 process.env.PAYPAL_CLIENT_ID = "not-a-real-client-id";
 process.env.PAYPAL_CLIENT_SECRET = "not-a-real-secret";
 process.env.PAYPAL_ENV = "sandbox";
@@ -386,7 +387,7 @@ check(
 console.log("\n--- Gate 2: confirming needs a live hold, for restaurants only ---");
 
 const { POST: adminPost } = await import("@/app/api/admin/booking/route");
-const { addBooking, setBookingPayment, getBooking, setBookingStatus } = await import("@/lib/store");
+const { addBooking, setBookingPayment, getBooking, setBookingStatus, setBookingAuthorization } = await import("@/lib/store");
 
 process.env.ADMIN_PASSWORD = "gate-check";
 
@@ -777,8 +778,8 @@ for (const dir of ["cancel", "admin"]) {
 // acceptance condition and nothing asserted it before.
 //
 // Only the zero-refund case runs here: it is the one that moves no money, so
-// it needs no PayPal call. The tour side (a real 100% refund) does, and is not
-// covered — see the note at the top of this file.
+// it needs no PayPal call. The refunds that DO move money are in the stubbed
+// block that follows.
 const { cancelBooking } = await import("@/lib/booking-actions");
 const paidTable = await seed({
   requestType: "restaurant",
@@ -803,9 +804,175 @@ check(
   String((await getBooking(paidTable.id))?.payment),
 );
 
+console.log("\n--- Money that DOES move, with PayPal answered by a stub ---");
+
+// Audit #14①. Everything above stops short of a PayPal call, so the refunds
+// that actually return money — and gate 3, a capture that fails — were never
+// executed by this file. They are now, by replacing fetch for the duration of
+// this block. The real lib/paypal.ts runs: token request, URL, request body,
+// error parsing. Only the far end is fake.
+//
+// 🔴 The stub REFUSES any URL that is not the sandbox API. If a future change
+// sent a request anywhere else, this block fails loudly instead of letting it
+// out. The credentials set at the top are not real either, so even the
+// sandbox would reject them.
+type StubCall = { url: string; body: string };
+const calls: StubCall[] = [];
+let stubReply: (url: string) => Response = () => new Response("{}", { status: 200 });
+const realFetch = globalThis.fetch;
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = String(input);
+  if (!url.startsWith("https://api-m.sandbox.paypal.com/")) {
+    throw new Error(`check:gates stub refused a request outside the PayPal sandbox: ${url}`);
+  }
+  calls.push({ url, body: String(init?.body ?? "") });
+  if (url.endsWith("/v1/oauth2/token")) {
+    return new Response(JSON.stringify({ access_token: "stub-token", expires_in: 3600 }), {
+      status: 200,
+    });
+  }
+  return stubReply(url);
+}) as typeof fetch;
+
+// Guam calendar days from today, as refundDecision counts them.
+const guamInDays = (n: number) => {
+  const g = new Date(Date.now() + 10 * 3600_000);
+  return new Date(Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate() + n))
+    .toISOString()
+    .slice(0, 10);
+};
+const refundCalls = () => calls.filter((c) => c.url.includes("/refund"));
+
+try {
+  // A charter taken before the pivot, charged $170, cancelled 30 days out:
+  // the ladder it was sold under says 100%.
+  const charter30 = await seed({
+    requestType: null,
+    amount: 170,
+    preferredDate: `${guamInDays(30)} 09:00`,
+  });
+  await setBookingStatus(charter30.id, "confirmed");
+  await setBookingPayment(charter30.id, { payment: "captured", paypalCaptureId: "CAP-C30" });
+  stubReply = () => new Response(JSON.stringify({ id: "REF-1", status: "COMPLETED" }), { status: 201 });
+  calls.length = 0;
+  const full = await cancelBooking(charter30.id, "policy");
+  const r30 = refundCalls();
+  check(
+    full?.refund?.rate === 1 && r30.length === 1 && r30[0].url.includes("/captures/CAP-C30/refund"),
+    "pre-pivot charter 30 days out: PayPal is asked to refund that capture",
+    `rate ${full?.refund?.rate}, ${r30.length} refund call(s)`,
+  );
+  // An empty body means "refund the whole capture". A stated amount on a full
+  // refund would be a second place for the figure to be wrong.
+  check(r30[0]?.body === "{}", "and asks for the whole capture, not a figure", r30[0]?.body ?? "(none)");
+  const after30 = await getBooking(charter30.id);
+  check(
+    after30?.payment === "refunded" && after30?.refundAmount === 170 && after30?.status === "cancelled",
+    "and the row records refunded $170, cancelled",
+    `${after30?.payment} $${after30?.refundAmount} ${after30?.status}`,
+  );
+
+  // 5 days out: 50%, and the amount sent is half of what was CHARGED.
+  const charter5 = await seed({ requestType: null, amount: 170, preferredDate: `${guamInDays(5)} 09:00` });
+  await setBookingStatus(charter5.id, "confirmed");
+  await setBookingPayment(charter5.id, { payment: "captured", paypalCaptureId: "CAP-C5" });
+  calls.length = 0;
+  const half = await cancelBooking(charter5.id, "policy");
+  const r5 = refundCalls();
+  check(
+    half?.refund?.rate === 0.5 && r5[0]?.body.includes('"value":"85.00"'),
+    "pre-pivot charter 5 days out: refunds $85.00 of the $170 charged",
+    r5[0]?.body ?? "(no refund call)",
+  );
+
+  // 2 days out: no refund, and PayPal is not called at all.
+  const charter2 = await seed({ requestType: null, amount: 170, preferredDate: `${guamInDays(2)} 09:00` });
+  await setBookingStatus(charter2.id, "confirmed");
+  await setBookingPayment(charter2.id, { payment: "captured", paypalCaptureId: "CAP-C2" });
+  calls.length = 0;
+  await cancelBooking(charter2.id, "policy");
+  check(refundCalls().length === 0, "pre-pivot charter 2 days out: no refund is requested", `${refundCalls().length} call(s)`);
+
+  // The owner's full refund on a restaurant (our fault / the restaurant's):
+  // the one path where a held table's $10 comes back.
+  const tableFull = await seed({ requestType: "restaurant", partnerName: "Proa", amount: 10 });
+  await setBookingStatus(tableFull.id, "confirmed");
+  await setBookingPayment(tableFull.id, { payment: "captured", paypalCaptureId: "CAP-T" });
+  calls.length = 0;
+  const tf = await cancelBooking(tableFull.id, "full");
+  check(
+    tf?.refund?.rate === 1 && refundCalls().length === 1 && (await getBooking(tableFull.id))?.payment === "refunded",
+    "restaurant, owner's full refund: the $10 is actually refunded",
+    `rate ${tf?.refund?.rate}, ${refundCalls().length} call(s)`,
+  );
+
+  // A refund PayPal rejects must not leave the row saying it was refunded.
+  const refundFails = await seed({ requestType: null, amount: 170, preferredDate: `${guamInDays(30)} 09:00` });
+  await setBookingStatus(refundFails.id, "confirmed");
+  await setBookingPayment(refundFails.id, { payment: "captured", paypalCaptureId: "CAP-FAIL" });
+  stubReply = () => new Response(JSON.stringify({ name: "INTERNAL_SERVER_ERROR" }), { status: 500 });
+  let threw = false;
+  try {
+    await cancelBooking(refundFails.id, "policy");
+  } catch {
+    threw = true;
+  }
+  const rf = await getBooking(refundFails.id);
+  check(
+    threw && rf?.payment === "captured" && rf?.status === "confirmed",
+    "a refund PayPal rejects leaves the booking captured and confirmed, not refunded",
+    `threw=${threw} ${rf?.payment} ${rf?.status}`,
+  );
+
+  console.log("\n--- Gate 3: a failed capture never confirms ---");
+
+  // Declared uncovered at the top of this file since it was written. A live
+  // hold, the owner presses 確定, PayPal fails the capture.
+  const holdRow = await seed({ requestType: "restaurant", partnerName: "Proa", amount: 10 });
+  await setBookingAuthorization(holdRow.id, { paypalOrderId: "ORD-G3", paypalAuthorizationId: "AUTH-G3" });
+  stubReply = () => new Response(JSON.stringify({ name: "INTERNAL_SERVER_ERROR" }), { status: 500 });
+  const g3 = await admin(holdRow.id, "confirm");
+  const g3row = await getBooking(holdRow.id);
+  check(
+    g3.status === 502 && g3row?.status === "pending" && g3row?.payment === "authorized",
+    "capture fails -> 502, still pending, hold still recorded as live",
+    `HTTP ${g3.status}, ${g3row?.status}, ${g3row?.payment}`,
+  );
+
+  // The one capture failure that is not worth retrying.
+  const expiredCap = await seed({ requestType: "restaurant", partnerName: "Proa", amount: 10 });
+  await setBookingAuthorization(expiredCap.id, { paypalOrderId: "ORD-G3E", paypalAuthorizationId: "AUTH-G3E" });
+  stubReply = () =>
+    new Response(
+      JSON.stringify({ name: "UNPROCESSABLE_ENTITY", details: [{ issue: "AUTHORIZATION_EXPIRED" }] }),
+      { status: 422 },
+    );
+  const g3e = await admin(expiredCap.id, "confirm");
+  const g3eRow = await getBooking(expiredCap.id);
+  check(
+    g3e.status === 409 && g3eRow?.status === "pending" && g3eRow?.payment === "expired",
+    "capture on an expired hold -> 409, still pending, marked expired",
+    `HTTP ${g3e.status}, ${g3eRow?.status}, ${g3eRow?.payment}`,
+  );
+
+  // And the success path, so the gate is known not to refuse everything.
+  const okCap = await seed({ requestType: "restaurant", partnerName: "Proa", amount: 10 });
+  await setBookingAuthorization(okCap.id, { paypalOrderId: "ORD-OK", paypalAuthorizationId: "AUTH-OK" });
+  stubReply = () => new Response(JSON.stringify({ id: "CAP-OK", status: "COMPLETED" }), { status: 201 });
+  const okRes = await admin(okCap.id, "confirm");
+  const okRow = await getBooking(okCap.id);
+  check(
+    okRes.status === 200 && okRow?.status === "confirmed" && okRow?.payment === "captured" && okRow?.paypalCaptureId === "CAP-OK",
+    "capture succeeds -> confirmed, captured, capture id saved",
+    `HTTP ${okRes.status}, ${okRow?.status}, ${okRow?.payment}, ${okRow?.paypalCaptureId}`,
+  );
+} finally {
+  globalThis.fetch = realFetch;
+}
+
 console.log("\n--- A replacement hold never loses the one it replaces ---");
 
-const { setBookingAuthorization } = await import("@/lib/store");
+// setBookingAuthorization is imported with the other store functions above.
 
 await setBookingAuthorization(deadHold.id, {
   paypalOrderId: "ORDER-2",
