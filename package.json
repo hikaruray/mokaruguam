@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:offline": "node scripts/dev-offline.mjs",
     "dev:sandbox": "node scripts/dev-sandbox.mjs",
+    "check:sandbox": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/ts-resolve.mjs scripts/sandbox-roundtrip.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
