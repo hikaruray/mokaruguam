@@ -8,6 +8,7 @@
 --   2026-08-22-booking-amount.sql
 --   2026-09-03-booking-hotel.sql
 --   2026-10-01-booking-request-type.sql
+--   2026-10-01-booking-guest-breakdown.sql
 --
 -- So do NOT read this file to answer "what does the table look like now" —
 -- that mistake was made on 2026-09-11, when it was cited as proof that no

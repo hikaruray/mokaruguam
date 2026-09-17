@@ -86,6 +86,13 @@ export interface BookingRequest {
   preferredDate: string; // free-text preferred date/time (e.g. "7/20 午後")
   hotel: string;        // where the guide picks the guest up (added 2026-08-30)
   guests: number;
+  // The split behind `guests`. null on every booking taken before 2026-10-01:
+  // the form always asked, but only the total was stored, so "not recorded"
+  // must stay distinguishable from "no children". Partners need it — trial
+  // dives and jet skis have age limits. See guestBreakdownLabel().
+  adults: number | null;
+  children4to11: number | null;
+  children0to3: number | null;
   spots: string;        // free-text wishlist of places to visit
   notes: string;        // any extra requests
   status: BookingStatus;
@@ -142,6 +149,9 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     // Bookings taken before 2026-08-30 have no hotel — read as empty, not "null".
     hotel: String(row.hotel ?? ""),
     guests: Number(row.guests ?? 0),
+    adults: row.adults != null ? Number(row.adults) : null,
+    children4to11: row.children_4to11 != null ? Number(row.children_4to11) : null,
+    children0to3: row.children_0to3 != null ? Number(row.children_0to3) : null,
     spots: String(row.spots ?? ""),
     notes: String(row.notes ?? ""),
     status: (row.status as BookingStatus) ?? "pending",
@@ -193,6 +203,21 @@ export function requestTypeOf(booking: BookingRequest): RequestType {
  * number is the handle a partner searches their inbox by, and two formats would
  * make half the bookings unfindable.
  */
+/**
+ * 「大人2名・子供(4-11歳)1名」, or "" when the split was not recorded.
+ *
+ * Empty rather than a guess for old rows: inventing "大人4名" from a total of
+ * four would tell a partner there are no children when we simply do not know.
+ */
+export function guestBreakdownLabel(booking: BookingRequest): string {
+  if (booking.adults == null) return "";
+  return (
+    `大人${booking.adults}名` +
+    (booking.children4to11 ? `・子供(4-11歳)${booking.children4to11}名` : "") +
+    (booking.children0to3 ? `・子供(0-3歳)${booking.children0to3}名` : "")
+  );
+}
+
 export function refLabel(booking: BookingRequest): string {
   if (booking.refNo == null) return booking.id;
   return `#${String(booking.refNo).padStart(4, "0")}`;
@@ -317,6 +342,11 @@ export async function addBooking(
         preferred_date: data.preferredDate,
         hotel: data.hotel,
         guests: data.guests,
+        // 🔴 Needs 2026-10-01-booking-guest-breakdown.sql to have run. Same
+        // contract as request_type above: missing columns fail the insert.
+        adults: data.adults,
+        children_4to11: data.children4to11,
+        children_0to3: data.children0to3,
         spots: data.spots,
         notes: data.notes,
         status: "pending",
@@ -345,6 +375,9 @@ export async function addBooking(
     preferredDate: data.preferredDate,
     hotel: data.hotel,
     guests: data.guests,
+    adults: data.adults,
+    children4to11: data.children4to11,
+    children0to3: data.children0to3,
     spots: data.spots,
     notes: data.notes,
     id: localId(),

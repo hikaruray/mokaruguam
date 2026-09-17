@@ -2,6 +2,7 @@ import {
   listBookings,
   chargedAmount,
   refLabel,
+  guestBreakdownLabel,
   type BookingStatus,
   type PaymentStatus,
 } from "@/lib/store";
@@ -130,7 +131,11 @@ export default async function AdminPage() {
                     <p className="font-mono text-xs text-slate-500">
                       {refLabel(b)}
                     </p>
-                    <p className="text-xs text-slate-400">{b.guests}名</p>
+                    <p className="text-xs text-slate-400">
+                      {b.guests}名
+                      {/* Blank for bookings taken before the split was stored. */}
+                      {b.adults != null && `（${guestBreakdownLabel(b)}）`}
+                    </p>
                     <p className="mt-1 text-xs text-slate-400">
                       {new Date(b.createdAt).toLocaleString("ja-JP")}
                     </p>

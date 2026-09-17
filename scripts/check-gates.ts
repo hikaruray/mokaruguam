@@ -302,6 +302,9 @@ const tour = await bookingPost(
     ...baseRequest,
     requestType: "tour",
     partnerName: "Joe's Jet Ski",
+    // A family, so the age split has something to carry.
+    children4to11: 1,
+    children0to3: 1,
   }),
 );
 check(tour.status === 200, "tour, no payment", `HTTP ${tour.status} (expected 200)`);
@@ -323,6 +326,33 @@ check(
   "and with the partner we are to arrange with",
   `"${after[0]?.partnerName}"`,
 );
+// Owner request 2026-09-17. The split used to reach only the owner's email,
+// and a jet ski or a trial dive has an age limit the partner has to check.
+check(
+  after[0]?.guests === 4 &&
+    after[0]?.adults === 2 &&
+    after[0]?.children4to11 === 1 &&
+    after[0]?.children0to3 === 1,
+  "and with the adults / children split, not only the total",
+  `${after[0]?.guests} = ${after[0]?.adults} + ${after[0]?.children4to11} + ${after[0]?.children0to3}`,
+);
+{
+  const { partnerDispatchEmail: dispatchOf } = await import("@/lib/booking-emails");
+  const withSplit = dispatchOf(after[0]!).text;
+  check(
+    withSplit.includes("子供(0-3歳)1名") && withSplit.includes("1 child(ren) aged 0-3"),
+    "the partner's request mail states the ages, in both languages",
+    withSplit.split("\n").find((l) => l.startsWith("内訳")) ?? "(no breakdown line)",
+  );
+  // A booking from before the split was stored must not be described as all
+  // adults. Saying nothing is the honest answer.
+  const oldRow = dispatchOf({ ...after[0]!, adults: null, children4to11: null, children0to3: null }).text;
+  check(
+    !oldRow.includes("内訳") && !oldRow.includes("adult"),
+    "and says nothing about ages when the split was never recorded",
+    oldRow.includes("内訳") ? "breakdown line present" : "no breakdown line",
+  );
+}
 
 // 🔴 The asymmetry in gate 0b, asserted from the free side. A tour moves no
 // money, so an incomplete request costs one email to ask what they meant —

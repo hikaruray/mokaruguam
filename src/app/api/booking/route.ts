@@ -316,6 +316,12 @@ export async function POST(request: Request) {
       preferredDate,
       hotel: hotel.trim(),
       guests: Number(guests),
+      // Stored from 2026-10-01 (it used to reach only the owner's email). A
+      // request without the split stays null rather than being read as "all
+      // adults" — see guestBreakdownLabel().
+      adults: hasBreakdown ? adults : null,
+      children4to11: hasBreakdown ? children4to11 : null,
+      children0to3: hasBreakdown ? children0to3 : null,
       spots: spots?.trim() ?? "",
       notes: notes?.trim() ?? "",
       ...paymentFields,

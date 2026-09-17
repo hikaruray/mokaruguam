@@ -9,6 +9,7 @@ import {
   requestTypeOf,
   chargedAmount,
   refLabel,
+  guestBreakdownLabel,
   type BookingRequest,
 } from "./store";
 import { CONTACT_EMAIL } from "./config";
@@ -292,6 +293,19 @@ export function partnerDispatchEmail(b: BookingRequest): {
         : `ご依頼 / Activity:      ${b.partnerName}`,
       `希望日時 / Date & time: ${b.preferredDate}`,
       `人数 / Guests:          ${b.guests}名 / ${b.guests} guest(s)`,
+      // The ages are the point for a partner: dives and jet skis have limits.
+      // Old rows have no split, and saying nothing beats guessing "all adults".
+      ...(b.adults != null
+        ? [
+            `内訳 / Breakdown:       ${guestBreakdownLabel(b)} / ${[
+              `${b.adults} adult(s)`,
+              b.children4to11 ? `${b.children4to11} child(ren) aged 4-11` : "",
+              b.children0to3 ? `${b.children0to3} child(ren) aged 0-3` : "",
+            ]
+              .filter(Boolean)
+              .join(", ")}`,
+          ]
+        : []),
       `お名前 / Guest name:    ${b.name}`,
       ...(b.hotel ? [`ご滞在先 / Hotel:       ${b.hotel}`] : []),
       ...(b.notes ? [`ご要望 / Requests:      ${b.notes}`] : []),
