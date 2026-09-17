@@ -18,6 +18,10 @@
 //
 // 🔴 Never point this at production. It asserts the base URL is localhost and
 // that the credentials are refused by PayPal Live before it moves anything.
+// Marks the file as a module so top-level await type-checks (the imports below
+// are dynamic, so without this tsc treats it as a script).
+export {};
+
 const PORT = process.argv[2] ?? "3006";
 const CARD = process.argv[3] ?? "4005519200000004";
 const ORIGIN = `http://localhost:${PORT}`;
