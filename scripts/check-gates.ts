@@ -1367,17 +1367,71 @@ check(
   "every reminder carries the cancellation link",
   "present in both",
 );
-// We have not confirmed the operators' terms. A fee in this mail would be us
-// promising another company's policy.
+// 2026-09-18: the owner confirmed with both operators that a guest is never
+// charged for cancelling a partner tour. This assertion used to read "no
+// reminder states a cancellation fee" — it failed the moment the confirmed
+// terms went in, which is the guard doing its job. The contract changed
+// because the fact did, not because the check was inconvenient.
 check(
-  !/キャンセル料|\$\d/.test(tourMail.text) && !/\$\d/.test(tableMail.text),
-  "no reminder states a cancellation fee or an amount",
+  tourMail.text.includes("キャンセル料は発生しません"),
+  "the tour reminder says there is no cancellation fee",
+  "stated",
+);
+// 🔴 The separation, and the reason this file asserts it. The restaurant's $10
+// IS kept once the table is booked. "キャンセル料は発生しません" reaching a
+// restaurant mail would promise a refund we do not give — the same shape as the
+// tour refund ladder leaking into restaurant wording (design §9-6).
+check(
+  !tableMail.text.includes("キャンセル料は発生しません"),
+  "the restaurant reminder does NOT claim there is no fee",
+  "absent",
+);
+// Neither mail names a figure: the tour has none, and the restaurant's $10 was
+// already taken, so quoting it here would read as a further charge.
+check(
+  !/\$\d/.test(tourMail.text) && !/\$\d/.test(tableMail.text),
+  "no reminder states an amount",
   "none stated",
 );
 check(
   tableMail.text.includes("お店へのキャンセルのご連絡は当社が代行します"),
   "the restaurant reminder says we tell the restaurant",
   "present",
+);
+
+// --- The same separation in the confirmation mail -------------------------
+// confirmedEmail has three branches (restaurant / legacy charter / partner
+// tour) and only the last one may carry the partner terms.
+const confTour = confirmedEmail(
+  { ...remTour, partnerName: "Joe's Jet Ski" } as typeof remTour,
+  0,
+);
+const confTable = confirmedEmail(
+  { ...remTable, partnerName: "Meat Street" } as typeof remTable,
+  10,
+);
+const confLegacy = confirmedEmail(
+  { ...remTour, requestType: null, partnerName: "" } as typeof remTour,
+  170,
+);
+check(
+  confTour.text.includes("キャンセル料は発生しません") &&
+    confTour.text.includes("3日前までにご連絡ください"),
+  "the tour confirmation carries the confirmed partner terms",
+  "fee and notice period both stated",
+);
+check(
+  !confTable.text.includes("キャンセル料は発生しません"),
+  "the restaurant confirmation does NOT claim there is no fee",
+  "absent",
+);
+// The pre-pivot charter keeps its own ladder (8日以上=100% / 7〜4日=50% /
+// 3日前以降=0%). Telling those guests there is no fee would contradict the
+// policy they actually agreed to, and they are still travelling until 9/30.
+check(
+  !confLegacy.text.includes("キャンセル料は発生しません"),
+  "the legacy charter confirmation does NOT claim there is no fee",
+  "absent",
 );
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);

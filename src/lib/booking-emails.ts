@@ -12,7 +12,11 @@ import {
   guestBreakdownLabel,
   type BookingRequest,
 } from "./store";
-import { CONTACT_EMAIL } from "./config";
+import {
+  CONTACT_EMAIL,
+  PARTNER_CANCEL_POLICY,
+  PARTNER_CANCEL_POLICY_REMINDER,
+} from "./config";
 import { GUAM_UTC_OFFSET_HOURS } from "./pricing";
 
 // Booking confirmed (予約確定 → payment captured for a restaurant, or the
@@ -36,7 +40,13 @@ export function confirmedEmail(
     : isLegacyCharter
       ? [`お支払い:   $${amount.toFixed(2)}（決済確定済み）`]
       : // Partner tour: we arranged it, the operator is paid on the day.
-        [`お支払い:   当社へのお支払いはございません（ツアー代金は当日、実施会社へお支払いください）`];
+        [
+          `お支払い:   当社へのお支払いはございません（ツアー代金は当日、実施会社へお支払いください）`,
+          // 🔴 Partner terms, confirmed with both operators — see config.ts.
+          // Restaurants are the opposite (the $10 is not refunded once the
+          // table is booked), so this line stays inside the tour branch.
+          `キャンセル: ${PARTNER_CANCEL_POLICY}`,
+        ];
 
   const closingLine = isLegacyCharter
     ? `開始時間の少し前にお集まりください。当日を楽しみにお待ちしております。`
@@ -255,9 +265,15 @@ function guamDateLabel(now: Date, days: number): string {
 // cancellation the operator can resell, or a table the restaurant can give
 // away — and a restaurant no-show happens in our name.
 //
-// 🔴 It must not state a cancellation fee. Each operator has its own rules and
-// we have not confirmed them (owner is asking Joe's Jet Ski and Gently Blue).
-// Quoting a fee we made up would be promising another company's terms.
+// 🔴 It states that there is NO fee, and only on the tour path. Owner confirmed
+// with both operators on 2026-09-18 that a guest is never charged for
+// cancelling (config.ts). Until then this mail deliberately said nothing,
+// because quoting a fee we had made up would have been promising another
+// company's terms — the rule was never "stay silent", it was "say only what has
+// been confirmed".
+//
+// 🔴 The restaurant branch must never pick this up: its $10 is not refunded
+// once the table is booked.
 export function reminderEmail(
   b: BookingRequest,
   cancelLink: string,
@@ -288,7 +304,7 @@ export function reminderEmail(
       cancelLink,
       isRestaurant
         ? `お店へのキャンセルのご連絡は当社が代行します。ご連絡がないままお越しにならないと、お店にご迷惑がかかります。`
-        : `ご連絡がないまま参加されないと、実施会社が準備した枠が無駄になってしまいます。`,
+        : `${PARTNER_CANCEL_POLICY_REMINDER}ご連絡がないまま参加されないと、実施会社が準備した枠が無駄になってしまいます。`,
       ``,
       `ご不明な点は ${CONTACT_EMAIL} までご返信ください。`,
       `— Mokaru Guam`,

@@ -101,3 +101,43 @@ export const VELTRA_URL =
 // the server (see lib/paypal.ts). NEXT_PUBLIC_ vars are inlined at build time.
 export const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ?? "";
 export const PAYPAL_ENABLED = PAYPAL_CLIENT_ID.length > 0;
+
+// ---------------------------------------------------------------------------
+// Partner tour cancellation terms
+// ---------------------------------------------------------------------------
+// Owner confirmed with BOTH operators on 2026-09-18 (Joe's Jet Ski and Gently
+// Blue gave identical terms):
+//
+//   • the guest is never charged for cancelling — no fee at any notice period
+//   • a no-show costs the guest nothing either
+//   • they want to be told by 3 days before, so the slot can be resold
+//   • they notify us when a guest does not turn up
+//
+// 🔴 What a no-show costs is OUR side: a guest who never turns up pays the
+// operator nothing, so there is no 20% for us. The day-before reminder is not a
+// courtesy feature — it is the only thing standing between a forgotten booking
+// and zero revenue on it.
+//
+// 🔴 These words belong to the PARTNER TOUR path ONLY. The restaurant path
+// charges a $10 arrangement fee that is NOT refunded once the table is actually
+// booked (design §9-6), so letting this copy reach a restaurant mail would
+// promise a refund we do not give — the same class of mistake as the tour
+// refund ladder leaking into restaurant wording. booking-emails.ts branches on
+// requestTypeOf() and check:gates asserts the two never mix.
+//
+// 🔵 Stating "no fee" plainly is deliberate, not a disclaimer. A guest who
+// believes cancelling will cost them money is precisely the guest who says
+// nothing and fails to appear. A cancellation the operator can resell is worth
+// more to us than a silent empty seat.
+export const PARTNER_CANCEL_NOTICE_DAYS = 3;
+
+// For the confirmation mail and the public pages: stated before the deadline,
+// so "no fee" is not read as conditional on meeting it.
+export const PARTNER_CANCEL_POLICY = `キャンセル料は発生しません。ご都合が悪くなった場合は、実施日の${PARTNER_CANCEL_NOTICE_DAYS}日前までにご連絡ください。`;
+
+// For the day-before reminder, which by definition arrives INSIDE the 3-day
+// window. Repeating the deadline there would read as "too late now" and produce
+// the no-show we are writing to prevent.
+// It sits under the heading「▼ ご都合が悪くなった場合」, so it must not repeat
+// that phrase back at the reader.
+export const PARTNER_CANCEL_POLICY_REMINDER = `キャンセル料は発生しませんので、遠慮なくお手続きください。`;
