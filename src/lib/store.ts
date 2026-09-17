@@ -114,6 +114,9 @@ export interface BookingRequest {
   paypalCaptureId: string | null;       // capture id (needed to refund later)
   refundAmount: number | null;          // USD refunded on cancellation (if any)
   refundRate: number | null;            // 0..1 refund rate applied on cancel
+  // When the day-before reminder was claimed. null = not sent. See
+  // claimReminder() — set once, never cleared, so no guest gets two.
+  reminderSentAt: string | null;
   createdAt: string;
 }
 
@@ -168,6 +171,7 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     refundAmount:
       row.refund_amount != null ? Number(row.refund_amount) : null,
     refundRate: row.refund_rate != null ? Number(row.refund_rate) : null,
+    reminderSentAt: row.reminder_sent_at != null ? String(row.reminder_sent_at) : null,
     createdAt: String(row.created_at),
   };
 }
@@ -304,6 +308,7 @@ export async function addBooking(
     | "paypalCaptureId"
     | "refundAmount"
     | "refundRate"
+    | "reminderSentAt"
     | "createdAt"
   > & {
     // Optional payment fields — set when the request went through PayPal.
@@ -393,6 +398,7 @@ export async function addBooking(
     paypalCaptureId: null,
     refundAmount: null,
     refundRate: null,
+    reminderSentAt: null,
     createdAt: new Date().toISOString(),
   };
   const db = await readFile();
@@ -451,6 +457,41 @@ export async function setBookingStatus(
   const booking = db.bookings.find((b) => b.id === id);
   if (booking) booking.status = status;
   await writeFile(db);
+}
+
+// Claim the day-before reminder for one booking. Returns true only to the one
+// caller that moved it from "not sent" to "sent".
+//
+// 🔴 A single conditional UPDATE, not read-then-write. The reminder job can run
+// twice — Vercel retries a cron that times out, and the URL is reachable by
+// anyone — and a read-then-write would let both runs see NULL and both send.
+// With `where reminder_sent_at is null` in the same statement, the second one
+// matches no row.
+//
+// Claimed BEFORE sending, deliberately. If the send then fails, the guest gets
+// no reminder rather than a second one on the retry; the owner's daily summary
+// lists the failure so it can be sent by hand.
+export async function claimReminder(id: string): Promise<boolean> {
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("bookings")
+      .update({ reminder_sent_at: now })
+      .eq("id", id)
+      .is("reminder_sent_at", null)
+      .select("id");
+    if (error) throw new Error(`Failed to claim reminder: ${error.message}`);
+    return (data ?? []).length === 1;
+  }
+
+  const db = await readFile();
+  const booking = db.bookings.find((b) => b.id === id);
+  if (!booking || booking.reminderSentAt) return false;
+  booking.reminderSentAt = now;
+  await writeFile(db);
+  return true;
 }
 
 // Replace who we are arranging with. Used in exactly one case: a restaurant

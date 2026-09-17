@@ -60,6 +60,39 @@ process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
 // comparing a value to itself.
 process.env.CANCEL_TOKEN_SECRET = "gate-check-secret";
 
+// --- No network, enforced rather than assumed -----------------------------
+//
+// 🔴 Found 2026-09-17. The header above said nothing here reaches the network,
+// and since 2026-09-12 that was false: the honeypot test posts a request
+// carrying a PayPal order id, the booking route calls getOrder(), and
+// lib/paypal.ts made a REAL token request to api-m.sandbox.paypal.com with the
+// fake credentials. PayPal answered 401 and the assertion still passed, so the
+// suite stayed green while quietly depending on the internet — and it would
+// have kept doing so for any future call nobody thought to stub.
+//
+// So fetch is replaced for the whole run, before any project module loads.
+// By default every request throws. The one block that exercises PayPal sets
+// stubReply for its duration, and even then only the sandbox host answers.
+type StubCall = { url: string; body: string };
+const calls: StubCall[] = [];
+let stubReply: ((url: string) => Response) | null = null;
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = String(input);
+  if (!stubReply) {
+    throw new Error(`check:gates allows no network access: ${url}`);
+  }
+  if (!url.startsWith("https://api-m.sandbox.paypal.com/")) {
+    throw new Error(`check:gates stub refused a request outside the PayPal sandbox: ${url}`);
+  }
+  calls.push({ url, body: String(init?.body ?? "") });
+  if (url.endsWith("/v1/oauth2/token")) {
+    return new Response(JSON.stringify({ access_token: "stub-token", expires_in: 3600 }), {
+      status: 200,
+    });
+  }
+  return stubReply(url);
+}) as typeof fetch;
+
 import { mkdtempSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -836,33 +869,11 @@ check(
 
 console.log("\n--- Money that DOES move, with PayPal answered by a stub ---");
 
-// Audit #14①. Everything above stops short of a PayPal call, so the refunds
-// that actually return money — and gate 3, a capture that fails — were never
-// executed by this file. They are now, by replacing fetch for the duration of
-// this block. The real lib/paypal.ts runs: token request, URL, request body,
-// error parsing. Only the far end is fake.
-//
-// 🔴 The stub REFUSES any URL that is not the sandbox API. If a future change
-// sent a request anywhere else, this block fails loudly instead of letting it
-// out. The credentials set at the top are not real either, so even the
-// sandbox would reject them.
-type StubCall = { url: string; body: string };
-const calls: StubCall[] = [];
-let stubReply: (url: string) => Response = () => new Response("{}", { status: 200 });
-const realFetch = globalThis.fetch;
-globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-  const url = String(input);
-  if (!url.startsWith("https://api-m.sandbox.paypal.com/")) {
-    throw new Error(`check:gates stub refused a request outside the PayPal sandbox: ${url}`);
-  }
-  calls.push({ url, body: String(init?.body ?? "") });
-  if (url.endsWith("/v1/oauth2/token")) {
-    return new Response(JSON.stringify({ access_token: "stub-token", expires_in: 3600 }), {
-      status: 200,
-    });
-  }
-  return stubReply(url);
-}) as typeof fetch;
+// Audit #14①. The refunds that actually return money — and gate 3, a capture
+// that fails — run here, with PayPal answered by the stub installed at the top
+// of this file. The real lib/paypal.ts runs: token request, URL, request body,
+// error parsing. Only the far end is fake. Outside this block the stub refuses
+// every request.
 
 // Guam calendar days from today, as refundDecision counts them.
 const guamInDays = (n: number) => {
@@ -997,7 +1008,8 @@ try {
     `HTTP ${okRes.status}, ${okRow?.status}, ${okRow?.payment}, ${okRow?.paypalCaptureId}`,
   );
 } finally {
-  globalThis.fetch = realFetch;
+  // Back to refusing everything.
+  stubReply = null;
 }
 
 console.log("\n--- A replacement hold never loses the one it replaces ---");
@@ -1288,6 +1300,84 @@ check(
     !confirmedEmail(moved, 10).text.includes("Proa"),
   "the confirmation names the restaurant booked, not the one that was full",
   moved?.partnerName ?? "(missing)",
+);
+
+console.log("\n--- Day-before reminders ---");
+
+// Owner request 2026-09-17: reduce no-shows. The rule under test is "every
+// confirmed booking for tomorrow gets exactly one reminder, and nothing else
+// gets one".
+const { GET: remindersGet } = await import("@/app/api/cron/reminders/route");
+const { reminderEmail } = await import("@/lib/booking-emails");
+const tomorrow = guamInDays(1);
+
+const remTour = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski", preferredDate: `${tomorrow} 10:00` });
+await setBookingStatus(remTour.id, "confirmed");
+const remTable = await seed({ requestType: "restaurant", partnerName: "Proa", preferredDate: `${tomorrow} 18:30` });
+await setBookingStatus(remTable.id, "confirmed");
+const remPending = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski", preferredDate: `${tomorrow} 10:00` });
+const remCancelled = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski", preferredDate: `${tomorrow} 10:00` });
+await setBookingStatus(remCancelled.id, "cancelled");
+const remLater = await seed({ requestType: "tour", partnerName: "Joe's Jet Ski", preferredDate: `${guamInDays(2)} 10:00` });
+await setBookingStatus(remLater.id, "confirmed");
+const remCharter = await seed({ requestType: null, preferredDate: `${tomorrow} 09:00` });
+await setBookingStatus(remCharter.id, "confirmed");
+
+const firstRun = await remindersGet(new Request("http://localhost/api/cron/reminders"));
+const firstBody = (await firstRun.json()) as { day?: string; sent?: number; failed?: number; alreadySent?: number };
+const claimed = async (id: string) => (await getBooking(id))?.reminderSentAt != null;
+check(
+  firstBody.day === tomorrow && (await claimed(remTour.id)) && (await claimed(remTable.id)),
+  "both confirmed bookings for tomorrow (tour and restaurant) are reminded",
+  `day ${firstBody.day}, sent ${firstBody.sent}, failed ${firstBody.failed}`,
+);
+check(
+  !(await claimed(remPending.id)) && !(await claimed(remCancelled.id)) &&
+    !(await claimed(remLater.id)) && !(await claimed(remCharter.id)),
+  "pending, cancelled, the day after, and pre-pivot charters are not",
+  "none claimed",
+);
+// RESEND is unset here, so the mail cannot go. The row is still claimed: a
+// failed send must not become a second reminder on the next run. It is
+// reported, so the owner's summary can list it.
+check(
+  firstBody.failed === 2,
+  "an unsent reminder is reported as failed, not as sent",
+  `failed ${firstBody.failed}`,
+);
+
+// 🔴 The one that matters: run it again.
+const secondRun = await remindersGet(new Request("http://localhost/api/cron/reminders"));
+const secondBody = (await secondRun.json()) as { sent?: number; failed?: number; alreadySent?: number };
+check(
+  secondBody.sent === 0 && secondBody.failed === 0 && secondBody.alreadySent === 2,
+  "a second run sends nobody a second reminder",
+  `sent ${secondBody.sent}, failed ${secondBody.failed}, already ${secondBody.alreadySent}`,
+);
+
+process.env.CRON_SECRET = "gate-cron-secret";
+const noAuth = await remindersGet(new Request("http://localhost/api/cron/reminders"));
+check(noAuth.status === 401, "with CRON_SECRET set, a call without it is refused", `HTTP ${noAuth.status}`);
+delete process.env.CRON_SECRET;
+
+const tourMail = reminderEmail(remTour, "https://example.invalid/cancel/x");
+const tableMail = reminderEmail(remTable, "https://example.invalid/cancel/x");
+check(
+  tourMail.text.includes("https://example.invalid/cancel/x") && tableMail.text.includes("https://example.invalid/cancel/x"),
+  "every reminder carries the cancellation link",
+  "present in both",
+);
+// We have not confirmed the operators' terms. A fee in this mail would be us
+// promising another company's policy.
+check(
+  !/キャンセル料|\$\d/.test(tourMail.text) && !/\$\d/.test(tableMail.text),
+  "no reminder states a cancellation fee or an amount",
+  "none stated",
+);
+check(
+  tableMail.text.includes("お店へのキャンセルのご連絡は当社が代行します"),
+  "the restaurant reminder says we tell the restaurant",
+  "present",
 );
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);

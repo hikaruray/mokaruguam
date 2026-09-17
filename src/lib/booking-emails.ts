@@ -243,6 +243,82 @@ function guamDateLabel(now: Date, days: number): string {
   return `${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${dow}）`;
 }
 
+// ---------------------------------------------------------------------------
+// The day-before reminder (owner request 2026-09-17: reduce no-shows)
+// ---------------------------------------------------------------------------
+// Sent by /api/cron/reminders to every confirmed booking whose date is
+// tomorrow in Guam.
+//
+// 🔵 THE CANCEL LINK IS THE POINT, not the reminder. Most no-shows are people
+// who forgot or found it too much trouble to say so. Putting a one-click
+// cancellation in front of them the day before turns a no-show into a
+// cancellation the operator can resell, or a table the restaurant can give
+// away — and a restaurant no-show happens in our name.
+//
+// 🔴 It must not state a cancellation fee. Each operator has its own rules and
+// we have not confirmed them (owner is asking Joe's Jet Ski and Gently Blue).
+// Quoting a fee we made up would be promising another company's terms.
+export function reminderEmail(
+  b: BookingRequest,
+  cancelLink: string,
+): { subject: string; text: string } {
+  const isRestaurant = requestTypeOf(b) === "restaurant";
+  return {
+    subject: isRestaurant
+      ? "【Mokaru Guam】明日のご予約のご確認（レストラン）"
+      : "【Mokaru Guam】明日のご予約のご確認（アクティビティ）",
+    text: [
+      `${b.name} 様`,
+      ``,
+      `明日のご予約のご確認です。`,
+      ``,
+      `▼ ご予約内容`,
+      `${isRestaurant ? "お店:       " : "お手配先:   "}${b.partnerName}`,
+      `日時:       ${b.preferredDate}`,
+      `人数:       ${b.guests}名${b.adults != null ? `（${guestBreakdownLabel(b)}）` : ""}`,
+      ...(b.hotel ? [`ご滞在先:   ${b.hotel}`] : []),
+      `受付番号:   ${refLabel(b)}`,
+      ``,
+      isRestaurant
+        ? `当日は直接お店へお越しください。お席はお名前で承っております。`
+        : `集合場所・時間・持ち物は、実施会社のご案内に従ってください。`,
+      ``,
+      `▼ ご都合が悪くなった場合`,
+      `お手数ですが、必ず事前に下記からキャンセルのお手続きをお願いします。`,
+      cancelLink,
+      isRestaurant
+        ? `お店へのキャンセルのご連絡は当社が代行します。ご連絡がないままお越しにならないと、お店にご迷惑がかかります。`
+        : `ご連絡がないまま参加されないと、実施会社が準備した枠が無駄になってしまいます。`,
+      ``,
+      `ご不明な点は ${CONTACT_EMAIL} までご返信ください。`,
+      `— Mokaru Guam`,
+    ].join("\n"),
+  };
+}
+
+// The owner's copy of the day: what is on tomorrow, and whether each guest was
+// reminded. Doubles as the list of tables and activities to expect.
+export function reminderSummaryEmail(
+  day: string,
+  rows: { booking: BookingRequest; result: "sent" | "failed" | "already" }[],
+): { subject: string; text: string } {
+  const failed = rows.filter((r) => r.result === "failed").length;
+  const label = { sent: "送信済み", failed: "🔴送信失敗（手動で連絡を）", already: "送信済み（前回）" };
+  return {
+    subject: `【リマインド】明日 ${day} のご予約 ${rows.length}件${failed ? `（送信失敗 ${failed}件）` : ""}`,
+    text: rows.length
+      ? [
+          `明日 ${day}（グアム時間）の確定済みのご予約です。`,
+          ``,
+          ...rows.map(
+            ({ booking: b, result }) =>
+              `${refLabel(b)}  ${requestTypeOf(b) === "restaurant" ? "レストラン" : "ツアー"}  ${b.preferredDate}  ${b.partnerName}  ${b.name}様 ${b.guests}名  — ${label[result]}`,
+          ),
+        ].join("\n")
+      : `明日 ${day}（グアム時間）の確定済みのご予約はありません。`,
+  };
+}
+
 // The request we send the partner operator or restaurant (design §8 #7).
 //
 // 🔴 THE SUBJECT LINE IS A FORMAT, NOT WORDING.
