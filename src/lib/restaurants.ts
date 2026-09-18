@@ -12,10 +12,11 @@
 // the arrangement earns nothing. Same rule as lib/partners.ts.
 //
 // 🔴 A RESTAURANT THAT HAS CLOSED MUST COME OFF, NOT STAY WITH A NOTE.
-// Delmonico was on the owner's list but public listings mark it closed in 2026
-// (Yelp: CLOSED, Feb 2026; GuamFoody's closed-restaurants list). It is left
-// out until the owner confirms it is open: a guest who pays $10 for a table at
-// a shut restaurant gets it back, but loses an evening they planned around it.
+// Delmonico was on the owner's first list. Public listings marked it closed in
+// 2026 (Yelp: CLOSED, Feb 2026; GuamFoody's closed-restaurants list), so it was
+// left out, and the owner confirmed on 2026-09-18 that it has closed. A guest
+// who pays $10 for a table at a shut restaurant gets it back, but loses an
+// evening they planned around it — check a pick is still open before adding it.
 
 export interface Restaurant {
   // Stable key; also the anchor on /dining (#id).
