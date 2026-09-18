@@ -18,6 +18,8 @@
 // is confirmed at arrangement time. A partner raising their price must not turn
 // this page into a false statement.
 
+import type { PhotoSeed } from "./images";
+
 export interface Partner {
   // Stable key. Used in the ?partner= prefill, so changing one silently breaks
   // any link already published.
@@ -35,18 +37,99 @@ export interface Partner {
   priceFrom: string;
   priceNote: string;
   blurb: string;
+  // Optional: a page of its own at /plans/[id]. Only partners whose facts we
+  // have read off their own site get one — the page states age limits and a
+  // meeting point, and a guessed one of those sends a family to the wrong
+  // beach or turns a 6-year-old away at the dock.
+  details?: PartnerDetails;
+}
+
+export interface PartnerDetails {
+  // Only a real Mokaru photo (lib/images.ts), never the operator's: we have no
+  // permission to use theirs. So this is usually a photo of the PLACE, and the
+  // alt text says so rather than implying it shows the tour.
+  photo?: { seed: PhotoSeed; alt: string };
+  // What the operator says about itself, attributed as theirs.
+  about: string[];
+  // The route / what happens on the day.
+  course: string[];
+  // Each price as the operator lists it, with what it covers.
+  prices: { label: string; price: string }[];
+  // 🔴 Who can take part. The request form cannot enforce these (its child
+  // bands are 4-11 and 0-3, which do not line up with an 8-year minimum), so
+  // this page is where a family finds out BEFORE they ask, not at the dock.
+  rules: string[];
+  meetingPoint: string;
+  onTheDay: string[];
+  bring: string[];
+  // Where the facts came from, and when we read them. Printed on the page so
+  // the next person to edit it knows how old they are.
+  source: { url: string; readOn: string };
 }
 
 export const PARTNERS: Partner[] = [
+  // Prices and rules read off joesjetski.com on 2026-09-18 (/two-lovers-point
+  // and /about).
+  //
+  // 🔴 PRICE CORRECTED 2026-09-18. This entry used to say「$134.40〜（お一人あ
+  // たり）」, which matched nothing on their site: a single rider is $140.00, and
+  // a tandem is $220.00 for the ski — $110 a head, cheaper than the figure we
+  // printed as the minimum. Neither reading made it true. $134.40 is $140 less
+  // 4%, so it was probably an old web discount. The owner chose the official
+  // figures so a guest who checks their site sees the same number we do.
   {
     id: "joes-jet-ski",
     company: "Joe's Jet Ski",
     activity: "Two Lovers Point ジェットスキーツアー",
     duration: "約1時間",
-    priceFrom: "$134.40〜",
-    priceNote: "Joe's Jet Ski の料金（お一人あたり）",
+    priceFrom: "$140.00〜",
+    priceNote: "Joe's Jet Ski の料金・1人乗り1台。2人乗りは1台 $220.00",
     blurb:
-      "恋人岬の沖合をジェットスキーで走るツアーです。初めての方にはスタッフが操作をご案内します。",
+      "恋人岬の沖合をジェットスキーで走るツアーです。運転は14歳から、免許は要りません。8歳から大人と一緒に同乗できます。",
+    details: {
+      photo: {
+        seed: "spot-lovers",
+        alt: "ツアーの目的地、恋人岬（Mokaru撮影）",
+      },
+      about: [
+        "グアムで最も長く続く、リーフの外に出るツアー会社だと同社は説明しています。家族経営の会社です。",
+        "米国沿岸警備隊（USCG）の免許を持つ船長が複数在籍し、スタッフ全員が水上安全の資格を持っている、とのことです。",
+      ],
+      course: [
+        "アガニア湾から、タモン湾の北端にある恋人岬（Two Lovers Point）まで、往復約16kmを走ります。",
+        "タモン湾とガンビーチの沖を抜けて、恋人岬の真下の海へ。天候が良ければ、恋人岬の前で海に入って泳ぐこともできます。",
+        "イルカやウミガメ、トビウオが見られることもあります（見られるとは限りません）。",
+      ],
+      prices: [
+        { label: "1人乗り（1台・大人14歳以上）", price: "$140.00" },
+        { label: "2人乗り（1台に2名・大人14歳以上）", price: "$220.00" },
+      ],
+      rules: [
+        "参加できるのは8歳からです。7歳以下のお子様は参加できません。",
+        "8〜13歳のお子様は、18歳以上の大人と同乗します（お子様の運転はできません）。",
+        "運転できるのは14歳からです。免許は要りません。",
+        "1台あたりの体重は合計159kg（350ポンド）までです。",
+        "飲酒しての参加はできません（同社は一切認めていません）。",
+        "8〜13歳のお子様の料金は、公式サイトに記載がないため手配時にご案内します。",
+      ],
+      meetingPoint:
+        "ザ・ピンクホテル（The Pink Hotel）のビーチ側。Kanton Tasi Rd, Tamuning。ホテルからの送迎は公式サイトに記載がありません。",
+      onTheDay: [
+        "予約時刻の10分前までにお越しください。",
+        "同意書の記入と説明に、ツアー時間とは別に約20分かかります。",
+        "予約時刻から30分以上遅れると、枠がなくなります。",
+        "無料のロッカーがあります。",
+      ],
+      bring: [
+        "タオル",
+        "水着、または濡れてもよい服（ボタンやファスナーのないもの）",
+        "あると便利：マリンシューズ、日焼け止め、防水のスマホケース・カメラ",
+      ],
+      source: {
+        url: "https://www.joesjetski.com/two-lovers-point",
+        readOn: "2026-09-18",
+      },
+    },
   },
   // Added 2026-09-12, after the owner confirmed the agreement is signed.
   //
@@ -96,4 +179,15 @@ export const PARTNERS: Partner[] = [
 // can take the company back off the front for the subject line.
 export function partnerRequestLabel(p: Partner): string {
   return `${p.company}／${p.activity}`;
+}
+
+// Partners that have a page of their own (/plans/[id]).
+export const PARTNERS_WITH_PAGE = PARTNERS.filter(
+  (p): p is Partner & { details: PartnerDetails } => p.details !== undefined,
+);
+
+export function getPartnerWithPage(
+  id: string,
+): (Partner & { details: PartnerDetails }) | undefined {
+  return PARTNERS_WITH_PAGE.find((p) => p.id === id);
 }

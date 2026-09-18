@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/config";
 import { SPOTS } from "@/lib/spots";
+import { PARTNERS_WITH_PAGE } from "@/lib/partners";
 import { LEGACY_SLUGS, getLegacyArticle } from "@/lib/legacy-articles";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -18,6 +19,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/legal`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.3 },
   ];
+
+  const partnerPages: MetadataRoute.Sitemap = PARTNERS_WITH_PAGE.map((p) => ({
+    url: `${SITE_URL}/plans/${p.id}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
 
   const spotPages: MetadataRoute.Sitemap = SPOTS.map((s) => ({
     url: `${SITE_URL}/spots/${s.slug}`,
@@ -40,7 +47,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  const current = [...staticPages, ...spotPages].map((p) => ({
+  const current = [...staticPages, ...partnerPages, ...spotPages].map((p) => ({
     ...p,
     lastModified: now,
   }));

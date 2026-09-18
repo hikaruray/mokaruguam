@@ -195,5 +195,22 @@ for (const [phrase, why] of BANNED) {
   );
 }
 
+// --- Spot pages -------------------------------------------------------------
+// lib/spots.ts is page copy, not an article, so nothing above ever read it —
+// and on 2026-09-18 the 恋人岬 spot still promised「ガイドがベストな構図でお撮り
+// します」, a guide service that ends 2026-09-30. Same list, plus「ガイド」on its
+// own: on a spot page, any guide is us.
+const { SPOTS } = await load("spots.ts");
+const SPOT_BANNED = [...BANNED.map(([phrase]) => phrase), "ガイド"];
+for (const s of SPOTS as { slug: string; name: string; tagline: string; body: string[]; tips: string[] }[]) {
+  const text = [s.name, s.tagline, ...s.body, ...s.tips].join("\n");
+  const found = SPOT_BANNED.filter((p) => text.includes(p));
+  check(
+    found.length === 0,
+    `spot page promises no ended service: ${s.slug}`,
+    found.length === 0 ? "clean" : found.join(", "),
+  );
+}
+
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

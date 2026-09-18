@@ -98,6 +98,14 @@ export default function PlansPage() {
                   <span className="block text-xs">（{p.priceNote}）</span>
                 </p>
                 <p className="mt-2 text-sm text-muted">{p.blurb}</p>
+                {p.details && (
+                  <Link
+                    href={`/plans/${p.id}`}
+                    className="mt-2 inline-block text-sm font-bold text-brand hover:underline"
+                  >
+                    年齢制限・集合場所・持ち物を見る →
+                  </Link>
+                )}
                 {/* 🔴 Our own form, never the operator's booking page: the
                     commission is owed on bookings we send. */}
                 <Link

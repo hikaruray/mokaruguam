@@ -88,12 +88,23 @@ export default async function SpotPage({
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
+          {/* Was「このスポットを含めてリクエスト予約」— a trip that visits the
+              spot, i.e. the charter that ends 2026-09-30. What we can do now is
+              arrange a restaurant or a partner activity. */}
           <Link
-            href="/#booking"
+            href="/reserve"
             className="rounded-full bg-brand px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-dark"
           >
-            このスポットを含めてリクエスト予約
+            レストラン・ツアーの手配を依頼する
           </Link>
+          {spot.slug === "lovers-point" && (
+            <Link
+              href="/plans/joes-jet-ski"
+              className="rounded-full border border-brand px-6 py-3 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
+            >
+              恋人岬の沖を走るジェットスキー →
+            </Link>
+          )}
           <Link
             href="/spots"
             className="rounded-full border border-line px-6 py-3 text-sm font-medium text-ink transition hover:bg-white"
