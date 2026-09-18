@@ -2,9 +2,13 @@
 //
 // WHO CHOSE THESE: the owner, on 2026-09-18 — they live on Guam and eat at
 // them. The facts on each card (area, address, genre) were checked against
-// public listings the same day; the page prints that date. The copy describes
-// what the place IS, not how good it is: the recommendation is the owner's,
-// and a superlative we invented would be a claim nobody made.
+// public listings the same day; the page prints that date.
+//
+// TWO VOICES, KEPT APART. `pick` is the owner's own recommendation (given
+// 2026-09-19), shown as「Mokaruのひとこと」— an opinion, signed as ours.
+// `blurb` stays factual: what the place is and where. Nobody at Mokaru should
+// write a new superlative into `blurb`; if the owner has an opinion, it goes in
+// `pick` in their words.
 //
 // 🔴 EVERY BUTTON GOES TO OUR FORM, NEVER THE RESTAURANT'S BOOKING PAGE.
 // Our income here is the $10 arrangement fee, paid by the guest. A guest who
@@ -28,6 +32,8 @@ export interface Restaurant {
   nameJa: string;
   genre: string;
   area: string;
+  // The owner's recommendation, in their words (lightly tidied, meaning kept).
+  pick: string;
   blurb: string;
   // 🔴 Anything that changes whether we CAN book it. Shown prominently on the
   // card, because a request we are bound to turn down wastes the guest's time
@@ -42,6 +48,7 @@ export const RESTAURANTS: Restaurant[] = [
     nameJa: "ローンスター・ステーキハウス",
     genre: "ステーキ",
     area: "タムニング（マリン・コープ・ドライブ沿い）",
+    pick: "大人も子供も大満足のメニュー。迷ったらここ。",
     blurb:
       "アメリカのステーキハウスのチェーンで、いま営業しているのはグアムのこのお店だけです。地元の会社が運営しています。",
   },
@@ -51,6 +58,7 @@ export const RESTAURANTS: Restaurant[] = [
     nameJa: "ロングホーン・ステーキハウス",
     genre: "ステーキ",
     area: "タムニング（グアム・プレミア・アウトレット近く）",
+    pick: "ステーキと言えばここ。Tボーンは絶品。",
     blurb:
       "アメリカのステーキハウスのチェーン。家族連れでも入りやすい雰囲気のお店です。",
     // Owner, 2026-09-18.
@@ -63,6 +71,7 @@ export const RESTAURANTS: Restaurant[] = [
     nameJa: "ルビー・チューズデー",
     genre: "アメリカン",
     area: "タムニング（グアム・プレミア・アウトレット内）",
+    pick: "サラダバーが人気のアメリカンダイナー。バーガーもうまい。",
     blurb:
       "アメリカのカジュアルダイニングのチェーン。グアム・プレミア・アウトレットの中にあるので、お買い物の合間にも寄りやすいお店です。",
   },
@@ -72,6 +81,7 @@ export const RESTAURANTS: Restaurant[] = [
     nameJa: "ビーチン・シュリンプ",
     genre: "シーフード（エビ料理）",
     area: "タモン（ザ・プラザ）ほか、島内に3店",
+    pick: "ガーリックシュリンプとスープパスタが大人気。メニューもリーズナブル。",
     blurb:
       "エビ料理のお店。タモンのザ・プラザのほか、アッパータモンのフレームツリー・プラザ、マイクロネシア・モールにもあります。ご希望の店舗をお知らせください。",
   },
@@ -81,6 +91,7 @@ export const RESTAURANTS: Restaurant[] = [
     nameJa: "クラブ・ダディ",
     genre: "シーフード（ケイジャン）",
     area: "タモン（ホリデイ・リゾート1階）／ハガニア",
+    pick: "テーブルに広げて、手づかみで豪快に食べるのが美味しい。",
     blurb:
       "カニやエビなどのシーフードを、ケイジャン風の味付けで楽しめるお店。タモンのホリデイ・リゾートとハガニアの2店があります。ご希望の店舗をお知らせください。",
   },
@@ -90,6 +101,7 @@ export const RESTAURANTS: Restaurant[] = [
     nameJa: "アルフレード・ステーキハウス",
     genre: "ステーキ",
     area: "タモン（デュシタニ・グアム・リゾート3階）",
+    pick: "ワンランク上のステーキハウス。特別な日に。",
     blurb:
       "ホテル内のステーキハウス。グアムで唯一ドライエイジング・ビーフを出すお店だと、お店は説明しています。席数が60ほどと多くないので、早めのご依頼がおすすめです。",
   },
@@ -99,6 +111,7 @@ export const RESTAURANTS: Restaurant[] = [
     nameJa: "ロイズ",
     genre: "ハワイアン・フュージョン",
     area: "タモン（ヒルトン・グアム・リゾート＆スパ内）",
+    pick: "ローカルに大人気のハワイアン・フュージョン・ダイニング。",
     blurb:
       "ハワイ発祥のレストラン。太平洋の食材とフランス料理の技法を合わせた、ハワイアン・フュージョン料理のお店です。",
   },

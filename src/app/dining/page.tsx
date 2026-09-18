@@ -57,7 +57,12 @@ export default function DiningPage() {
               <p className="text-xs font-bold text-brand">{r.genre}</p>
               <h2 className="mt-1 text-lg font-bold">{r.name}</h2>
               <p className="text-sm text-muted">{r.nameJa}</p>
-              <p className="mt-2 text-xs text-muted">📍 {r.area}</p>
+              {/* The owner's words, signed as ours — see lib/restaurants.ts. */}
+              <div className="mt-3 rounded-lg bg-brand/10 px-3 py-2">
+                <p className="text-[11px] font-bold text-brand">Mokaruのひとこと</p>
+                <p className="text-[15px] font-bold leading-snug text-ink">{r.pick}</p>
+              </div>
+              <p className="mt-3 text-xs text-muted">📍 {r.area}</p>
               <p className="mt-3 text-sm leading-relaxed text-ink">{r.blurb}</p>
               {r.bookingNote && (
                 <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
