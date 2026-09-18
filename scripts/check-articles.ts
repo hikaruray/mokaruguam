@@ -212,5 +212,18 @@ for (const s of SPOTS as { slug: string; name: string; tagline: string; body: st
   );
 }
 
+// --- Restaurant recommendations (/dining) -----------------------------------
+// Page data again, so the same blind spot as spots.ts until it is read here.
+const { RESTAURANTS } = await load("restaurants.ts");
+for (const r of RESTAURANTS as { id: string; name: string; blurb: string; area: string; bookingNote?: string }[]) {
+  const text = [r.name, r.area, r.blurb, r.bookingNote ?? ""].join("\n");
+  const found = SPOT_BANNED.filter((p) => text.includes(p));
+  check(
+    found.length === 0,
+    `restaurant card promises no ended service: ${r.id}`,
+    found.length === 0 ? "clean" : found.join(", "),
+  );
+}
+
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

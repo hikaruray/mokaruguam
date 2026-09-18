@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: SITE_URL, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/reserve`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/plans`, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE_URL}/dining`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/spots`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/guide`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/faq`, changeFrequency: "monthly", priority: 0.7 },

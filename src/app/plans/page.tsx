@@ -64,12 +64,17 @@ export default function PlansPage() {
               お食事代は含まれません（当日、お店へ直接お支払いください）
             </li>
           </ul>
-          <Link
-            href="/reserve?type=restaurant"
-            className="mt-5 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark"
-          >
-            レストランの予約を依頼する
-          </Link>
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            <Link
+              href="/reserve?type=restaurant"
+              className="inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark"
+            >
+              レストランの予約を依頼する
+            </Link>
+            <Link href="/dining" className="text-sm font-bold text-brand hover:underline">
+              Mokaruおすすめのお店を見る →
+            </Link>
+          </div>
         </div>
       </section>
 
