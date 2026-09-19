@@ -9,7 +9,7 @@ import {
   getLegacyArticle,
   isLegacySlug,
 } from "@/lib/legacy-articles";
-import { ctaFor } from "@/lib/legacy-cta";
+import { ctaFor, topNoteFor } from "@/lib/legacy-cta";
 
 // Restored legacy blog articles. See src/lib/legacy-articles.ts for why these
 // exist and how the URLs line up with the old site.
@@ -75,6 +75,7 @@ export default async function LegacyArticlePage({
   if (!article) notFound();
 
   const cta = ctaFor(slug);
+  const topNote = topNoteFor(slug);
 
   return (
     <PageShell>
@@ -89,6 +90,15 @@ export default async function LegacyArticlePage({
           </time>
           {" 更新"}
         </p>
+
+        {topNote && (
+          <p className="mt-6 rounded-xl border border-brand bg-brand/10 px-4 py-3 text-sm leading-relaxed">
+            {topNote.text}
+            <Link href={topNote.link.href} className="ml-1 font-bold text-brand underline">
+              {topNote.link.label} →
+            </Link>
+          </p>
+        )}
 
         {/* Body comes from our own WordPress export (no user input), and is
             stripped of scripts/styles in cleanHtml(). */}

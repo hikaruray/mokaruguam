@@ -143,15 +143,46 @@ const RELATED_SPOT: Record<string, CtaLink> = {
   "fort-apugan": { href: "/spots/apugan-fort", label: "アプガン砦のページを見る" },
 };
 
+// A note shown ABOVE an article whose content has been superseded by a page on
+// the current site. The article stays (it has search traffic, and after the
+// July 404s no live URL is removed casually), but a reader should see where the
+// current version is before reading the old one — a link at the bottom of a
+// long article is one most of them never reach.
+//
+// "restaurants" is the April 2025 list (4 places under a title saying TOP5).
+// The owner re-chose the recommendations on 2026-09-18 and they live at /dining.
+export interface LegacyTopNote {
+  text: string;
+  link: CtaLink;
+}
+
+const TOP_NOTE: Record<string, LegacyTopNote> = {
+  restaurants: {
+    text: "この記事は2025年に書いたものです。いまのおすすめのお店は、新しいページにまとめています。",
+    link: { href: "/dining", label: "Mokaruおすすめのレストランを見る" },
+  },
+};
+
+export function topNoteFor(slug: string): LegacyTopNote | undefined {
+  return TOP_NOTE[slug];
+}
+
+// A food article's first link goes to the current recommendations, not the
+// spots index — someone reading about where to eat wants places to eat.
+const DINING_LINK: CtaLink = { href: "/dining", label: "Mokaruおすすめのお店を見る" };
+
 export function ctaFor(slug: string): LegacyCta {
-  const theme = THEMES[THEME_BY_SLUG[slug] ?? "practical"];
+  const themeKey = THEME_BY_SLUG[slug] ?? "practical";
+  const theme = THEMES[themeKey];
   const spot = RELATED_SPOT[slug];
 
   return {
     heading: theme.heading,
     lead: theme.lead,
     links: [
-      spot ?? { href: "/spots", label: "人気スポットを見る" },
+      themeKey === "food"
+        ? DINING_LINK
+        : (spot ?? { href: "/spots", label: "人気スポットを見る" }),
       { href: "/plans", label: "手配できるツアーを見る" },
       { href: "/reserve", label: "手配を依頼する" },
     ],

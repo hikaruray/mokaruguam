@@ -23,6 +23,9 @@ export default function Footer() {
           <div>
             <p className="mb-1.5 font-bold text-white">メニュー</p>
             <p><Link href="/plans" className="hover:text-white">できること・料金</Link></p>
+            {/* Also here, not only in the header: the header nav is hidden
+                below md, so on a phone this footer is the only menu. */}
+            <p><Link href="/dining" className="hover:text-white">おすすめレストラン</Link></p>
             <p><Link href="/spots" className="hover:text-white">人気スポット</Link></p>
             <p><Link href="/reviews" className="hover:text-white">お客様の声</Link></p>
             <p><Link href="/faq" className="hover:text-white">よくある質問</Link></p>
