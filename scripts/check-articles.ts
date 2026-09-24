@@ -212,5 +212,34 @@ for (const s of SPOTS as { slug: string; name: string; tagline: string; body: st
   );
 }
 
+// --- Partner pages and the request-form notice -----------------------------
+// lib/partners.ts is page copy too (/plans, /plans/[id], and the notice the
+// request form shows), and like spots.ts nothing read it until 2026-09-24.
+// Not「ガイド」on its own here: an operator's own guides are theirs to mention.
+const { PARTNERS } = await load("partners.ts");
+const PARTNER_BANNED = BANNED.map(([phrase]) => phrase);
+for (const p of PARTNERS as {
+  id: string;
+  activity: string;
+  priceNote: string;
+  blurb: string;
+  requestNotice?: { lines: string[] };
+  details?: Record<string, unknown>;
+}[]) {
+  const text = [
+    p.activity,
+    p.priceNote,
+    p.blurb,
+    ...(p.requestNotice?.lines ?? []),
+    JSON.stringify(p.details ?? {}),
+  ].join("\n");
+  const found = PARTNER_BANNED.filter((ph) => text.includes(ph));
+  check(
+    found.length === 0,
+    `partner copy promises no ended service: ${p.id}`,
+    found.length === 0 ? "clean" : found.join(", "),
+  );
+}
+
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

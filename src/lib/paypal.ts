@@ -172,7 +172,10 @@ export async function createAuthorizeOrder(
     purchase_units: [
       {
         reference_id: opts.referenceId ?? "mokaru-booking",
-        description: opts.description ?? "Mokaru Guam 貸切チャーター（リクエスト予約）",
+        // Both callers pass their own. The fallback is what a guest would see
+        // on their PayPal statement if a new caller forgot, so it names nothing
+        // we have stopped selling.
+        description: opts.description ?? "Mokaru Guam 手配料",
         amount: { currency_code: "USD", value: amount.toFixed(2) },
       },
     ],

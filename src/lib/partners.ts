@@ -42,6 +42,20 @@ export interface Partner {
   // meeting point, and a guessed one of those sends a family to the wrong
   // beach or turns a 6-year-old away at the dock.
   details?: PartnerDetails;
+  // Optional: shown on the request form while the guest is filling it in, as
+  // soon as what they typed names this partner. For conditions that turn a
+  // family away at the dock (an age minimum), which the form's own fields
+  // cannot express — the child bands are 4-11 and 0-3.
+  requestNotice?: RequestNotice;
+}
+
+export interface RequestNotice {
+  // Lower-case fragments; any one appearing in the typed partner field
+  // (lower-cased) shows the notice. Includes the activity in plain words
+  // (「ジェットスキー」), because a guest who does not know the company name
+  // types what they want to do — and we only arrange that one way.
+  match: string[];
+  lines: string[];
 }
 
 export interface PartnerDetails {
@@ -86,6 +100,17 @@ export const PARTNERS: Partner[] = [
     priceNote: "Joe's Jet Ski の料金・1人乗り1台。2人乗りは1台 $220.00",
     blurb:
       "恋人岬の沖合をジェットスキーで走るツアーです。運転は14歳から、免許は要りません。8歳から大人と一緒に同乗できます。",
+    // 🔴 Added 2026-09-24. The page states the 8-year minimum, but a guest who
+    // types「Joe's Jet Ski」straight into the form never sees the page, and
+    // the form would take a request for a 3-year-old without a word.
+    requestNotice: {
+      match: ["joe's", "joes", "joe’s", "ジョーズ", "ジェットスキー", "jet ski", "jetski"],
+      lines: [
+        "参加できるのは8歳からです。7歳以下のお子様は参加できません。",
+        "8〜13歳のお子様は大人と同乗します。運転は14歳から（免許不要）。",
+        "1台あたりの体重は合計159kgまでです。",
+      ],
+    },
     details: {
       photo: {
         seed: "spot-lovers",
@@ -185,6 +210,19 @@ export function partnerRequestLabel(p: Partner): string {
 export const PARTNERS_WITH_PAGE = PARTNERS.filter(
   (p): p is Partner & { details: PartnerDetails } => p.details !== undefined,
 );
+
+// The partner whose notice applies to what the guest typed, if any.
+export function partnerNoticeFor(
+  typed: string,
+): (Partner & { requestNotice: RequestNotice }) | undefined {
+  const t = typed.toLowerCase();
+  if (!t.trim()) return undefined;
+  return PARTNERS.find(
+    (p): p is Partner & { requestNotice: RequestNotice } =>
+      p.requestNotice !== undefined &&
+      p.requestNotice.match.some((m) => t.includes(m)),
+  );
+}
 
 export function getPartnerWithPage(
   id: string,
