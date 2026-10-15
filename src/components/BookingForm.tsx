@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RESTAURANT_FEE } from "@/lib/pricing";
 import { PAYPAL_ENABLED, CONTACT_EMAIL } from "@/lib/config";
+import { partnerNoticeFor } from "@/lib/partners";
 import PaypalCheckout from "./PaypalCheckout";
 
 type State = "idle" | "sending" | "sent" | "error";
@@ -100,6 +101,9 @@ export default function BookingForm() {
   const isRestaurant = requestType === "restaurant";
   // Money only ever moves on the restaurant path.
   const takesPayment = isRestaurant && PAYPAL_ENABLED;
+  // Participation conditions of the partner the guest is asking for (the jet
+  // ski's 8-year minimum). Tours only: a restaurant name never triggers it.
+  const notice = isRestaurant ? undefined : partnerNoticeFor(partnerName);
 
   function readForm(form: HTMLFormElement): FormValues {
     const fd = new FormData(form);
@@ -412,6 +416,34 @@ export default function BookingForm() {
               決まっていない場合は「シュノーケリング」など、やりたいことをご記入ください。
             </p>
           )}
+          {/* 🔴 Before the guest fills in the rest, not after they submit: the
+              form cannot refuse this (its child bands are 4-11 and 0-3), so
+              the only protection is that they read it here. */}
+          {notice && (
+            <div
+              role="note"
+              className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-ink"
+            >
+              <div className="font-bold">
+                ⚠️ {notice.company} の参加条件（ご依頼の前にご確認ください）
+              </div>
+              <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                {notice.requestNotice.lines.map((l) => (
+                  <li key={l}>{l}</li>
+                ))}
+              </ul>
+              {notice.details && (
+                <a
+                  href={`/plans/${notice.id}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="mt-1.5 inline-block font-bold text-brand hover:underline"
+                >
+                  参加条件・持ち物をすべて見る →
+                </a>
+              )}
+            </div>
+          )}
 
           {isRestaurant && (
             <>
@@ -512,6 +544,11 @@ export default function BookingForm() {
             <GuestSelect label="子供 4-11歳" name="children4to11" min={0} max={7} defaultValue={0} />
             <GuestSelect label="子供 0-3歳" name="children0to3" min={0} max={7} defaultValue={0} />
           </div>
+          {notice && (
+            <p className="mt-1.5 text-xs font-medium text-amber-700">
+              {notice.company}：{notice.requestNotice.lines[0]}
+            </p>
+          )}
           <p className="mt-1.5 text-xs text-muted">
             8名以上のご予約も承ります（別途お見積り）。{CONTACT_EMAIL} までご連絡ください。
           </p>
@@ -526,7 +563,7 @@ export default function BookingForm() {
           <p className="-mt-1 text-xs text-muted">
             {isRestaurant
               ? "お店にお伝えする連絡先の確認に使用します。"
-              : "当日の送迎・集合場所の確認に使用します。"}
+              : "実施会社にお伝えし、集合場所のご案内に使用します。"}
             ホテル以外（Airbnb・ご親族宅など）の場合はその旨をご記入ください。
           </p>
 
@@ -537,7 +574,7 @@ export default function BookingForm() {
             placeholder={
               isRestaurant
                 ? "例：窓際の席希望・記念日・アレルギー・ベビーチェア"
-                : "例：お子様連れ・記念日・送迎の希望"
+                : "例：お子様の年齢・記念日・ダイビングの経験"
             }
             className="mt-1.5 min-h-[78px] w-full resize-y rounded-lg border border-line px-3 py-2.5 text-sm"
           />
