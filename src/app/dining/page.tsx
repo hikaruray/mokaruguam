@@ -62,7 +62,11 @@ export default function DiningPage() {
               className="flex scroll-mt-24 flex-col rounded-2xl border border-line bg-white p-6"
             >
               <p className="text-xs font-bold text-brand">{r.genre}</p>
-              <h2 className="mt-1 text-lg font-bold">{r.name}</h2>
+              <h2 className="mt-1 text-lg font-bold">
+                <Link href={`/dining/${r.id}`} className="hover:text-brand hover:underline">
+                  {r.name}
+                </Link>
+              </h2>
               <p className="text-sm text-muted">{r.nameJa}</p>
               {/* The owner's words, signed as ours — see lib/restaurants.ts. */}
               <div className="mt-3 rounded-lg bg-brand/10 px-3 py-2">
@@ -76,6 +80,12 @@ export default function DiningPage() {
                   ! {r.bookingNote}
                 </p>
               )}
+              <Link
+                href={`/dining/${r.id}`}
+                className="mt-3 self-start text-sm font-bold text-brand hover:underline"
+              >
+                このお店について、くわしく見る →
+              </Link>
               {/* Pushes the button to the card's bottom so a row lines up. */}
               <div className="flex-1" />
               {/* 🔴 Our form, never the restaurant's own booking page — see

@@ -39,6 +39,13 @@ export interface Restaurant {
   // card, because a request we are bound to turn down wastes the guest's time
   // and ours, even though it costs them nothing.
   bookingNote?: string;
+  // Extra facts for the store's own page (/dining/[id]), added 2026-10-15.
+  // Each one names where it was read, because none of them is the owner's own
+  // knowledge. Only things a guest would want BEFORE asking us to book: what
+  // to order, who it suits. 🔴 No hours and no addresses — the public listings
+  // disagree with each other on both, and we confirm those with the restaurant
+  // after the request arrives anyway.
+  facts?: { text: string; source: string }[];
 }
 
 export const RESTAURANTS: Restaurant[] = [
@@ -61,6 +68,12 @@ export const RESTAURANTS: Restaurant[] = [
     pick: "ステーキと言えばここ。Tボーンは絶品。",
     blurb:
       "アメリカのステーキハウスのチェーン。家族連れでも入りやすい雰囲気のお店です。",
+    facts: [
+      {
+        text: "夕食の時間帯は、地元の人にも観光客にも人気で、予約なしだと1時間以上待つことがあると紹介されています。",
+        source: "KKday・Evendo の店舗紹介",
+      },
+    ],
     // Owner, 2026-09-18.
     bookingNote:
       "金・土・日・祝日は、お店が予約を受け付けていません。この曜日は当社でもお取りできませんので、平日でご依頼ください。",
@@ -74,6 +87,16 @@ export const RESTAURANTS: Restaurant[] = [
     pick: "サラダバーが人気のアメリカンダイナー。バーガーもうまい。",
     blurb:
       "アメリカのカジュアルダイニングのチェーン。グアム・プレミア・アウトレットの中にあるので、お買い物の合間にも寄りやすいお店です。",
+    facts: [
+      {
+        text: "グアム・プレミア・アウトレットの敷地内にある、独立した建物のお店です。",
+        source: "Wikipedia（Guam Premier Outlets）",
+      },
+      {
+        text: "チェーンの看板は、50種類以上の具材が並ぶサラダバー（Garden Bar）です。",
+        source: "Ruby Tuesday の発表（米国の業界紙）",
+      },
+    ],
   },
   {
     id: "beachin-shrimp",
@@ -84,6 +107,12 @@ export const RESTAURANTS: Restaurant[] = [
     pick: "ガーリックシュリンプとスープパスタが大人気。メニューもリーズナブル。",
     blurb:
       "エビ料理のお店。タモンのザ・プラザのほか、アッパータモンのフレームツリー・プラザ、マイクロネシア・モールにもあります。ご希望の店舗をお知らせください。",
+    facts: [
+      {
+        text: "名物として紹介されることが多いのは、ガーリックシュリンプ（ガンバス・アル・アヒージョ）。エビをオリーブオイルとバター、たっぷりのニンニク、パプリカで炒めた一皿で、ライスとパンが付きます。",
+        source: "The Guam Guide／Guam Daily Post（オーナーへの取材）",
+      },
+    ],
   },
   {
     id: "crab-daddy",
@@ -94,6 +123,12 @@ export const RESTAURANTS: Restaurant[] = [
     pick: "テーブルに広げて、手づかみで豪快に食べるのが美味しい。",
     blurb:
       "カニやエビなどのシーフードを、ケイジャン風の味付けで楽しめるお店。タモンのホリデイ・リゾートとハガニアの2店があります。ご希望の店舗をお知らせください。",
+    facts: [
+      {
+        text: "注文は、カニ・エビ・ムール貝・イカ・ロブスターなどから具材を選び、ソースと辛さを選ぶシーフードボイルのスタイルです。ポーボーイ（サンドイッチ）や揚げ物もあります。",
+        source: "Guam Foody／Guam Daily Post",
+      },
+    ],
   },
   {
     id: "alfredos",
@@ -104,6 +139,10 @@ export const RESTAURANTS: Restaurant[] = [
     pick: "ワンランク上のステーキハウス。特別な日に。",
     blurb:
       "ホテル内のステーキハウス。グアムで唯一ドライエイジング・ビーフを出すお店だと、お店は説明しています。席数が60ほどと多くないので、早めのご依頼がおすすめです。",
+    // From the restaurant's own OpenTable listing (read 2026-10-15), not the
+    // owner. It decides whether a family booking can be taken at all.
+    bookingNote:
+      "2026年1月から、7歳以下のお子様は 17:00〜19:00 の間のみ入店できます。この時間以外は、7歳以下のお子様連れのご予約はお取りできません。",
   },
   {
     id: "roys",
@@ -114,8 +153,21 @@ export const RESTAURANTS: Restaurant[] = [
     pick: "ローカルに大人気のハワイアン・フュージョン・ダイニング。",
     blurb:
       "ハワイ発祥のレストラン。太平洋の食材とフランス料理の技法を合わせた、ハワイアン・フュージョン料理のお店です。",
+    facts: [
+      {
+        text: "看板メニューは、バターフィッシュ（白身魚）の味噌焼き「ミソヤキ・バターフィッシュ」と、チョコレート・スフレ。タモン湾を望むレストランです。",
+        source: "ヒルトン・グアム・リゾート＆スパ 公式サイト",
+      },
+    ],
   },
 ];
 
 // When the facts on the cards were last checked against public listings.
 export const RESTAURANTS_CHECKED_ON = "2026-09-18";
+
+// When the `facts` (store pages) were read from the sources they name.
+export const RESTAURANT_FACTS_CHECKED_ON = "2026-10-15";
+
+export function getRestaurant(id: string): Restaurant | undefined {
+  return RESTAURANTS.find((r) => r.id === id);
+}

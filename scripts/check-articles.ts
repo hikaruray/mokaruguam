@@ -215,8 +215,17 @@ for (const s of SPOTS as { slug: string; name: string; tagline: string; body: st
 // --- Restaurant recommendations (/dining) -----------------------------------
 // Page data again, so the same blind spot as spots.ts until it is read here.
 const { RESTAURANTS } = await load("restaurants.ts");
-for (const r of RESTAURANTS as { id: string; name: string; pick: string; blurb: string; area: string; bookingNote?: string }[]) {
-  const text = [r.name, r.area, r.pick, r.blurb, r.bookingNote ?? ""].join("\n");
+// `facts` (2026-10-15) are read too: they are page copy on /dining/[id].
+for (const r of RESTAURANTS as {
+  id: string;
+  name: string;
+  pick: string;
+  blurb: string;
+  area: string;
+  bookingNote?: string;
+  facts?: { text: string }[];
+}[]) {
+  const text = [r.name, r.area, r.pick, r.blurb, r.bookingNote ?? "", ...(r.facts ?? []).map((f) => f.text)].join("\n");
   const found = SPOT_BANNED.filter((p) => text.includes(p));
   check(
     found.length === 0,
