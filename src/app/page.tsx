@@ -9,6 +9,8 @@ import Booking from "@/components/Booking";
 import Footer from "@/components/Footer";
 import MobileCta from "@/components/MobileCta";
 import type { Metadata } from "next";
+import JsonLd from "@/components/JsonLd";
+import { organizationLd, websiteLd } from "@/lib/structured-data";
 
 // Title and description come from the layout defaults. Only the canonical is
 // set here: every other page declares one and the home page did not (found
@@ -21,6 +23,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <>
+      <JsonLd data={[organizationLd(), websiteLd()]} />
       <Header />
       <main className="pb-16 md:pb-0">
         <Hero />

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import PageShell from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { OG_IMAGE } from "@/lib/images";
+import JsonLd from "@/components/JsonLd";
+import { articleLd, breadcrumbLd } from "@/lib/structured-data";
 import {
   LEGACY_SLUGS,
   getLegacyArticle,
@@ -79,6 +81,18 @@ export default async function LegacyArticlePage({
 
   return (
     <PageShell>
+      <JsonLd
+        data={[
+          articleLd({
+            title: article.title,
+            path: `/${slug}`,
+            datePublished: article.date,
+            dateModified: article.modified,
+            image: OG_IMAGE.url,
+          }),
+          breadcrumbLd([{ name: article.title, path: `/${slug}` }]),
+        ]}
+      />
       <article className="mx-auto max-w-3xl px-5 py-12">
         <div className="text-xs font-bold uppercase tracking-[0.14em] text-brand">
           Guam Guide

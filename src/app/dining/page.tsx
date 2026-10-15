@@ -3,6 +3,8 @@ import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { OG_IMAGE } from "@/lib/images";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbLd, itemListLd } from "@/lib/structured-data";
 import { RESTAURANT_FEE } from "@/lib/pricing";
 import { RESTAURANTS, RESTAURANTS_CHECKED_ON } from "@/lib/restaurants";
 
@@ -32,6 +34,12 @@ export const metadata: Metadata = {
 export default function DiningPage() {
   return (
     <PageShell>
+      <JsonLd
+        data={[
+          breadcrumbLd([{ name: "おすすめレストラン", path: "/dining" }]),
+          itemListLd(RESTAURANTS.map((r) => ({ name: r.nameJa, path: `/dining/${r.id}` }))),
+        ]}
+      />
       <PageHero
         eyebrow="Mokaru's picks"
         title="Mokaruおすすめのレストラン"

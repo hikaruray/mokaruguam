@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import PageShell from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { OG_IMAGE, photoFor } from "@/lib/images";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbLd } from "@/lib/structured-data";
 import { PARTNER_CANCEL_POLICY } from "@/lib/config";
 import {
   PARTNERS_WITH_PAGE,
@@ -57,6 +59,12 @@ export default async function PartnerPage({
 
   return (
     <PageShell>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "できること・料金", path: "/plans" },
+          { name: p.company, path: `/plans/${p.id}` },
+        ])}
+      />
       {d.photo ? (
         <div className="relative aspect-[16/9] w-full overflow-hidden sm:aspect-[21/9]">
           <Image

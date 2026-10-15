@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import PageShell from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { SPOTS, getSpot, spotHero } from "@/lib/spots";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbLd } from "@/lib/structured-data";
 
 // Pre-render every spot page at build time.
 export function generateStaticParams() {
@@ -46,6 +48,12 @@ export default async function SpotPage({
 
   return (
     <PageShell>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "人気スポット", path: "/spots" },
+          { name: spot.name, path: `/spots/${spot.slug}` },
+        ])}
+      />
       {/* Hero image */}
       <div className="relative aspect-[16/9] w-full overflow-hidden sm:aspect-[21/9]">
         <Image

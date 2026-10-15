@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import PageShell from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { OG_IMAGE } from "@/lib/images";
+import JsonLd from "@/components/JsonLd";
+import { breadcrumbLd } from "@/lib/structured-data";
 import { RESTAURANT_FEE } from "@/lib/pricing";
 import {
   RESTAURANTS,
@@ -63,6 +65,13 @@ export default async function RestaurantPage({
 
   return (
     <PageShell>
+      {/* Breadcrumb only — no Restaurant markup, see lib/structured-data.ts. */}
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "おすすめレストラン", path: "/dining" },
+          { name: r.nameJa, path: `/dining/${r.id}` },
+        ])}
+      />
       <section className="border-b border-line bg-white">
         <div className="mx-auto max-w-5xl px-5 py-12">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand">
