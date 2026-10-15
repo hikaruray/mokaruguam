@@ -32,6 +32,9 @@ export interface CancelResult {
   alreadyCancelled: boolean;
   refund: { rate: number; amount: number; tier: string } | null;
   booking: BookingRequest;
+  // Whether the cancellation email reached the guest. null when none was sent
+  // (already cancelled). The cancellation itself stands either way.
+  mailDelivered: boolean | null;
 }
 
 // Cancel a booking by id. `mode`:
@@ -58,6 +61,7 @@ export async function cancelBooking(
             }
           : null,
       booking,
+      mailDelivered: null,
     };
   }
 
@@ -123,12 +127,12 @@ export async function cancelBooking(
   // is confirmed in writing, not just on-screen. Best-effort — a mail failure
   // must not fail the cancellation itself.
   const mail = cancelledEmail(updated, refund);
-  await sendMail({
+  const { delivered } = await sendMail({
     to: updated.email,
     subject: mail.subject,
     text: mail.text,
     bccOwner: true,
   });
 
-  return { ok: true, alreadyCancelled: false, refund, booking: updated };
+  return { ok: true, alreadyCancelled: false, refund, booking: updated, mailDelivered: delivered };
 }

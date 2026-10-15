@@ -75,7 +75,11 @@ export async function POST(request: Request) {
       if (!result) {
         return Response.json({ error: "Booking not found." }, { status: 404 });
       }
-      return Response.json({ ok: true, refund: result.refund });
+      return Response.json({
+        ok: true,
+        refund: result.refund,
+        mailDelivered: result.mailDelivered,
+      });
     } catch (err) {
       console.error("Cancel failed:", err);
       return Response.json(
@@ -335,8 +339,9 @@ export async function POST(request: Request) {
     if (action === "confirm") {
       if (hasAuthorization) {
         let captureId: string;
+        let captureStatus: string;
         try {
-          ({ captureId } = await captureAuthorization(
+          ({ captureId, status: captureStatus } = await captureAuthorization(
             booking.paypalAuthorizationId!,
           ));
         } catch (err) {
@@ -365,6 +370,37 @@ export async function POST(request: Request) {
           }
           throw err;
         }
+
+        // 🔴 Gate 4 (2026-10-15): only a COMPLETED capture is money received.
+        // Before this, a DECLINED or PENDING capture was recorded as captured,
+        // the booking confirmed, and the guest emailed「手配料 $10（お支払い
+        // 済み）」— a payment-received notice for money that had not arrived.
+        // Nothing is written and no mail goes out on either branch below; the
+        // booking stays pending with its authorization as it was.
+        if (captureStatus === "PENDING") {
+          // Under PayPal review. The money will most likely arrive; pressing
+          // 確定 again later reaches the already-captured path above, which
+          // re-reads this capture's status and lets it through once COMPLETED.
+          return Response.json(
+            {
+              error: `PayPalが手配料の受け取りを審査中です（PENDING）。まだ確定していません。お客様へのメールも送っていません。\nPayPalの管理画面でこの支払いが完了したのを確認してから、もう一度「確定」を押してください。（capture: ${captureId}）`,
+            },
+            { status: 409 },
+          );
+        }
+        if (captureStatus !== "COMPLETED") {
+          // DECLINED / FAILED: nothing was taken. /repay asks PayPal whether
+          // the hold is still alive before it offers anything, so the link is
+          // safe to hand on whatever state the authorization is in now.
+          const link = repayUrl(booking.id, SITE_URL);
+          return Response.json(
+            {
+              error: `カード会社が手配料の受け取りを拒否しました（${captureStatus}）。確定していません。お客様へのメールも送っていません。\nお店へのご予約はお控えのうえ、お客様に下記のリンクから再度のお手続きをご案内してください。\n${link}`,
+            },
+            { status: 409 },
+          );
+        }
+
         await setBookingPayment(id, {
           payment: "captured",
           paypalCaptureId: captureId,
@@ -408,25 +444,23 @@ export async function POST(request: Request) {
   // between: no written record of what was actually promised to the guest, on
   // the one step that commits a guide and a vehicle to a date. Owner request,
   // 2026-08-30.
-  if (action === "confirm") {
-    // The amount charged, as snapshotted at request time — so the email always
-    // matches the customer's card statement even after a price change.
-    const mail = confirmedEmail(booking, chargedAmount(booking));
-    await sendMail({
-      to: booking.email,
-      subject: mail.subject,
-      text: mail.text,
-      bccOwner: true,
-    });
-  } else {
-    const mail = declinedEmail(booking);
-    await sendMail({
-      to: booking.email,
-      subject: mail.subject,
-      text: mail.text,
-      bccOwner: true,
-    });
-  }
+  //
+  // The money step above has already happened, so a failed mail does not undo
+  // it — but the owner is told (mailDelivered: false → an alert in Admin),
+  // because a confirmed guest who never hears back is the complaint this site
+  // can least afford, and until 2026-10-15 a failed send looked like a sent one.
+  const mail =
+    action === "confirm"
+      ? // The amount charged, as snapshotted at request time — so the email
+        // always matches the customer's card statement even after a price change.
+        confirmedEmail(booking, chargedAmount(booking))
+      : declinedEmail(booking);
+  const { delivered } = await sendMail({
+    to: booking.email,
+    subject: mail.subject,
+    text: mail.text,
+    bccOwner: true,
+  });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, mailDelivered: delivered });
 }

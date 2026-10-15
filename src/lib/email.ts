@@ -27,7 +27,12 @@ export async function sendMail(opts: {
 
   try {
     const resend = new Resend(apiKey);
-    await resend.emails.send({
+    // 🔴 Resend does NOT throw on failure — a bad key, an unverified domain and
+    // even a network error all come back as `{ error }` (measured 2026-10-15:
+    // an invalid key returned `API key is invalid` with no exception). Until
+    // this line read `error`, every failed send in the site reported
+    // delivered: true, which also disarmed every caller that checks it.
+    const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: opts.to,
       bcc: opts.bccOwner ? OWNER_COPY_EMAIL : undefined,
@@ -35,6 +40,10 @@ export async function sendMail(opts: {
       subject: opts.subject,
       text: opts.text,
     });
+    if (error) {
+      console.error("Email send failed:", { to: opts.to, subject: opts.subject, error });
+      return { delivered: false };
+    }
     return { delivered: true };
   } catch (err) {
     // Never let an email failure break the booking/cancellation flow.

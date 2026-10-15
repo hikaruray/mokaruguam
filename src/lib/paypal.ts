@@ -235,10 +235,29 @@ export async function getAuthorization(authorizationId: string): Promise<{
   return { status: data.status, captureId };
 }
 
+// Read a capture back — its own status, which is the one that says whether
+// the money actually arrived.
+export async function getCaptureStatus(captureId: string): Promise<string> {
+  const data = await api<{ status: string }>(
+    `/v2/payments/captures/${captureId}`,
+    "GET",
+    undefined,
+    2,
+  );
+  return data.status;
+}
+
 // Capture a previously created authorization (予約確定 → 課金確定).
 // IDEMPOTENT: if PayPal reports it was already captured, we look the existing
 // capture up and return it as success, so a retry reconciles the DB instead of
 // erroring.
+//
+// 🔴 `status` is the CAPTURE's status: COMPLETED is money received; PENDING
+// (under review) and DECLINED / FAILED are not. A capture call can succeed as
+// an HTTP request and still not be money. Until 2026-10-15 the caller ignored
+// this field, and on the already-captured path it held the AUTHORIZATION's
+// status ("CAPTURED"), which reads like success even when the capture itself is
+// still pending — so both paths now report the capture's own status.
 export async function captureAuthorization(
   authorizationId: string,
 ): Promise<{ captureId: string; status: string; alreadyDone: boolean }> {
@@ -259,7 +278,7 @@ export async function captureAuthorization(
       if (existing.captureId) {
         return {
           captureId: existing.captureId,
-          status: existing.status,
+          status: await getCaptureStatus(existing.captureId),
           alreadyDone: true,
         };
       }

@@ -1,10 +1,5 @@
-import { Resend } from "resend";
-import {
-  FROM_EMAIL,
-  CONTACT_EMAIL,
-  OWNER_COPY_EMAIL,
-  SITE_URL,
-} from "@/lib/config";
+import { CONTACT_EMAIL, SITE_URL } from "@/lib/config";
+import { sendMail } from "@/lib/email";
 import { addBooking, refLabel } from "@/lib/store";
 import { PLANS, amountForRequest } from "@/lib/pricing";
 import {
@@ -488,47 +483,44 @@ export async function POST(request: Request) {
     `— Mokaru Guam`,
   ].join("\n");
 
-  const apiKey = process.env.RESEND_API_KEY;
-
-  // Until the sending key is configured at launch, log so nothing is lost.
-  if (!apiKey) {
-    console.log(
-      "[BOOKING — email not configured]\n--- BUSINESS ---\n" +
-        bizText +
-        "\n--- CUSTOMER ---\n" +
-        custText,
-    );
-    return Response.json({ ok: true, delivered: false, authorized, amount: authorizedAmount, planId: planId ?? "" });
-  }
-
-  try {
-    const resend = new Resend(apiKey);
-    // Business notification.
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: CONTACT_EMAIL,
-      bcc: OWNER_COPY_EMAIL,
-      replyTo: email,
-      subject: bizSubject,
-      text: bizText,
+  // 🔴 Through sendMail(), which reads Resend's `{ error }`. This route used to
+  // call Resend directly inside a try/catch — but Resend never throws, so a
+  // failed send of either mail was reported as delivered (2026-10-15 audit).
+  // The request is saved by now, so neither failure fails the request; each is
+  // reported separately because they matter to different people:
+  //   • the owner notice failing means nobody knows to start — the
+  //     pending-requests cron is the backstop for that;
+  //   • the guest copy failing means the guest's screen must not claim that an
+  //     email was sent, and has to give them the reference number instead.
+  const owner = await sendMail({
+    to: CONTACT_EMAIL,
+    replyTo: email,
+    subject: bizSubject,
+    text: bizText,
+    bccOwner: true,
+  });
+  const guest = await sendMail({
+    to: email,
+    subject: custSubject,
+    text: custText,
+  });
+  if (!owner.delivered || !guest.delivered) {
+    console.error("[booking] saved, but a notification was not delivered", {
+      ref: refLabel(saved),
+      ownerNotified: owner.delivered,
+      guestNotified: guest.delivered,
     });
-    // Customer confirmation (best-effort; a failure here shouldn't fail the request).
-    try {
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: email,
-        replyTo: CONTACT_EMAIL,
-        subject: custSubject,
-        text: custText,
-      });
-    } catch (custErr) {
-      console.error("Failed to send customer confirmation:", custErr);
-    }
-    return Response.json({ ok: true, delivered: true, authorized, amount: authorizedAmount, planId: planId ?? "" });
-  } catch (err) {
-    console.error("Failed to send booking email:", err);
-    // The request is already saved to the store, so report success to the user;
-    // the owner can still see it in the Admin dashboard.
-    return Response.json({ ok: true, delivered: false, authorized, amount: authorizedAmount, planId: planId ?? "" });
   }
+
+  return Response.json({
+    ok: true,
+    // `delivered` is the GUEST's confirmation — it is what the success screen
+    // tells them they received.
+    delivered: guest.delivered,
+    ownerNotified: owner.delivered,
+    ref: refLabel(saved),
+    authorized,
+    amount: authorizedAmount,
+    planId: planId ?? "",
+  });
 }

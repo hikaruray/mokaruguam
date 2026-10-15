@@ -72,6 +72,11 @@ export default function BookingForm() {
   const [error, setError] = useState("");
   const [sentType, setSentType] = useState<RequestType>("tour");
   const [paid, setPaid] = useState(false); // true when the request was authorized
+  // Whether the confirmation email actually went out, and the reference number
+  // to show when it did not (2026-10-15). The screen used to say「確認メールを
+  // お送りしました」unconditionally.
+  const [mailSent, setMailSent] = useState(true);
+  const [ref, setRef] = useState("");
   const [payStep, setPayStep] = useState<FormValues | null>(null);
   const [requestType, setRequestType] = useState<RequestType | null>(null);
   const [fallbackChoice, setFallbackChoice] = useState<"cancel" | "suggest" | "">("");
@@ -182,6 +187,8 @@ export default function BookingForm() {
           return;
         }
         setPaid(Boolean(data.authorized));
+        setMailSent(data.delivered !== false);
+        setRef(typeof data.ref === "string" ? data.ref : "");
         setSentType(values.requestType);
         trackBookingRequest(values, data);
         setState("sent");
@@ -274,8 +281,32 @@ export default function BookingForm() {
               「お取りできなかった場合は料金をいただきません」, reads as "you can
               back out free at any time". That is true right up until the table
               is held, and false afterwards — which is the moment it matters. */}
+          {!mailSent && (
+            // The request is saved and (on the restaurant path) the hold is
+            // placed — only the email failed. Say exactly that, and give them
+            // the one thing that lets us find their request without the mail.
+            <li className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+              ⚠️ ご依頼は受け付けましたが、<b>確認メールを送信できませんでした</b>。
+              {ref && (
+                <>
+                  受付番号 <b>{ref}</b> を控えて、
+                </>
+              )}
+              お手数ですが{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold underline">
+                {CONTACT_EMAIL}
+              </a>{" "}
+              までご連絡ください。メールアドレスの入力間違いの可能性もあります。
+            </li>
+          )}
           <li>
-            🧾 確認メールをお送りしました。メール内の<b className="text-ink">キャンセルリンク</b>からキャンセルいただけます。
+            {mailSent ? (
+              <>
+                🧾 確認メールをお送りしました。メール内の<b className="text-ink">キャンセルリンク</b>からキャンセルいただけます。
+              </>
+            ) : (
+              <>🧾 キャンセルをご希望の場合も、上記のアドレスまでご連絡ください。</>
+            )}
             {restaurant && (
               <>
                 {" "}

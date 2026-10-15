@@ -1021,6 +1021,64 @@ try {
     "capture succeeds -> confirmed, captured, capture id saved",
     `HTTP ${okRes.status}, ${okRow?.status}, ${okRow?.payment}, ${okRow?.paypalCaptureId}`,
   );
+
+  console.log("\n--- Gate 4: only a COMPLETED capture confirms (2026-10-15) ---");
+
+  // The capture CALL succeeds but the capture is not money. Before gate 4 both
+  // of these confirmed the booking and emailed「手配料 $10（お支払い済み）」.
+  for (const capStatus of ["PENDING", "DECLINED"]) {
+    const row = await seed({ requestType: "restaurant", partnerName: "Proa", amount: 10 });
+    await setBookingAuthorization(row.id, { paypalOrderId: `ORD-${capStatus}`, paypalAuthorizationId: `AUTH-${capStatus}` });
+    stubReply = () => new Response(JSON.stringify({ id: `CAP-${capStatus}`, status: capStatus }), { status: 201 });
+    const res = await admin(row.id, "confirm");
+    const after = await getBooking(row.id);
+    check(
+      res.status === 409 && after?.status === "pending" && after?.payment === "authorized" && !after?.paypalCaptureId,
+      `capture comes back ${capStatus} -> 409, still pending, not recorded as captured`,
+      `HTTP ${res.status}, ${after?.status}, ${after?.payment}, capture=${after?.paypalCaptureId ?? "none"}`,
+    );
+  }
+
+  // The retry path: PayPal says the authorization was already captured. The
+  // status that decides it must be the CAPTURE's (read back), not the
+  // authorization's "CAPTURED", which looks like success while the capture is
+  // still under review.
+  let captureState = "PENDING";
+  const retryRow = await seed({ requestType: "restaurant", partnerName: "Proa", amount: 10 });
+  await setBookingAuthorization(retryRow.id, { paypalOrderId: "ORD-RETRY", paypalAuthorizationId: "AUTH-RETRY" });
+  stubReply = (url) => {
+    if (url.endsWith("/authorizations/AUTH-RETRY/capture")) {
+      return new Response(
+        JSON.stringify({ name: "UNPROCESSABLE_ENTITY", details: [{ issue: "AUTHORIZATION_ALREADY_CAPTURED" }] }),
+        { status: 422 },
+      );
+    }
+    if (url.endsWith("/authorizations/AUTH-RETRY")) {
+      return new Response(
+        JSON.stringify({ status: "CAPTURED", supplementary_data: { related_ids: { capture_ids: ["CAP-RETRY"] } } }),
+        { status: 200 },
+      );
+    }
+    if (url.endsWith("/captures/CAP-RETRY")) {
+      return new Response(JSON.stringify({ id: "CAP-RETRY", status: captureState }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ name: "NOT_STUBBED" }), { status: 500 });
+  };
+  const retryPending = await admin(retryRow.id, "confirm");
+  const rp = await getBooking(retryRow.id);
+  check(
+    retryPending.status === 409 && rp?.status === "pending" && rp?.payment === "authorized",
+    "already captured but the capture is PENDING -> 409, still pending",
+    `HTTP ${retryPending.status}, ${rp?.status}, ${rp?.payment}`,
+  );
+  captureState = "COMPLETED";
+  const retryDone = await admin(retryRow.id, "confirm");
+  const rd = await getBooking(retryRow.id);
+  check(
+    retryDone.status === 200 && rd?.status === "confirmed" && rd?.payment === "captured" && rd?.paypalCaptureId === "CAP-RETRY",
+    "pressing 確定 again once the capture COMPLETED -> confirmed with that capture id",
+    `HTTP ${retryDone.status}, ${rd?.status}, ${rd?.payment}, ${rd?.paypalCaptureId}`,
+  );
 } finally {
   // Back to refusing everything.
   stubReply = null;
@@ -1447,6 +1505,50 @@ check(
   "the legacy charter confirmation does NOT claim there is no fee",
   "absent",
 );
+
+console.log("\n--- A failed email is reported as failed (2026-10-15) ---");
+
+// Resend never throws: a bad key, an unverified domain and a dead network all
+// come back as `{ error }`. Here the network is dead — the fetch stub refuses
+// anything outside the PayPal sandbox — so Resend returns an error object, and
+// sendMail must report it. Before 2026-10-15 it reported delivered: true, and
+// so did every route built on it.
+{
+  const { sendMail } = await import("@/lib/email");
+  process.env.RESEND_API_KEY = "re_check_gates_not_a_key";
+  try {
+    const r = await sendMail({ to: "gate-check@example.invalid", subject: "x", text: "x" });
+    check(r.delivered === false, "sendMail with an unreachable Resend -> delivered: false", `delivered=${r.delivered}`);
+
+    // And the request route passes that through to the guest's screen.
+    const res = await bookingPost(
+      new Request("http://localhost/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-forwarded-for": "10.0.0.250" },
+        body: JSON.stringify({
+          requestType: "tour",
+          partnerName: "Joe's Jet Ski",
+          name: "検証",
+          email: "gate-check@example.invalid",
+          phone: "090-0000-0000",
+          preferredDate: requestDate,
+          hotel: "未定",
+          adults: 2,
+          children4to11: 0,
+          children0to3: 0,
+        }),
+      }),
+    );
+    const data = await res.json();
+    check(
+      res.status === 200 && data.delivered === false && data.ownerNotified === false && typeof data.ref === "string" && data.ref !== "",
+      "request saved but mail failed -> delivered:false, ownerNotified:false, ref returned",
+      `HTTP ${res.status}, delivered=${data.delivered}, ownerNotified=${data.ownerNotified}, ref=${data.ref}`,
+    );
+  } finally {
+    delete process.env.RESEND_API_KEY;
+  }
+}
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

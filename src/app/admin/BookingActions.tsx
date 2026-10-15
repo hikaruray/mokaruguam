@@ -114,6 +114,14 @@ export default function BookingActions({
         setErr(data.error || "処理に失敗しました。もう一度お試しください。");
         return;
       }
+      // The money step succeeded; the mail telling the guest about it may not
+      // have. An alert, not the red note, because refresh() redraws this row.
+      const data = await res.json().catch(() => ({}));
+      if (data.mailDelivered === false) {
+        alert(
+          "処理は完了しましたが、お客様へのメールを送信できませんでした。\nお客様へ直接ご連絡ください（送信元の設定・Resendの状態もご確認ください）。",
+        );
+      }
       router.refresh();
     } catch {
       setErr("通信エラーが発生しました。もう一度お試しください。");
