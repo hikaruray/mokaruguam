@@ -7,7 +7,8 @@ import { RESTAURANT_FEE } from "@/lib/pricing";
 import { PARTNERS, partnerRequestLabel } from "@/lib/partners";
 
 export const metadata: Metadata = {
-  title: "できること・料金",
+  // Search title (2026-10-15, A2). The page's own H1 stays「できること・料金」.
+  title: "グアムのレストラン予約代行・ツアー手配の料金",
   description:
     "グアムのレストラン予約代行は1件$10、お取りできなければ料金はいただきません。アクティビティ・ツアーの手配は当社へのお支払いなし。渡航前に日本語だけで手配が終わります。",
   alternates: { canonical: "/plans" },

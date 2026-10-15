@@ -9,12 +9,19 @@ import { RESTAURANTS, RESTAURANTS_CHECKED_ON } from "@/lib/restaurants";
 // Not /restaurants: that URL is a 2025 legacy article that still draws search
 // traffic, and after the 2026-07-16 DNS switch 404'd 125 of them, no live URL
 // gets taken over without the owner deciding to.
+//
+// Title and description were reworded 2026-10-15 for search (A2): the old title
+// had neither「グアム」nor「予約」, the two words every query for this page
+// contains. Store names come from the data, so a store removed from
+// lib/restaurants.ts also leaves the search snippet. The H1 is unchanged.
+const STORE_NAMES = RESTAURANTS.map((r) => r.nameJa.replace(/・ステーキハウス$/, "")).join("、");
+
 export const metadata: Metadata = {
-  title: "Mokaruおすすめのレストラン",
-  description: `グアム在住のMokaruスタッフがおすすめするレストラン。ステーキ・シーフード・ハワイアンなど。予約は日本語で代行します（1件$${RESTAURANT_FEE}、お取りできなければ料金はいただきません）。`,
+  title: "グアムのおすすめレストラン｜日本語で予約代行",
+  description: `グアム在住のMokaruスタッフがおすすめするレストラン${RESTAURANTS.length}店（${STORE_NAMES}）。予約は日本語で代行します（1件$${RESTAURANT_FEE}、お取りできなければ料金はいただきません）。`,
   alternates: { canonical: "/dining" },
   openGraph: {
-    title: "Mokaruおすすめのレストラン｜Mokaru Guam",
+    title: "グアムのおすすめレストラン｜Mokaru Guam",
     description: `グアム在住スタッフのおすすめ。予約は日本語で代行（1件$${RESTAURANT_FEE}）。`,
     url: "/dining",
     type: "website",
