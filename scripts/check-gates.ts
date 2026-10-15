@@ -124,11 +124,26 @@ const post = (url: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
+// Guam calendar days from today, as refundDecision and the past-date gate
+// count them.
+const guamInDays = (n: number) => {
+  const g = new Date(Date.now() + 10 * 3600_000);
+  return new Date(Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate() + n))
+    .toISOString()
+    .slice(0, 10);
+};
+
+// 🔴 Relative, not a literal. This was "2026-10-20" until that date was about
+// to pass: from 10-21 every request below would have been refused as a past
+// date, and the tour that must go through would have failed for a reason that
+// has nothing to do with the gate it tests.
+const requestDate = `${guamInDays(5)} 18:00`;
+
 const baseRequest = {
   name: "検証 太郎",
   email: "gate-check@example.invalid",
   phone: "090-0000-0000",
-  preferredDate: "2026-10-20 18:00",
+  preferredDate: requestDate,
   hotel: "未定",
   guests: 2,
   adults: 2,
@@ -410,11 +425,17 @@ check(
   `${saved.length} rows, all tours`,
 );
 
-// The tour above was dated 2026-10-20 on purpose. The charter cutoff rejected
-// anything after 2026-09-30 without looking at the request type, and every date
-// the new business handles is after it — so its removal is load-bearing, not
-// tidying. If this file ever starts failing at the assertion above with a
-// message about ガイドツアー, the cutoff has come back.
+// The tour above is dated after 2026-09-30 on purpose. The charter cutoff
+// rejected anything after that without looking at the request type, and every
+// date the new business handles is after it — so its removal is load-bearing,
+// not tidying. If this file ever starts failing at the assertion above with a
+// message about ガイドツアー, the cutoff has come back. The date is relative
+// now, so assert it is still on the far side of the old cutoff.
+check(
+  requestDate > "2026-09-30",
+  "the request date is after the old charter cutoff",
+  requestDate,
+);
 
 console.log("\n--- The form sends what the server demands ---");
 
@@ -478,7 +499,7 @@ const seed = async (over: Record<string, unknown>) =>
     cuisineHint: "",
     planId: "middle",
     planName: "5時間プラン",
-    preferredDate: "2026-10-20 18:00",
+    preferredDate: requestDate,
     hotel: "未定",
     guests: 2,
     spots: "",
@@ -875,13 +896,6 @@ console.log("\n--- Money that DOES move, with PayPal answered by a stub ---");
 // error parsing. Only the far end is fake. Outside this block the stub refuses
 // every request.
 
-// Guam calendar days from today, as refundDecision counts them.
-const guamInDays = (n: number) => {
-  const g = new Date(Date.now() + 10 * 3600_000);
-  return new Date(Date.UTC(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate() + n))
-    .toISOString()
-    .slice(0, 10);
-};
 const refundCalls = () => calls.filter((c) => c.url.includes("/refund"));
 
 try {
