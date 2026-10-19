@@ -263,5 +263,45 @@ for (const p of PARTNERS as {
   );
 }
 
+// --- AI search copy: /llms.txt and article summaries (2026-10-19) ----------
+// lib/ai-search.ts repeats the terms of service to every AI that reads
+// /llms.txt. It is allowed to do that only by quoting /legal, /faq and /about
+// word for word, so when one of those pages is reworded this fails until the
+// quote is replaced with the new wording.
+{
+  const { readFileSync } = await import("node:fs");
+  const root = dirname(import.meta.dirname);
+  const { ALL_QUOTED, ARTICLE_SUMMARIES, ENDED_SERVICE_LINE, llmsTxt } = await load("ai-search.ts");
+  const { RESTAURANT_FEE } = await load("pricing.ts");
+
+  for (const q of ALL_QUOTED as { text: string; source: string; q?: string }[]) {
+    const src = readFileSync(join(root, q.source), "utf8");
+    check(src.includes(q.text), `llms.txt quote still on ${q.source}`, q.text.slice(0, 40));
+    if (q.q) check(src.includes(q.q), `llms.txt question still on ${q.source}`, q.q);
+  }
+
+  const llms = (llmsTxt as () => string)();
+  check(llms.includes(`$${RESTAURANT_FEE}`), "llms.txt states RESTAURANT_FEE", `$${RESTAURANT_FEE}`);
+  // The one past-tense sentence saying the charter ended is excused, as one
+  // exact sentence — the same rule as an Allowance above.
+  const scanned = llms.replace((ENDED_SERVICE_LINE as { text: string }).text, "");
+  const llmsFound = BANNED.map(([phrase]) => phrase).filter((p) => scanned.includes(p));
+  check(
+    llmsFound.length === 0,
+    "llms.txt promises no ended service",
+    llmsFound.length === 0 ? "clean" : llmsFound.join(", "),
+  );
+
+  for (const [slug, s] of Object.entries(
+    ARTICLE_SUMMARIES as Record<string, { lines: string[] }>,
+  )) {
+    const a = get(slug);
+    const text = (a?.html ?? "").replace(/<[^>]+>/g, "").replace(/\s+/g, "");
+    for (const line of s.lines) {
+      check(text.includes(line.replace(/\s+/g, "")), `summary line is the article's own: ${slug}`, line);
+    }
+  }
+}
+
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);
