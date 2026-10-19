@@ -151,14 +151,18 @@ export default async function AdminPage() {
                           ? "bg-orange-100 text-orange-800"
                           : b.requestType === "tour"
                             ? "bg-sky-100 text-sky-800"
-                            : "bg-slate-200 text-slate-600"
+                            : b.requestType === "arrange"
+                              ? "bg-violet-100 text-violet-800"
+                              : "bg-slate-200 text-slate-600"
                       }`}
                     >
                       {b.requestType === "restaurant"
                         ? "レストラン $10"
                         : b.requestType === "tour"
                           ? "ツアー手配（無料）"
-                          : "旧・貸切（9/30まで）"}
+                          : b.requestType === "arrange"
+                            ? "提携外ツアー $25（報告で確定）"
+                            : "旧・貸切（9/30まで）"}
                     </span>
                     <p className="font-medium">{b.partnerName || b.planName}</p>
                     <p className="text-xs text-slate-400">希望：{b.preferredDate}</p>

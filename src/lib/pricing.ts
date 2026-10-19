@@ -285,9 +285,11 @@ export function refundRateForDate(
 // the server was supposed to get that $10 from; this is that missing piece.
 
 // USD, per booking. Flat — see amountForRequest for why it is not per guest.
-export const RESTAURANT_FEE = 10;
-
-export type RequestType = "tour" | "restaurant";
+// Defined in lib/request-types.ts with the other per-type facts; re-exported
+// here because the pages already import it from pricing.
+import { RESTAURANT_FEE, ARRANGE_FEE, type RequestType } from "./request-types";
+export { RESTAURANT_FEE, ARRANGE_FEE };
+export type { RequestType };
 
 export interface RequestAmount {
   amount: number;
@@ -324,6 +326,21 @@ export function amountForRequest(
       referenceId: "mokaru-restaurant",
       guests: g,
       peak: false, // peak season changes tour pricing; the arrangement fee is flat
+    };
+  }
+
+  if (requestType === "arrange") {
+    // A tour we have no partnership with (2026-10-19). Flat $25 for up to three
+    // exchanges with the operator — the work of asking in English, which costs
+    // the same whatever the party size. Held now, captured when the first
+    // report goes out (admin "report" action), never per guest.
+    const g = Math.min(MAX_GUESTS, Math.max(1, Math.floor(Number(guests) || 1)));
+    return {
+      amount: ARRANGE_FEE,
+      label: "ツアーお問い合わせ・予約代行",
+      referenceId: "mokaru-arrange",
+      guests: g,
+      peak: false,
     };
   }
 

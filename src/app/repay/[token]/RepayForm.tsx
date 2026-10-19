@@ -13,10 +13,14 @@ type State = "idle" | "saving" | "done" | "error";
 export default function RepayForm({
   token,
   amount,
+  isArrange = false,
 }: {
   token: string;
   amount: number;
+  // Arrange (2026-10-19): captured at the first report, not when a table is held.
+  isArrange?: boolean;
 }) {
+  const feeLabel = isArrange ? "代行料" : "手配料";
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
 
@@ -72,10 +76,12 @@ export default function RepayForm({
           お手続きを承りました
         </div>
         <p className="mt-2 text-emerald-800">
-          手配料 ${amount.toFixed(2)} をお預かり（仮押さえ）しました。まだ請求されていません。
+          {feeLabel} ${amount.toFixed(2)} をお預かり（仮押さえ）しました。まだ請求されていません。
         </p>
         <p className="mt-2 text-emerald-800">
-          これからお店へお席の確保をご依頼します。結果はメールでご連絡します。お席をご用意できなかった場合は仮押さえを解除し、料金は発生しません。
+          {isArrange
+            ? "これから実施会社へお問い合わせします。結果はメールでご報告します。1回目のご報告をお送りした時点でお支払いが確定します。"
+            : "これからお店へお席の確保をご依頼します。結果はメールでご連絡します。お席をご用意できなかった場合は仮押さえを解除し、料金は発生しません。"}
         </p>
       </div>
     );
@@ -94,7 +100,7 @@ export default function RepayForm({
   return (
     <div className="mt-6 rounded-2xl border border-line bg-white p-5">
       <p className="text-sm font-bold text-ink">
-        手配料 ${amount.toFixed(2)} のお支払い手続き
+        {feeLabel} ${amount.toFixed(2)} のお支払い手続き
       </p>
       <div className="mt-4">
         <PaypalCheckout

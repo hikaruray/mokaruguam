@@ -27,7 +27,10 @@ export const FIELD_LIMITS = {
   preferredDate: 100,
   hotel: 200,
   spots: 1000,
-  notes: 1000,
+  // 1000 typed by the guest + the arrange pattern line the form prepends
+  // (「【3回の使い方】A：…」, about 30 characters). Without the headroom a guest
+  // who fills the box would be refused for text they never typed.
+  notes: 1100,
   partnerName: 200,
   budgetHint: 100,
   cuisineHint: 100,

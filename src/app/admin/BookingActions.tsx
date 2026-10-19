@@ -43,6 +43,9 @@ export default function BookingActions({
   const [proposal, setProposal] = useState("");
   const [venue, setVenue] = useState("");
   const canPropose = requestType === "restaurant" && fallbackChoice === "suggest";
+  // Arrange (2026-10-19): captured by "report", never "confirm" — the guest
+  // must not be told「お手配が完了しました」when only a first report went out.
+  const isArrange = requestType === "arrange";
 
   // Mails that change nothing on the booking: 送客メール and the two status
   // mails. One path, so all three report failure and success the same way.
@@ -77,7 +80,18 @@ export default function BookingActions({
     }
   }
 
-  async function act(action: "confirm" | "decline" | "cancel" | "cancel-full") {
+  async function act(action: "confirm" | "report" | "decline" | "cancel" | "cancel-full") {
+    if (action === "report") {
+      const ok = confirm(
+        [
+          "1回目のご報告（空き・料金・支払い方法・実施会社のキャンセル規定）をお客様にメールで送りましたか？",
+          "",
+          "押すと代行料を確定（カードから請求）し、お客様に「1回目のご報告をお送りしました（代行料を確定しました）」メールを送ります。",
+          "このあとのキャンセルでは代行料は返金されません。実行しますか？",
+        ].join("\n"),
+      );
+      if (!ok) return;
+    }
     if (action === "confirm" && venue.trim()) {
       if (!confirm(`「${venue.trim()}」で確定します。\nお客様への確定メールにはこのお店の名前が載ります。実行しますか？`)) return;
     }
@@ -145,11 +159,11 @@ export default function BookingActions({
       <span className="inline-flex flex-col items-end">
         <span className="inline-flex gap-2">
           <button
-            onClick={() => act("confirm")}
+            onClick={() => act(isArrange ? "report" : "confirm")}
             disabled={busy}
             className="rounded-md bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-100 disabled:opacity-50"
           >
-            確定
+            {isArrange ? "1回目の報告を送った" : "確定"}
           </button>
           <button
             onClick={() => act("decline")}
@@ -159,8 +173,11 @@ export default function BookingActions({
             お断り
           </button>
         </span>
-        {/* Pre-pivot charters were ours to run; there is nobody to send them to. */}
+        {/* Pre-pivot charters were ours to run; there is nobody to send them to.
+            Arrange is enquired by hand in English from Gmail (the sent folder
+            counts the exchanges), so it has no 送客メール either. */}
         {requestType !== null &&
+          !isArrange &&
           (dispatchOpen ? (
             <span className="mt-1.5 inline-flex gap-1.5">
               <input

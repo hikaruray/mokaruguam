@@ -2,14 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RESTAURANT_FEE } from "@/lib/pricing";
+import {
+  ARRANGE_FEE,
+  ARRANGE_MAX_EXCHANGES,
+  ARRANGE_PATTERNS,
+  isPaidRequest,
+  type RequestType,
+} from "@/lib/request-types";
 import { PAYPAL_ENABLED, CONTACT_EMAIL } from "@/lib/config";
 import { partnerNoticeFor } from "@/lib/partners";
 import PaypalCheckout from "./PaypalCheckout";
 
 type State = "idle" | "sending" | "sent" | "error";
-type RequestType = "tour" | "restaurant";
-
-// One form, two paths (design §7). The kind of request is chosen first and
+// One form, three paths (design §7; arrange added 2026-10-19). The kind of request is chosen first and
 // everything downstream branches on it:
 //
 //   tour       — we arrange a partner's activity. The guest pays them on the
@@ -18,6 +23,10 @@ type RequestType = "tour" | "restaurant";
 //                it is only visible for a moment.
 //   restaurant — we book a table for a flat $10, authorised here and captured
 //                only when the table is actually held.
+//   arrange    — a tour we have no partnership with. A flat $25, authorised
+//                here and captured when the first report goes out — charged
+//                even if no booking comes of it, which is why the guest has to
+//                tick that sentence before the payment step (gate 0c).
 //
 // 🔴 There is no default. requestType starts null and the submit button is not
 // reachable until the guest picks one. Defaulting either way is a money bug:
@@ -42,6 +51,8 @@ interface FormValues {
   children4to11: number;
   children0to3: number;
   notes: string;
+  // Arrange only. The tick is checked again by the server (gate 0c).
+  arrangeAccepted: boolean;
   mg_field_2: string;    // honeypot — hidden; real users leave it empty
 }
 
@@ -81,6 +92,10 @@ export default function BookingForm() {
   const [requestType, setRequestType] = useState<RequestType | null>(null);
   const [fallbackChoice, setFallbackChoice] = useState<"cancel" | "suggest" | "">("");
   const [partnerName, setPartnerName] = useState("");
+  // Arrange only. A is pre-selected because it is the recommended pattern —
+  // unlike the request type, this choice moves no money.
+  const [arrangePattern, setArrangePattern] = useState<string>("A");
+  const [arrangeAccepted, setArrangeAccepted] = useState(false);
   const savedValues = useRef<FormValues | null>(null);
 
   // Arriving from a partner's page on /plans: prefill what they came to book.
@@ -97,18 +112,20 @@ export default function BookingForm() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const type = params.get("type");
-    if (type === "tour" || type === "restaurant") setRequestType(type);
+    if (type === "tour" || type === "restaurant" || type === "arrange") setRequestType(type);
     const partner = params.get("partner");
     if (partner) setPartnerName(partner.slice(0, 200));
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const isRestaurant = requestType === "restaurant";
-  // Money only ever moves on the restaurant path.
-  const takesPayment = isRestaurant && PAYPAL_ENABLED;
+  const isArrange = requestType === "arrange";
+  // Money moves on the restaurant and arrange paths, never on a partner tour.
+  const takesPayment = requestType !== null && isPaidRequest(requestType) && PAYPAL_ENABLED;
+  const fee = isArrange ? ARRANGE_FEE : RESTAURANT_FEE;
   // Participation conditions of the partner the guest is asking for (the jet
-  // ski's 8-year minimum). Tours only: a restaurant name never triggers it.
-  const notice = isRestaurant ? undefined : partnerNoticeFor(partnerName);
+  // ski's 8-year minimum). Partner tours only.
+  const notice = requestType === "tour" ? partnerNoticeFor(partnerName) : undefined;
 
   function readForm(form: HTMLFormElement): FormValues {
     const fd = new FormData(form);
@@ -117,6 +134,14 @@ export default function BookingForm() {
     const adults = Number(fd.get("adults") || 0);
     const children4to11 = Number(fd.get("children4to11") || 0);
     const children0to3 = Number(fd.get("children0to3") || 0);
+    const rawNotes = String(fd.get("notes") || "");
+    // Arrange: the chosen pattern rides at the top of the notes, so the owner's
+    // notice and the admin screen show it without another column.
+    const pattern = ARRANGE_PATTERNS.find((p) => p.id === arrangePattern);
+    const notes =
+      isArrange && pattern
+        ? `【3回の使い方】${pattern.id}：${pattern.title}${rawNotes.trim() ? `\n${rawNotes}` : ""}`
+        : rawNotes;
     return {
       // Non-null by construction: the form below is not rendered until a type
       // is chosen, so this function cannot run before then.
@@ -136,7 +161,8 @@ export default function BookingForm() {
       adults,
       children4to11,
       children0to3,
-      notes: String(fd.get("notes") || ""),
+      notes,
+      arrangeAccepted: isArrange ? arrangeAccepted : false,
       mg_field_2: String(fd.get("mg_field_2") || ""),
     };
   }
@@ -156,6 +182,16 @@ export default function BookingForm() {
         `1〜7名で承っております。8名以上のご予約は別途お見積りとなりますので、${CONTACT_EMAIL} までご連絡ください。`,
       );
       return false;
+    }
+    if (v.requestType === "arrange") {
+      if (!v.partnerName) {
+        setError("お問い合わせしたいツアー・会社名（または探してほしい内容）をご入力ください。");
+        return false;
+      }
+      if (!v.arrangeAccepted) {
+        setError("お問い合わせ代行のお約束をご確認のうえ、チェックを入れてください。");
+        return false;
+      }
     }
     if (v.requestType === "restaurant") {
       if (!v.partnerName) {
@@ -249,6 +285,7 @@ export default function BookingForm() {
   // --- Confirmation ---------------------------------------------------------
   if (state === "sent") {
     const restaurant = sentType === "restaurant";
+    const arrange = sentType === "arrange";
     return (
       <div className="rounded-2xl bg-white p-6 text-ink">
         <div className="text-lg font-bold text-brand">
@@ -256,16 +293,22 @@ export default function BookingForm() {
         </div>
         <p className="mt-1 text-sm font-medium text-ink">
           {paid
-            ? "現時点では手配料のお預かり（仮押さえ）のみで、まだ請求されていません。"
+            ? `現時点では${arrange ? "代行料" : "手配料"}のお預かり（仮押さえ）のみで、まだ請求されていません。`
             : "この時点では料金は発生していません。"}
         </p>
         <ul className="mt-4 space-y-2.5 text-sm text-muted">
           <li>
             📩 <b className="text-ink">48時間以内</b>に、
-            {restaurant ? "お店への確認状況" : "提携先への確認状況"}
+            {restaurant ? "お店への確認状況" : arrange ? "実施会社へのお問い合わせ状況" : "提携先への確認状況"}
             をご連絡します。
           </li>
-          {restaurant ? (
+          {arrange ? (
+            <li>
+              💳 1回目のご報告をお送りした時点で代行料 ${ARRANGE_FEE.toFixed(2)} のお支払いが確定します。
+              <b className="text-ink">ご予約が取れなかった場合も、代行料はご返金できません</b>
+              （1回目のご報告の前に取りやめる場合は、料金はいただきません）。
+            </li>
+          ) : restaurant ? (
             <li>
               💳 お席が取れた時点で手配料 ${RESTAURANT_FEE.toFixed(2)} のお支払いが確定します。
               <b className="text-ink">お取りできなかった場合は、料金はいただきません</b>
@@ -307,6 +350,12 @@ export default function BookingForm() {
             ) : (
               <>🧾 キャンセルをご希望の場合も、上記のアドレスまでご連絡ください。</>
             )}
+            {arrange && (
+              <>
+                {" "}
+                1回目のご報告の<b className="text-ink">あと</b>のキャンセルは、代行料のご返金はいたしかねます。
+              </>
+            )}
             {restaurant && (
               <>
                 {" "}
@@ -334,24 +383,31 @@ export default function BookingForm() {
   if (payStep) {
     return (
       <div className="rounded-2xl bg-white p-6 text-ink">
-        <div className="text-base font-bold">手配料のお支払い</div>
+        <div className="text-base font-bold">{isArrange ? "代行料" : "手配料"}のお支払い</div>
         <div className="mt-3 rounded-xl bg-sand p-4 text-sm">
           <div className="flex justify-between">
             <span className="text-muted">
-              レストラン予約代行／{payStep.partnerName}
+              {isArrange ? "ツアーお問い合わせ・予約代行" : "レストラン予約代行"}／{payStep.partnerName}
             </span>
             <span className="text-lg font-bold text-brand">
-              ${RESTAURANT_FEE.toFixed(2)}
+              ${fee.toFixed(2)}
             </span>
           </div>
           <p className="mt-1 text-xs text-muted">
             {payStep.preferredDate}／{payStep.guests}名（{guestSummary(payStep)}）
           </p>
           {/* 1件につき、です。人数では変わらないことを支払い直前に言う。 */}
-          <p className="mt-2 text-xs text-muted">
-            手配料は<b>1件 ${RESTAURANT_FEE.toFixed(2)}</b>（人数にかかわらず同額）。
-            この時点では<b>お預かり（仮押さえ）</b>のみで、お席が取れた時点でお支払いが確定します。お取りできなかった場合はお預かりを解除します。
-          </p>
+          {isArrange ? (
+            <p className="mt-2 text-xs text-muted">
+              代行料は<b>1件 ${ARRANGE_FEE.toFixed(2)}</b>（人数にかかわらず同額・実施会社とのやりとり最大{ARRANGE_MAX_EXCHANGES}回）。
+              この時点では<b>お預かり（仮押さえ）</b>のみで、<b>1回目のご報告をお送りした時点</b>でお支払いが確定します。ご予約が取れなかった場合も返金はありません。
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-muted">
+              手配料は<b>1件 ${RESTAURANT_FEE.toFixed(2)}</b>（人数にかかわらず同額）。
+              この時点では<b>お預かり（仮押さえ）</b>のみで、お席が取れた時点でお支払いが確定します。お取りできなかった場合はお預かりを解除します。
+            </p>
+          )}
         </div>
 
         <div className="mt-4">
@@ -420,6 +476,12 @@ export default function BookingForm() {
             title="レストランの予約代行"
             note={`手配料 1件 $${RESTAURANT_FEE.toFixed(2)}（お取りできなかった場合は無料）`}
           />
+          <TypeOption
+            checked={requestType === "arrange"}
+            onSelect={() => setRequestType("arrange")}
+            title="掲載のないツアーのお問い合わせ・予約代行"
+            note={`代行料 1件 $${ARRANGE_FEE.toFixed(2)}（実施会社とのやりとり最大${ARRANGE_MAX_EXCHANGES}回。ご予約が取れなくてもかかります）`}
+          />
         </div>
       </fieldset>
 
@@ -430,22 +492,89 @@ export default function BookingForm() {
       ) : (
         <>
           <Field
-            label={isRestaurant ? "ご希望のお店（第1希望）" : "提携先・ツアー名"}
+            label={
+              isRestaurant
+                ? "ご希望のお店（第1希望）"
+                : isArrange
+                  ? "お問い合わせしたいツアー・会社名"
+                  : "提携先・ツアー名"
+            }
             name="partnerName"
             value={partnerName}
             onChange={setPartnerName}
             placeholder={
               isRestaurant
                 ? "例：Proa Tumon"
-                : "例：Joe's Jet Ski／やりたいことでもOK"
+                : isArrange
+                  ? "例：○○社のイルカウォッチング／ツアーページのURL"
+                  : "例：Joe's Jet Ski／やりたいことでもOK"
             }
             required
             maxLength={200}
           />
-          {!isRestaurant && (
+          {requestType === "tour" && (
             <p className="-mt-1 text-xs text-muted">
               決まっていない場合は「シュノーケリング」など、やりたいことをご記入ください。
             </p>
+          )}
+          {isArrange && (
+            <p className="-mt-1 text-xs text-muted">
+              会社が決まっていない場合は「午前中に行けるイルカウォッチング」など、探してほしい内容をご記入ください。
+            </p>
+          )}
+
+          {/* 🔴 Arrange: the promises that differ from every other path on
+              this site, shown before the guest types anything else and ticked
+              before the payment step. The server checks the tick (gate 0c). */}
+          {isArrange && (
+            <>
+              <fieldset className="mt-3">
+                <legend className="text-xs font-bold">
+                  {ARRANGE_MAX_EXCHANGES}回のやりとりの使い方
+                </legend>
+                <div className="mt-1.5 grid gap-2">
+                  {ARRANGE_PATTERNS.map((p) => (
+                    <TypeOption
+                      key={p.id}
+                      checked={arrangePattern === p.id}
+                      onSelect={() => setArrangePattern(p.id)}
+                      title={`${p.id}. ${p.title}${p.recommended ? "（おすすめ）" : ""}`}
+                      note={p.detail}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+
+              <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-ink">
+                <div className="font-bold">お問い合わせ代行のお約束（お申し込みの前にご確認ください）</div>
+                <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                  <li>
+                    当社が実施会社と英語でやりとりし、日本語でご報告します。<b>1回</b>＝問い合わせて、返事を受け取り、ご報告するまで（最大{ARRANGE_MAX_EXCHANGES}回）。お返事がない分や、お客様とのメールは回数に含みません。
+                  </li>
+                  <li>
+                    <b>ご予約の成立は保証できません。</b>代行料 ${ARRANGE_FEE} は、ご予約が取れなかった場合もかかります。1回目のご報告の前に取りやめる場合は、料金はいただきません。
+                  </li>
+                  <li>
+                    ツアー代金は代行料とは別です。<b>支払い方法と実施会社のキャンセル規定</b>は、1回目のご報告で必ずお知らせします。事前のカード決済が必要なツアーは、当社はカード情報をお預かりしないため、確認結果のご報告までとなります。
+                  </li>
+                  <li>
+                    年齢・体重・持病・妊娠中などの参加の可否は、<b>実施会社の判断</b>に従います。
+                  </li>
+                  <li>
+                    日本語のサイトで直接ご予約できるツアーは、ご自身でご予約いただくと代行料はかかりません。当社の提携先で叶う内容でしたら、そちらを先にご案内します（提携先の手配は無料です）。
+                  </li>
+                </ul>
+                <label className="mt-2.5 flex cursor-pointer items-start gap-2 font-bold">
+                  <input
+                    type="checkbox"
+                    checked={arrangeAccepted}
+                    onChange={(e) => setArrangeAccepted(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  上記を確認しました（ご予約が取れなくても代行料 ${ARRANGE_FEE} がかかることを含む）
+                </label>
+              </div>
+            </>
           )}
           {/* 🔴 Before the guest fills in the rest, not after they submit: the
               form cannot refuse this (its child bands are 4-11 and 0-3), so
@@ -594,28 +723,34 @@ export default function BookingForm() {
           <p className="-mt-1 text-xs text-muted">
             {isRestaurant
               ? "お店にお伝えする連絡先の確認に使用します。"
-              : "実施会社にお伝えし、集合場所のご案内に使用します。"}
+              : isArrange
+                ? "送迎の有無や集合場所の確認のため、実施会社にお伝えします。"
+                : "実施会社にお伝えし、集合場所のご案内に使用します。"}
             ホテル以外（Airbnb・ご親族宅など）の場合はその旨をご記入ください。
           </p>
 
-          <label className="mt-3 block text-xs font-bold">ご要望（任意）</label>
+          <label className="mt-3 block text-xs font-bold">
+            {isArrange ? "実施会社に聞きたいこと・ご要望（任意）" : "ご要望（任意）"}
+          </label>
           <textarea
             name="notes"
             maxLength={1000}
             placeholder={
               isRestaurant
                 ? "例：窓際の席希望・記念日・アレルギー・ベビーチェア"
-                : "例：お子様の年齢・記念日・ダイビングの経験"
+                : isArrange
+                  ? "例：日本語スタッフはいるか・ホテル送迎の有無・雨天時の扱い・写真データの料金・子供の年齢制限"
+                  : "例：お子様の年齢・記念日・ダイビングの経験"
             }
             className="mt-1.5 min-h-[78px] w-full resize-y rounded-lg border border-line px-3 py-2.5 text-sm"
           />
 
-          {isRestaurant && PAYPAL_ENABLED && (
+          {takesPayment && (
             <div className="mt-4 flex items-center justify-between rounded-xl bg-sand px-4 py-3 text-sm">
-              <span className="text-muted">手配料（1件・人数によらず同額）</span>
-              <span className="text-lg font-bold text-brand">
-                ${RESTAURANT_FEE.toFixed(2)}
+              <span className="text-muted">
+                {isArrange ? "代行料（1件・人数によらず同額）" : "手配料（1件・人数によらず同額）"}
               </span>
+              <span className="text-lg font-bold text-brand">${fee.toFixed(2)}</span>
             </div>
           )}
 
@@ -642,8 +777,14 @@ export default function BookingForm() {
           </button>
           <p className="mt-2 text-center text-xs text-muted">
             {takesPayment
-              ? "お席が取れた時点でお支払いが確定します。お取りできなかった場合はお預かりを解除します。"
-              : "送信後、48時間以内に状況をご連絡します。当社へのお支払いはありません。"}
+              ? isArrange
+                ? "1回目のご報告をお送りした時点でお支払いが確定します。それより前に取りやめる場合はお預かりを解除します。"
+                : "お席が取れた時点でお支払いが確定します。お取りできなかった場合はお預かりを解除します。"
+              : // A paid kind with PayPal switched off: the server refuses it
+                // (gate 1), so never tell that guest there is nothing to pay.
+                requestType !== null && isPaidRequest(requestType)
+                ? "送信後、48時間以内に状況をご連絡します。"
+                : "送信後、48時間以内に状況をご連絡します。当社へのお支払いはありません。"}
           </p>
           {/* Shown at the point of collection, not just in the footer: this is
               the form that actually takes the name, email and phone number. */}

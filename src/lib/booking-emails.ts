@@ -18,6 +18,7 @@ import {
   PARTNER_CANCEL_POLICY_REMINDER,
 } from "./config";
 import { GUAM_UTC_OFFSET_HOURS } from "./pricing";
+import { ARRANGE_MAX_EXCHANGES } from "./request-types";
 
 // Booking confirmed (予約確定 → payment captured for a restaurant, or the
 // arrangement simply agreed for a tour).
@@ -31,6 +32,11 @@ export function confirmedEmail(
   b: BookingRequest,
   amount: number,
 ): { subject: string; text: string } {
+  // 🔴 An arrange request is never「お手配が完了しました」: its capture means the
+  // first report went out, not that anything was booked. The admin route sends
+  // firstReportEmail for it and refuses "confirm"; this is the same rule at the
+  // last place that could still say the wrong thing.
+  if (requestTypeOf(b) === "arrange") return firstReportEmail(b, amount);
   const isRestaurant = requestTypeOf(b) === "restaurant";
   // Pre-pivot charter bookings keep exactly the line they always had.
   const isLegacyCharter = b.requestType === null;
@@ -82,6 +88,48 @@ export function confirmedEmail(
   };
 }
 
+// Arrange (提携外ツアー代行, 2026-10-19): the owner has sent the guest the first
+// report by hand and pressed「1回目の報告を送った」, which captured the fee.
+//
+// 🔴 What this mail must NOT say: that anything is booked. The report itself —
+// availability, price, payment method, the operator's cancellation terms — went
+// in the owner's own email; this one only records that the fee is now charged,
+// what it covers, and that mails with us are not counted. Saying「お手配が完了」
+// here would be read as a booking, and there may never be one.
+export function firstReportEmail(
+  b: BookingRequest,
+  amount: number,
+): { subject: string; text: string } {
+  return {
+    subject: "【Mokaru Guam】1回目のご報告をお送りしました（代行料を確定しました）",
+    text: [
+      `${b.name} 様`,
+      ``,
+      `ご依頼の件について、1回目のご報告を別のメールでお送りしました。`,
+      `ご報告をお送りしたため、代行料のお支払いを確定しました。`,
+      ``,
+      `▼ 代行料`,
+      `代行料:     $${amount.toFixed(2)}（お支払い済み）`,
+      `内容:       実施会社とのやりとり最大${ARRANGE_MAX_EXCHANGES}回（今回が1回目）`,
+      `ご予約の成立を保証するものではないため、ご予約に至らなかった場合も代行料のご返金はいたしかねます。`,
+      ``,
+      `▼ このあと`,
+      `ご報告の内容をご確認のうえ、ご希望をご報告メールへのご返信でお知らせください。`,
+      `お客様とのメールのやりとりは、何通でも回数に含みません。`,
+      `ツアー代金・お支払い方法・実施会社のキャンセル規定は、ご報告メールに記載しています。`,
+      ``,
+      `▼ ご依頼の内容`,
+      `お問い合わせ先: ${b.partnerName}`,
+      `ご希望日時: ${b.preferredDate}`,
+      `人数:       ${b.guests}名`,
+      `受付番号:   ${refLabel(b)}`,
+      ``,
+      `ご不明な点は ${CONTACT_EMAIL} までご返信ください。`,
+      `— Mokaru Guam`,
+    ].join("\n"),
+  };
+}
+
 // A replacement hold was taken after the first one expired (/repay).
 //
 // 🔴 This email must not read like a confirmation. Nothing is arranged yet at
@@ -99,7 +147,7 @@ export function reauthorizedEmail(
       `${b.name} 様`,
       ``,
       `お支払いのお手続きをいただき、ありがとうございます。`,
-      `手配料 $${amount.toFixed(2)} をカードにお預かり（仮押さえ）しました。この時点ではまだ請求されていません。`,
+      `${requestTypeOf(b) === "arrange" ? "代行料" : "手配料"} $${amount.toFixed(2)} をカードにお預かり（仮押さえ）しました。この時点ではまだ請求されていません。`,
       ``,
       `▼ ご依頼の内容`,
       ...(b.partnerName ? [`お手配先:   ${b.partnerName}`] : []),
@@ -107,9 +155,17 @@ export function reauthorizedEmail(
       `人数:       ${b.guests}名`,
       ``,
       `▼ このあとの流れ`,
-      `1. これからお店へお席の確保をご依頼します。`,
-      `2. お席が取れた時点で手配料のお支払いが確定し、確定のご連絡をお送りします。`,
-      `3. お席をご用意できなかった場合は、仮押さえを解除します。ご請求は発生しません。`,
+      ...(requestTypeOf(b) === "arrange"
+        ? [
+        `1. これから実施会社へお問い合わせします。`,
+        `2. 1回目のご報告をお送りした時点で代行料のお支払いが確定します。`,
+        `3. それより前に取りやめる場合は、仮押さえを解除します。ご請求は発生しません。`,
+          ]
+        : [
+        `1. これからお店へお席の確保をご依頼します。`,
+        `2. お席が取れた時点で手配料のお支払いが確定し、確定のご連絡をお送りします。`,
+        `3. お席をご用意できなかった場合は、仮押さえを解除します。ご請求は発生しません。`,
+          ]),
       ``,
       `受付番号: ${refLabel(b)}`,
       `— Mokaru Guam`,
@@ -126,7 +182,9 @@ export function reauthorizedOwnerEmail(
   return {
     subject: `【再オーソリ成立】${b.name} 様／${b.partnerName || "レストラン予約代行"}`,
     text: [
-      `カードのお預かりを取り直せました。お店への予約はここから進めてください。`,
+      requestTypeOf(b) === "arrange"
+        ? `カードのお預かりを取り直せました。実施会社へのお問い合わせはここから進めてください。`
+        : `カードのお預かりを取り直せました。お店への予約はここから進めてください。`,
       ``,
       `お名前:   ${b.name}`,
       `連絡先:   ${b.email} / ${b.phone}`,
@@ -135,8 +193,15 @@ export function reauthorizedOwnerEmail(
       `人数:     ${b.guests}名`,
       `手配料:   $${amount.toFixed(2)}（仮押さえ中・未請求）`,
       ``,
-      `お席が取れたら管理画面で「確定」を押すと手配料が確定します。`,
-      `取れなかった場合は「お断り」で仮押さえを解除してください。`,
+      ...(requestTypeOf(b) === "arrange"
+        ? [
+        `1回目の報告をお客様に送ったら、管理画面で「1回目の報告を送った」を押すと代行料が確定します。`,
+        `報告前に取りやめる場合は「お断り」で仮押さえを解除してください。`,
+          ]
+        : [
+        `お席が取れたら管理画面で「確定」を押すと手配料が確定します。`,
+        `取れなかった場合は「お断り」で仮押さえを解除してください。`,
+          ]),
       ``,
       `受付番号: ${refLabel(b)}`,
     ].join("\n"),
@@ -156,6 +221,7 @@ export function reauthorizedOwnerEmail(
 // Still waiting on the restaurant or operator.
 export function waitingEmail(b: BookingRequest): { subject: string; text: string } {
   const isRestaurant = requestTypeOf(b) === "restaurant";
+  const isArrange = requestTypeOf(b) === "arrange";
   return {
     subject: "【Mokaru Guam】ご依頼の状況のお知らせ（お手配を進めています）",
     text: [
@@ -165,13 +231,19 @@ export function waitingEmail(b: BookingRequest): { subject: string; text: string
       ``,
       isRestaurant
         ? `お店へご予約をお願いしており、お返事を待っているところです。`
-        : `実施会社へ空き状況を確認しており、お返事を待っているところです。`,
+        : isArrange
+          ? `実施会社へ英語でお問い合わせしており、お返事を待っているところです。お返事のない間は、やりとりの回数に含みません。`
+          : `実施会社へ空き状況を確認しており、お返事を待っているところです。`,
       `お返事がありしだい、あらためてご連絡します。`,
       ``,
       `▼ お支払いについて`,
       isRestaurant
         ? `手配料はカードにお預かり（仮押さえ）したままで、まだご請求していません。お席が取れた時点で確定します。`
-        : `当社へのお支払いはございません。`,
+        : isArrange
+          ? b.payment === "captured"
+            ? `代行料はお支払い済みです（1回目のご報告の時点で確定しています）。`
+            : `代行料はカードにお預かり（仮押さえ）したままで、まだご請求していません。1回目のご報告をお送りした時点で確定します。`
+          : `当社へのお支払いはございません。`,
       ``,
       `▼ ご依頼の内容`,
       `お手配先:   ${b.partnerName}`,
@@ -328,7 +400,7 @@ export function reminderSummaryEmail(
           ``,
           ...rows.map(
             ({ booking: b, result }) =>
-              `${refLabel(b)}  ${requestTypeOf(b) === "restaurant" ? "レストラン" : "ツアー"}  ${b.preferredDate}  ${b.partnerName}  ${b.name}様 ${b.guests}名  — ${label[result]}`,
+              `${refLabel(b)}  ${{ restaurant: "レストラン", tour: "ツアー", arrange: "提携外ツアー" }[requestTypeOf(b)]}  ${b.preferredDate}  ${b.partnerName}  ${b.name}様 ${b.guests}名  — ${label[result]}`,
           ),
         ].join("\n")
       : `明日 ${day}（グアム時間）の確定済みのご予約はありません。`,
@@ -435,21 +507,30 @@ export function declinedEmail(b: BookingRequest): {
   text: string;
 } {
   const isRestaurant = requestTypeOf(b) === "restaurant";
+  const isArrange = requestTypeOf(b) === "arrange";
   const isLegacyCharter = b.requestType === null;
 
-  const reason = isRestaurant
+  // Arrange is declined only before the first report (after it the fee is
+  // captured and the admin route refuses decline), so nothing is charged.
+  const reason = isArrange
+    ? `誠に恐れ入りますが、今回のご依頼はお問い合わせを進めることができませんでした。`
+    : isRestaurant
     ? `誠に恐れ入りますが、ご希望のお日にち・お時間でお席をご用意できませんでした。`
     : isLegacyCharter
       ? `誠に恐れ入りますが、ご希望の日時はガイド・車両の都合によりお手配ができませんでした。`
       : `誠に恐れ入りますが、実施会社の空き状況によりお手配ができませんでした。`;
 
-  const moneyLine = isRestaurant
+  const moneyLine = isArrange
+    ? `代行料はいただきません。カードのお預かりは解除しており、ご請求は発生しておりません。`
+    : isRestaurant
     ? `手配料はいただきません。カードのお預かりは解除しており、ご請求は発生しておりません。`
     : isLegacyCharter
       ? `カードの仮押さえは解除しており、ご請求は発生しておりません。ご安心ください。`
       : `当社へのお支払いはもとより発生しておりません。ご請求は一切ございません。`;
 
-  const nextLine = isRestaurant
+  const nextLine = isArrange
+    ? `内容を変えてのご依頼や、当社の提携先のツアーであればご案内できる場合がございます。よろしければご返信ください。`
+    : isRestaurant
     ? `別のお店・別のお時間であればお取りできる場合がございます。よろしければご返信ください。`
     : `別の日程や他の実施会社であればご案内できる場合がございます。よろしければご返信ください。`;
 
@@ -490,6 +571,17 @@ export function cancelledEmail(
       `▼ 返金について`,
       `キャンセルポリシーに基づき、返金率 ${Math.round(refund.rate * 100)}%（$${refund.amount.toFixed(2)}）で返金手続きを行いました。`,
       `ご利用の決済方法に、数営業日でご返金が反映されます。`,
+    ];
+  } else if (b.payment === "captured" && requestTypeOf(b) === "arrange") {
+    // After the first report: the fee bought the enquiries, which are made.
+    // If a tour was actually booked through us, we tell the operator — same
+    // reasoning as the restaurant branch below.
+    moneyLines = [
+      `▼ 代行料について`,
+      `1回目のご報告をお送りしたあとのため、代行料 $${chargedAmount(b).toFixed(2)} のご返金はいたしかねます。あらかじめご了承ください。`,
+      ``,
+      `▼ ツアーについて`,
+      `当社経由でツアーのご予約が済んでいる場合は、キャンセルのご連絡を当社から実施会社へお伝えします。キャンセル料は実施会社の規定に従います。`,
     ];
   } else if (b.payment === "captured" && requestTypeOf(b) === "restaurant") {
     // Charged, no refund — but for a completely different reason than a tour,

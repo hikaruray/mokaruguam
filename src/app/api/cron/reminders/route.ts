@@ -48,6 +48,10 @@ export async function GET(request: Request) {
     (b) =>
       b.status === "confirmed" &&
       b.requestType !== null &&
+      // 🔴 Not arrange (2026-10-19). Its "confirmed" means the first report
+      // went out, not that a tour is booked — the date is only what the guest
+      // hoped for, and a「明日のご予約のご確認」mail would invent a booking.
+      b.requestType !== "arrange" &&
       // The form always sends "YYYY-MM-DD HH:MM", date first.
       b.preferredDate.trim().split(/\s+/)[0] === day,
   );

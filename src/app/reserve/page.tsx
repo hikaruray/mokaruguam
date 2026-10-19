@@ -5,6 +5,7 @@ import PageShell, { PageHero } from "@/components/PageShell";
 import BookingForm from "@/components/BookingForm";
 import { CONTACT_EMAIL } from "@/lib/config";
 import { RESTAURANT_FEE } from "@/lib/pricing";
+import { ARRANGE_FEE } from "@/lib/request-types";
 
 export const metadata: Metadata = {
   title: "手配を依頼する",
@@ -36,8 +37,8 @@ export default function ReservePage() {
             <h2 className="text-lg font-bold">ご依頼の流れ</h2>
             <ol className="mt-4 list-decimal space-y-3 pl-5 text-[15px]">
               <li>
-                ご依頼の種類（レストラン／ツアー）と、ご希望日時・人数をお送りください。レストランのみ、手配料 $
-                {RESTAURANT_FEE} をカードに
+                ご依頼の種類（レストラン／提携先のツアー／掲載のないツアー）と、ご希望日時・人数をお送りください。レストランは手配料 $
+                {RESTAURANT_FEE}、掲載のないツアーは代行料 ${ARRANGE_FEE} をカードに
                 <span className="font-bold text-brand">
                   お預かりします（この時点では請求されません）。
                 </span>
@@ -53,11 +54,18 @@ export default function ReservePage() {
                   お取りできなかった場合、料金はいただきません。
                 </span>
               </li>
+              <li>
+                掲載のないツアーのお問い合わせ・予約代行は、
+                <span className="font-bold text-ink">
+                  1回目のご報告をお送りした時点で代行料が確定
+                </span>
+                します。ご予約の成立は保証できず、取れなかった場合も代行料はかかります。
+              </li>
             </ol>
 
             <div className="mt-5 rounded-2xl border border-line bg-sand p-4 text-sm text-muted">
               <p>
-                <b className="text-ink">ツアーの手配は、当社へのお支払いはありません。</b>
+                <b className="text-ink">提携先のツアーの手配は、当社へのお支払いはありません。</b>
                 ツアー代金は当日、実施会社へ直接お支払いください。
               </p>
               <p className="mt-2">

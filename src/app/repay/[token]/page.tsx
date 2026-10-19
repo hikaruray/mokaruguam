@@ -44,6 +44,10 @@ export default async function RepayPage({
   }
 
   const { booking, amount, holdIsLive } = check;
+  // Arrange (2026-10-19): the fee is captured at the first report, not when a
+  // table is held, so the restaurant sentences below would promise the wrong thing.
+  const isArrange = booking.requestType === "arrange";
+  const feeLabel = isArrange ? "代行料" : "手配料";
 
   return (
     <PageShell>
@@ -58,7 +62,7 @@ export default async function RepayPage({
             )}
             <Row label="ご希望日時" value={booking.preferredDate} />
             <Row label="人数" value={`${booking.guests}名`} />
-            <Row label="手配料" value={`$${amount.toFixed(2)}`} />
+            <Row label={feeLabel} value={`$${amount.toFixed(2)}`} />
           </dl>
         </div>
 
@@ -68,7 +72,7 @@ export default async function RepayPage({
           <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
             <p className="font-bold">お手続きは不要です</p>
             <p className="mt-2">
-              お支払いは有効なままお預かりしています。重ねてのお手続きはなさらないでください。お店へのお席のご依頼は当社で進めております。
+              お支払いは有効なままお預かりしています。重ねてのお手続きはなさらないでください。{isArrange ? "実施会社へのお問い合わせは当社で進めております。" : "お店へのお席のご依頼は当社で進めております。"}
             </p>
           </div>
         ) : (
@@ -81,11 +85,14 @@ export default async function RepayPage({
               </p>
               <p className="mt-2">
                 お手続きの時点では<b className="text-ink">仮押さえのみ</b>
-                で、まだ請求されません。お席が取れた時点でお支払いが確定し、ご用意できなかった場合は仮押さえを解除しますので、料金は発生しません。
+                で、まだ請求されません。
+                {isArrange
+                  ? "1回目のご報告をお送りした時点でお支払いが確定します。それより前に取りやめる場合は仮押さえを解除しますので、料金は発生しません。"
+                  : "お席が取れた時点でお支払いが確定し、ご用意できなかった場合は仮押さえを解除しますので、料金は発生しません。"}
               </p>
             </div>
 
-            <RepayForm token={token} amount={amount} />
+            <RepayForm token={token} amount={amount} isArrange={isArrange} />
           </>
         )}
 

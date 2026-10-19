@@ -1,4 +1,5 @@
 import { listBookings, refLabel, requestTypeOf, type BookingRequest } from "@/lib/store";
+import { isPaidRequest } from "@/lib/request-types";
 import { sendMail } from "@/lib/email";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/config";
 
@@ -55,14 +56,15 @@ export async function GET(request: Request) {
   // Oldest first: the one closest to losing its hold is the one to do now.
   stale.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const holdAtRisk = (b: BookingRequest) =>
-    requestTypeOf(b) === "restaurant" &&
+    // Arrange (2026-10-19) holds $25 the same way and loses it the same way.
+    isPaidRequest(requestTypeOf(b)) &&
     b.payment === "authorized" &&
     hoursSince(b.createdAt, now) >= HOLD_WARN_HOURS;
   const atRisk = stale.filter(holdAtRisk).length;
 
   const lines = stale.map((b) => {
     const h = Math.floor(hoursSince(b.createdAt, now));
-    const kind = requestTypeOf(b) === "restaurant" ? "レストラン" : "ツアー";
+    const kind = { restaurant: "レストラン", tour: "ツアー", arrange: "提携外ツアー" }[requestTypeOf(b)];
     const flag = holdAtRisk(b)
       ? "  🔴 カードのお預かりの保証（約3日）が近い／過ぎている"
       : b.payment === "expired"

@@ -13,9 +13,11 @@ import {
   PaypalApiError,
 } from "@/lib/paypal";
 import { cancelBooking } from "@/lib/booking-actions";
+import { isPaidRequest } from "@/lib/request-types";
 import { sendMail } from "@/lib/email";
 import {
   confirmedEmail,
+  firstReportEmail,
   declinedEmail,
   partnerDispatchEmail,
   waitingEmail,
@@ -28,6 +30,10 @@ import { SITE_URL } from "@/lib/config";
 // PayPal action (booking-payment-design.md: authorize → capture/void/refund).
 //
 //   confirm     → 予約確定   : capture the authorization (決済確定)
+//   report      → 1回目の報告を送った : capture, for arrange only (2026-10-19).
+//                 The arrange fee is captured when the work has started, not
+//                 when a booking is made — there may never be one. It sends
+//                 firstReportEmail, never confirmedEmail「お手配が完了しました」.
 //   decline     → お断り     : void the authorization (仮押さえ解除・課金なし)
 //   cancel      → キャンセル : refund per the 3-tier policy (実施日基準)
 //   cancel-full → キャンセル : full refund (天候不良・自社都合の中止)
@@ -54,6 +60,7 @@ export async function POST(request: Request) {
   const { id, action } = body;
   const valid = [
     "confirm",
+    "report",
     "decline",
     "cancel",
     "cancel-full",
@@ -159,6 +166,19 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+    // 🔴 Arrange is enquired by the owner by hand, in English, from the tour@
+    // Gmail. That sent folder is how the three exchanges are counted and shown
+    // to the guest (design 2026-09-18), and this template is a booking request
+    // in a partner's format — wrong for a company we have no agreement with.
+    if (requestTypeOf(booking) === "arrange") {
+      return Response.json(
+        {
+          error:
+            "提携外ツアーの依頼は送客メールを使いません。tour@ の Gmail から実施会社へ英語で直接お問い合わせください（送信履歴が回数の根拠になります）。",
+        },
+        { status: 409 },
+      );
+    }
     const mail = partnerDispatchEmail(booking);
     const { delivered } = await sendMail({
       to,
@@ -240,6 +260,33 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, subject: mail.subject });
   }
 
+  // --- confirm vs report: which capture button belongs to which kind --------
+  //
+  // 🔴 Both capture the hold. They differ in what the guest is told, and
+  // telling an arrange guest「お手配が完了しました」when we have only sent a
+  // first report is a false statement in an email that cannot be taken back
+  // (the 2026-09-18 design note, 穴③). So each button refuses the other kind.
+  const type = requestTypeOf(booking);
+  if (action === "confirm" && type === "arrange") {
+    return Response.json(
+      {
+        error:
+          "提携外ツアーの依頼には「確定」を使いません。1回目のご報告をお客様に送ったら「1回目の報告を送った」を押してください。",
+      },
+      { status: 409 },
+    );
+  }
+  if (action === "report" && type !== "arrange") {
+    return Response.json(
+      { error: "「1回目の報告を送った」は提携外ツアーの依頼専用です。" },
+      { status: 409 },
+    );
+  }
+  const isCapture = action === "confirm" || action === "report";
+  // Where the owner should hold off while the money is not in place.
+  const holdOff =
+    type === "arrange" ? "実施会社へのお問い合わせ" : "お店へのご予約";
+
   // --- confirm on a different restaurant (the proposal was accepted) -------
   //
   // Validated here, before any money moves, so a bad request cannot capture
@@ -292,11 +339,9 @@ export async function POST(request: Request) {
   // touches PayPal, so those bookings are payment="none" by design, as is every
   // request-only booking taken before the pivot. Without this restriction the
   // gate would reject every confirmation from 2026-10-01 onwards.
-  if (
-    action === "confirm" &&
-    requestTypeOf(booking) === "restaurant" &&
-    !hasAuthorization
-  ) {
+  // Arrange (2026-10-19) is held and captured the same way, so the same gate
+  // applies to its "report" button.
+  if (isCapture && isPaidRequest(type) && !hasAuthorization) {
     // 🔴 Already captured is a different situation and must not share the
     // message below. It happens when setBookingPayment succeeded and
     // setBookingStatus did not — the money is taken, the status never moved.
@@ -328,7 +373,7 @@ export async function POST(request: Request) {
       {
         error:
           booking.payment === "expired"
-            ? `カードのお預かりが期限切れです。お客様に下記のリンクから再度のお手続きをご案内してください。お手続きが済むまで、お店へのご予約はお控えください（席だけ取れて手配料を請求できない状態を避けるため）。\n${link}`
+            ? `カードのお預かりが期限切れです。お客様に下記のリンクから再度のお手続きをご案内してください。お手続きが済むまで、${holdOff}はお控えください（手配だけ進んで料金を請求できない状態を避けるため）。\n${link}`
             : `この依頼にはカードのお預かりがありません。確定すると手配料を請求できないため、確定できません。お客様に下記のリンクから再度のお手続きをご案内してください。\n${link}`,
       },
       { status: 409 },
@@ -336,7 +381,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (action === "confirm") {
+    if (isCapture) {
       if (hasAuthorization) {
         let captureId: string;
         let captureStatus: string;
@@ -363,7 +408,7 @@ export async function POST(request: Request) {
             const link = repayUrl(booking.id, SITE_URL);
             return Response.json(
               {
-                error: `カードのお預かりが期限切れのため、手配料を請求できませんでした。確定していません。お客様に下記のリンクから再度のお手続きをご案内してください。お手続きが済むまで、お店へのご予約はお控えください。\n${link}`,
+                error: `カードのお預かりが期限切れのため、手配料を請求できませんでした。確定していません。お客様に下記のリンクから再度のお手続きをご案内してください。お手続きが済むまで、${holdOff}はお控えください。\n${link}`,
               },
               { status: 409 },
             );
@@ -383,7 +428,7 @@ export async function POST(request: Request) {
           // re-reads this capture's status and lets it through once COMPLETED.
           return Response.json(
             {
-              error: `PayPalが手配料の受け取りを審査中です（PENDING）。まだ確定していません。お客様へのメールも送っていません。\nPayPalの管理画面でこの支払いが完了したのを確認してから、もう一度「確定」を押してください。（capture: ${captureId}）`,
+              error: `PayPalが手配料の受け取りを審査中です（PENDING）。まだ確定していません。お客様へのメールも送っていません。\nPayPalの管理画面でこの支払いが完了したのを確認してから、もう一度「${type === "arrange" ? "1回目の報告を送った" : "確定"}」を押してください。（capture: ${captureId}）`,
             },
             { status: 409 },
           );
@@ -395,7 +440,7 @@ export async function POST(request: Request) {
           const link = repayUrl(booking.id, SITE_URL);
           return Response.json(
             {
-              error: `カード会社が手配料の受け取りを拒否しました（${captureStatus}）。確定していません。お客様へのメールも送っていません。\nお店へのご予約はお控えのうえ、お客様に下記のリンクから再度のお手続きをご案内してください。\n${link}`,
+              error: `カード会社が手配料の受け取りを拒否しました（${captureStatus}）。確定していません。お客様へのメールも送っていません。\n${holdOff}はお控えのうえ、お客様に下記のリンクから再度のお手続きをご案内してください。\n${link}`,
             },
             { status: 409 },
           );
@@ -450,7 +495,9 @@ export async function POST(request: Request) {
   // because a confirmed guest who never hears back is the complaint this site
   // can least afford, and until 2026-10-15 a failed send looked like a sent one.
   const mail =
-    action === "confirm"
+    action === "report"
+      ? firstReportEmail(booking, chargedAmount(booking))
+      : action === "confirm"
       ? // The amount charged, as snapshotted at request time — so the email
         // always matches the customer's card statement even after a price change.
         confirmedEmail(booking, chargedAmount(booking))

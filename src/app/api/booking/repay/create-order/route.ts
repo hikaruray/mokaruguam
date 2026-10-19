@@ -46,9 +46,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Shown on the guest's PayPal screen and card statement, so it names what
+    // they are actually paying for (arrange added 2026-10-19).
+    const isArrange = check.booking.requestType === "arrange";
     const order = await createAuthorizeOrder(check.amount, {
-      referenceId: "mokaru-restaurant-repay",
-      description: `Mokaru Guam レストラン予約代行 手配料（お手続きのやり直し）`,
+      referenceId: isArrange ? "mokaru-arrange-repay" : "mokaru-restaurant-repay",
+      description: isArrange
+        ? `Mokaru Guam ツアーお問い合わせ・予約代行 代行料（お手続きのやり直し）`
+        : `Mokaru Guam レストラン予約代行 手配料（お手続きのやり直し）`,
     });
     return Response.json({ id: order.id, amount: check.amount });
   } catch (err) {

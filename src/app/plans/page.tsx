@@ -4,6 +4,7 @@ import Link from "next/link";
 import PageShell, { PageHero } from "@/components/PageShell";
 import BookingCta from "@/components/BookingCta";
 import { RESTAURANT_FEE } from "@/lib/pricing";
+import { ARRANGE_FEE, ARRANGE_MAX_EXCHANGES } from "@/lib/request-types";
 import { PARTNERS, partnerRequestLabel } from "@/lib/partners";
 
 export const metadata: Metadata = {
@@ -126,17 +127,38 @@ export default function PlansPage() {
               </div>
             ))}
 
+            {/* 🔴 2026-10-19: until today this card offered tours we have no
+                partnership with as something we would arrange "as far as we can",
+                with no price — a free promise for exactly the work that now costs
+                $25. Left in place it becomes「無料と書いてあったのに$25取られた」.
+                check:gates asserts the old sentence stays gone. Ideas that a
+                partner can serve still go to the free tour path. */}
             <div className="rounded-2xl border border-dashed border-line bg-sand p-6">
-              <h3 className="text-lg font-bold">ご希望のツアーはありますか？</h3>
+              <p className="text-xs font-bold text-brand">掲載のないツアー</p>
+              <h3 className="mt-1 text-lg font-bold">お問い合わせ・予約代行</h3>
               <p className="mt-2 text-sm text-muted">
-                掲載のないツアーやアクティビティも、可能な範囲でお手配します。やりたいことをそのままお送りください（「シュノーケリング」などでも構いません）。
+                <b className="text-ink">代行料 1件 ${ARRANGE_FEE}</b>
+                。ご希望のツアー会社へ当社が英語で問い合わせ、日本語でご報告します（やりとり最大{ARRANGE_MAX_EXCHANGES}回）。現地払いのツアーなら、ご予約までお取りします。
               </p>
-              <Link
-                href="/reserve?type=tour"
-                className="mt-4 inline-block rounded-full border border-brand px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
-              >
-                やりたいことを相談する
-              </Link>
+              <ul className="mt-3 space-y-1 text-xs text-muted">
+                <li>・ご予約の成立は保証できません。<b className="text-ink">取れなかった場合も代行料はかかります</b>（1回目のご報告の前に取りやめる場合は無料）</li>
+                <li>・ツアー代金・キャンセル規定は実施会社のものに従います（1回目のご報告でお知らせします）</li>
+                <li>・提携先で叶う内容なら、先に提携先（無料）をご案内します</li>
+              </ul>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/reserve?type=arrange"
+                  className="inline-block rounded-full border border-brand px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
+                >
+                  問い合わせを依頼する（${ARRANGE_FEE}）
+                </Link>
+                <Link
+                  href="/reserve?type=tour"
+                  className="inline-block px-1 py-2.5 text-sm font-bold text-muted hover:text-brand hover:underline"
+                >
+                  やりたいことを無料で相談 →
+                </Link>
+              </div>
             </div>
           </div>
         </div>

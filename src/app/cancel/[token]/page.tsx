@@ -70,7 +70,11 @@ export default async function CancelPage({
   // The date ladder applies to tours and to pre-pivot charters. An arrangement
   // fee buys the act of getting the table, which is finished once the table is
   // held, so the day of the meal has no bearing on it.
-  const laddered = requestTypeOf(booking) !== "restaurant";
+  // Arrange (2026-10-19) is not laddered either: its fee buys enquiries that,
+  // once made, cannot be resold.
+  const laddered =
+    requestTypeOf(booking) !== "restaurant" && requestTypeOf(booking) !== "arrange";
+  const isArrange = requestTypeOf(booking) === "arrange";
 
   return (
     <PageShell>
@@ -131,6 +135,10 @@ export default async function CancelPage({
               {laddered ? (
                 <p className="mt-3 text-xs text-muted">
                   キャンセルポリシー：実施日の8日以上前=全額返金／7〜4日前=50%／3日前以降（当日・無連絡含む）=返金なし。
+                </p>
+              ) : isArrange ? (
+                <p className="mt-3 text-xs text-muted">
+                  代行料は、1回目のご報告をお送りした時点でご返金の対象外となります。それより前のキャンセルは料金はかかりません。当社経由でツアーのご予約が済んでいる場合、実施会社へのご連絡は当社が行います（キャンセル料は実施会社の規定に従います）。
                 </p>
               ) : (
                 <p className="mt-3 text-xs text-muted">

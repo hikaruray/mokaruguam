@@ -37,7 +37,7 @@ export interface RefundDecision {
  * @param preferredDate the tour date, for the date-based ladder.
  */
 export function refundDecision(
-  requestType: "tour" | "restaurant" | null | undefined,
+  requestType: "tour" | "restaurant" | "arrange" | null | undefined,
   preferredDate: string | null | undefined,
   mode: RefundMode = "policy",
 ): RefundDecision {
@@ -52,6 +52,17 @@ export function refundDecision(
     // once the table is held that work is finished and cannot be resold. The
     // day of the meal has no bearing on it.
     return { rate: 0, tier: "お手配完了後のため返金なし" };
+  }
+
+  if (requestType === "arrange") {
+    // Owner decision 2026-10-19: the $25 is captured when the FIRST report goes
+    // to the guest, because that is when the work has started — an English
+    // enquiry made and answered. A cancellation before then never reaches this
+    // function (the hold is still only authorised and cancelBooking voids it),
+    // so arriving here means the fee is captured and the work is under way.
+    // The tour date is irrelevant: the date ladder prices a guide and vehicle
+    // that can be resold, and an enquiry already made cannot be.
+    return { rate: 0, tier: "1回目のご報告後のため返金なし" };
   }
 
   // "tour", and also null: a booking with no request type predates the pivot,

@@ -462,10 +462,14 @@ check(
 );
 // PayPal on the tour path contradicts「お客様のお支払いはありません」the moment
 // it renders, even briefly (design §6-5).
+// Since 2026-10-19 payment is offered on two paths (restaurant, arrange), so
+// the check is that it goes through isPaidRequest and that a tour is not one.
+const { isPaidRequest: paidKind } = await import("@/lib/request-types");
 check(
-  /const takesPayment = isRestaurant && PAYPAL_ENABLED/.test(formSource),
-  "and only offers payment on the restaurant path",
-  "takesPayment requires isRestaurant",
+  /const takesPayment = requestType !== null && isPaidRequest\(requestType\) && PAYPAL_ENABLED/.test(formSource) &&
+    paidKind("restaurant") && paidKind("arrange") && !paidKind("tour"),
+  "and only offers payment on the paid paths (never a partner tour)",
+  "takesPayment requires isPaidRequest",
 );
 
 console.log("\n--- Gate 2: confirming needs a live hold, for restaurants only ---");
@@ -1505,6 +1509,230 @@ check(
   "the legacy charter confirmation does NOT claim there is no fee",
   "absent",
 );
+
+console.log("\n--- Arrange: the non-partner tour enquiry, $25 (2026-10-19) ---");
+
+// The third kind of request, and the only one charged when it fails. Design:
+// MokaruGuam/arrange-design.md. What is asserted here is the money: held on
+// request, captured by「1回目の報告を送った」(never by 確定), released if
+// cancelled before that, never refunded by policy after it — and never told
+// 「お手配が完了しました」.
+{
+  const { amountForRequest } = await import("@/lib/pricing");
+  const { refundDecision } = await import("@/lib/refund-policy");
+  const { firstReportEmail, declinedEmail, cancelledEmail, waitingEmail } = await import(
+    "@/lib/booking-emails"
+  );
+
+  const fee = amountForRequest("arrange", null, 4, requestDate);
+  check(fee?.amount === 25, "arrange is priced at a flat $25", `amount ${fee?.amount}`);
+  check(
+    amountForRequest("arrange", null, 7, requestDate)?.amount === 25,
+    "and the price does not scale with the party",
+    "7 guests -> $25",
+  );
+  check(
+    refundDecision("arrange", `${guamInDays(60)} 09:00`, "policy").rate === 0 &&
+      refundDecision("arrange", `${guamInDays(60)} 09:00`, "full").rate === 1,
+    "after capture: no policy refund however far out; the owner's full refund still works",
+    "policy 0, full 1",
+  );
+
+  // --- the request route ---------------------------------------------------
+  const before = (await listBookings()).length;
+  const arrangeBase = {
+    ...baseRequest,
+    requestType: "arrange",
+    partnerName: "Example Dolphin Tours",
+    arrangeAccepted: true,
+  };
+  const noName = await bookingPost(
+    post("http://localhost/api/booking", { ...arrangeBase, partnerName: "" }),
+  );
+  check(noName.status === 400, "arrange with nothing to ask about is refused", `HTTP ${noName.status} (expected 400)`);
+  const noTick = await bookingPost(
+    post("http://localhost/api/booking", { ...arrangeBase, arrangeAccepted: undefined }),
+  );
+  check(
+    noTick.status === 400,
+    "arrange without the「取れなくても$25」tick is refused (gate 0c)",
+    `HTTP ${noTick.status} (expected 400)`,
+  );
+  const arrangeNoHold = await bookingPost(post("http://localhost/api/booking", arrangeBase));
+  check(
+    arrangeNoHold.status === 402,
+    "arrange, complete but no hold -> 402 (gate 1 covers it like a restaurant)",
+    `HTTP ${arrangeNoHold.status} (expected 402)`,
+  );
+  check(
+    (await listBookings()).length === before,
+    "and none of the refused arrange requests was saved",
+    `${(await listBookings()).length - before} new row(s)`,
+  );
+
+  // --- the admin buttons -----------------------------------------------------
+  const arrNoHold = await seed({ requestType: "arrange", partnerName: "Example Dolphin Tours", amount: 25 });
+  const repNoHold = await admin(arrNoHold.id, "report");
+  check(repNoHold.status === 409, "arrange, no hold, 報告ボタン -> 409 (gate 2)", `HTTP ${repNoHold.status}`);
+
+  const arrConfirm = await seed({ requestType: "arrange", partnerName: "Example Dolphin Tours", amount: 25 });
+  await setBookingAuthorization(arrConfirm.id, { paypalOrderId: "ORD-ARR-C", paypalAuthorizationId: "AUTH-ARR-C" });
+  const confirmOnArrange = await admin(arrConfirm.id, "confirm");
+  check(
+    confirmOnArrange.status === 409 && (await getBooking(arrConfirm.id))?.payment === "authorized",
+    "「確定」is refused on arrange, and nothing is captured",
+    `HTTP ${confirmOnArrange.status}`,
+  );
+
+  const tableForReport = await seed({ requestType: "restaurant", partnerName: "Proa", amount: 10 });
+  await setBookingAuthorization(tableForReport.id, { paypalOrderId: "ORD-T-R", paypalAuthorizationId: "AUTH-T-R" });
+  const reportOnTable = await admin(tableForReport.id, "report");
+  check(
+    reportOnTable.status === 409 && (await getBooking(tableForReport.id))?.payment === "authorized",
+    "「1回目の報告を送った」is refused on a restaurant",
+    `HTTP ${reportOnTable.status}`,
+  );
+
+  const dispatchArrange = await adminPost(
+    new Request("http://localhost/api/admin/booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", cookie: "admin=gate-check" },
+      body: JSON.stringify({ id: arrConfirm.id, action: "dispatch", to: "ops@example.invalid" }),
+    }),
+  );
+  check(
+    dispatchArrange.status === 409,
+    "arrange has no 送客メール (the owner enquires by hand from Gmail)",
+    `HTTP ${dispatchArrange.status}`,
+  );
+
+  // --- money that moves, PayPal stubbed --------------------------------------
+  try {
+    // Report with a live hold: captured, confirmed.
+    stubReply = () => new Response(JSON.stringify({ id: "CAP-ARR", status: "COMPLETED" }), { status: 201 });
+    calls.length = 0;
+    const rep = await admin(arrConfirm.id, "report");
+    const repRow = await getBooking(arrConfirm.id);
+    check(
+      rep.status === 200 && repRow?.status === "confirmed" && repRow?.payment === "captured" &&
+        repRow?.paypalCaptureId === "CAP-ARR" &&
+        calls.some((c) => c.url.includes("/authorizations/AUTH-ARR-C/capture")),
+      "報告ボタン with a live hold -> the $25 is captured and the row confirmed",
+      `HTTP ${rep.status}, ${repRow?.status}, ${repRow?.payment}, ${repRow?.paypalCaptureId}`,
+    );
+
+    // A PENDING capture is not money here either (gate 4).
+    const arrPending = await seed({ requestType: "arrange", partnerName: "Example Dolphin Tours", amount: 25 });
+    await setBookingAuthorization(arrPending.id, { paypalOrderId: "ORD-ARR-P", paypalAuthorizationId: "AUTH-ARR-P" });
+    stubReply = () => new Response(JSON.stringify({ id: "CAP-ARR-P", status: "PENDING" }), { status: 201 });
+    const repPending = await admin(arrPending.id, "report");
+    const pRow = await getBooking(arrPending.id);
+    check(
+      repPending.status === 409 && pRow?.status === "pending" && pRow?.payment === "authorized",
+      "報告ボタン, capture PENDING -> 409, still pending (gate 4 applies to arrange)",
+      `HTTP ${repPending.status}, ${pRow?.status}, ${pRow?.payment}`,
+    );
+
+    // Cancelled before the first report: the hold is voided, nothing charged.
+    const arrEarly = await seed({ requestType: "arrange", partnerName: "Example Dolphin Tours", amount: 25 });
+    await setBookingAuthorization(arrEarly.id, { paypalOrderId: "ORD-ARR-E", paypalAuthorizationId: "AUTH-ARR-E" });
+    stubReply = () => new Response(null, { status: 204 });
+    calls.length = 0;
+    const early = await cancelBooking(arrEarly.id, "policy");
+    const eRow = await getBooking(arrEarly.id);
+    check(
+      eRow?.payment === "voided" && eRow?.status === "cancelled" &&
+        calls.some((c) => c.url.includes("/authorizations/AUTH-ARR-E/void")) &&
+        !calls.some((c) => c.url.includes("/capture") || c.url.includes("/refund")) &&
+        early?.refund?.amount === 0,
+      "cancelled before the first report -> hold voided, nothing captured or refunded",
+      `${eRow?.payment} ${eRow?.status}, ${calls.length} call(s)`,
+    );
+
+    // Cancelled after the first report: no refund call, the $25 stands.
+    calls.length = 0;
+    stubReply = () => new Response(JSON.stringify({ id: "REF-ARR", status: "COMPLETED" }), { status: 201 });
+    const late = await cancelBooking(arrConfirm.id, "policy");
+    const lRow = await getBooking(arrConfirm.id);
+    check(
+      late?.refund?.rate === 0 && refundCalls().length === 0 && lRow?.payment === "captured" && lRow?.status === "cancelled",
+      "cancelled after the first report -> no refund requested, still captured",
+      `rate ${late?.refund?.rate}, ${refundCalls().length} refund call(s), ${lRow?.payment}`,
+    );
+    const lateMail = cancelledEmail(lRow!, late?.refund ?? null);
+    check(
+      lateMail.text.includes("1回目のご報告をお送りしたあと") && !lateMail.text.includes("実施日の3日前"),
+      "and the cancellation mail cites the first report, not the tour ladder",
+      "present / absent",
+    );
+  } finally {
+    stubReply = null;
+  }
+
+  // --- what the guest is told -------------------------------------------------
+  const arrRow = await seed({ requestType: "arrange", partnerName: "Example Dolphin Tours", amount: 25 });
+  const report = firstReportEmail(arrRow, 25);
+  check(
+    !report.subject.includes("お手配が完了") && !report.text.includes("お手配が完了") &&
+      report.text.includes("ご予約の成立を保証するものではない"),
+    "the report mail never says「お手配が完了」and says the booking is not guaranteed",
+    report.subject,
+  );
+  check(
+    !confirmedEmail(arrRow, 25).subject.includes("お手配が完了"),
+    "confirmedEmail on an arrange row falls back to the report mail",
+    confirmedEmail(arrRow, 25).subject,
+  );
+  check(
+    declinedEmail(arrRow).text.includes("代行料はいただきません"),
+    "an arrange decline says the $25 is not charged",
+    "present",
+  );
+  check(
+    !waitingEmail(arrRow).text.includes("当社へのお支払いはございません"),
+    "the waiting mail does not tell an arrange guest there is nothing to pay",
+    "absent",
+  );
+
+  // --- no day-before reminder: arrange "confirmed" is not a booked tour --------
+  const arrTomorrow = await seed({
+    requestType: "arrange",
+    partnerName: "Example Dolphin Tours",
+    preferredDate: `${guamInDays(1)} 09:00`,
+  });
+  await setBookingStatus(arrTomorrow.id, "confirmed");
+  await remindersGet(new Request("http://localhost/api/cron/reminders"));
+  check(
+    (await getBooking(arrTomorrow.id))?.reminderSentAt == null,
+    "a reported arrange request dated tomorrow gets no「明日のご予約」reminder",
+    "not claimed",
+  );
+
+  // --- the pages stopped promising it for free --------------------------------
+  const plansSource = await readFile(
+    join(import.meta.dirname, "..", "src", "app", "plans", "page.tsx"),
+    "utf8",
+  );
+  check(
+    !plansSource.includes("可能な範囲でお手配します"),
+    "/plans no longer offers non-partner tours for free",
+    "the 2026-09-18 open item #6",
+  );
+  const legalSource = await readFile(
+    join(import.meta.dirname, "..", "src", "app", "legal", "page.tsx"),
+    "utf8",
+  );
+  check(
+    legalSource.includes("ご予約の成立を保証するものではありません"),
+    "/legal states the booking is not guaranteed (what the fee rests on)",
+    "present",
+  );
+  check(
+    /arrangeAccepted:\s*isArrange \? arrangeAccepted : false/.test(formSource),
+    "the form sends the guest's tick, not a constant",
+    "readForm() fills arrangeAccepted from the checkbox",
+  );
+}
 
 console.log("\n--- A failed email is reported as failed (2026-10-15) ---");
 

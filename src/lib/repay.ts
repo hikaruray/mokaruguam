@@ -27,6 +27,7 @@ import {
   chargedAmount,
   type BookingRequest,
 } from "./store";
+import { isPaidRequest } from "./request-types";
 import { getAuthorization, isPaypalConfigured, PaypalApiError } from "./paypal";
 import { verifyRepayToken } from "./cancel-token";
 import { CONTACT_EMAIL } from "./config";
@@ -94,7 +95,9 @@ export async function loadRepayable(
   // A tour arrangement never touches PayPal — there is no fee and so nothing to
   // re-authorise. A link like this one should not exist; say so plainly rather
   // than opening a payment form on a free service.
-  if (requestTypeOf(booking) !== "restaurant") {
+  // Arrange (2026-10-19) is held the same way and can outlive its hold the
+  // same way, before the first report captures it.
+  if (!isPaidRequest(requestTypeOf(booking))) {
     return refuse(
       400,
       `このご依頼にお支払いは発生しません。お手続きは不要です。`,

@@ -3,6 +3,12 @@ import { sendMail } from "@/lib/email";
 import { addBooking, refLabel } from "@/lib/store";
 import { PLANS, amountForRequest } from "@/lib/pricing";
 import {
+  isRequestType,
+  isPaidRequest,
+  REQUEST_TYPE_LABEL,
+  ARRANGE_MAX_EXCHANGES,
+} from "@/lib/request-types";
+import {
   authorizeOrder,
   voidAuthorization,
   getOrder,
@@ -23,8 +29,11 @@ import { isBot, validateBooking, rateLimit, clientIp } from "@/lib/spam";
 //     with the order + authorization ids. Capture happens later on 予約確定.
 export async function POST(request: Request) {
   let body: {
-    // "tour" | "restaurant". Never defaulted here — see amountForRequest.
+    // "tour" | "restaurant" | "arrange". Never defaulted here — see amountForRequest.
     requestType?: string;
+    // Arrange only: the guest ticked that they understood the $25 is charged
+    // whether or not a booking comes of it. See gate 0c.
+    arrangeAccepted?: boolean;
     // The partner operator, or the restaurant (first choice).
     partnerName?: string;
     // Restaurant only: what to do if that first choice is full, and the hints
@@ -133,10 +142,7 @@ export async function POST(request: Request) {
   // restaurant booking whose type went missing would skip the $10 entirely and
   // slip past the authorisation check below. Refusing costs one error message;
   // accepting silently gives the arrangement away.
-  const requestType =
-    body.requestType === "tour" || body.requestType === "restaurant"
-      ? body.requestType
-      : null;
+  const requestType = isRequestType(body.requestType) ? body.requestType : null;
   if (requestType === null) {
     return Response.json(
       { error: "ご依頼の種類を選択してください。" },
@@ -180,6 +186,32 @@ export async function POST(request: Request) {
       );
     }
   }
+  // --- Gate 0c: an arrange request must say what to ask about, and the guest
+  // must have accepted the one term that differs from everything else here.
+  //
+  // WHAT TO ASK: $25 buys enquiries on the guest's behalf. With nothing named
+  // there is nothing to enquire about, and finding out costs an email to the
+  // guest while their hold runs down — refuse before any money moves.
+  //
+  // THE TERM: the restaurant fee is not charged when we fail; this one is
+  // (owner decision 2026-09-18). The form makes the guest tick it, and the
+  // server checks the tick arrived, because a request posted without the form
+  // would otherwise hold $25 from someone who never saw that sentence.
+  if (requestType === "arrange") {
+    if (!partnerName) {
+      return Response.json(
+        { error: "お問い合わせしたいツアー・会社名（または探してほしい内容）をご入力ください。" },
+        { status: 400 },
+      );
+    }
+    if (body.arrangeAccepted !== true) {
+      return Response.json(
+        { error: "お問い合わせ代行のお約束（予約の成立は保証されないこと等）をご確認のうえ、チェックを入れてください。" },
+        { status: 400 },
+      );
+    }
+  }
+
   // 🔴 Not required on a tour, and that asymmetry is deliberate. Arranging a
   // partner activity moves no money, so an incomplete request costs one email
   // to ask what they meant — while refusing it turns away a free enquiry on the
@@ -191,9 +223,9 @@ export async function POST(request: Request) {
   // which is what the Admin list and every email would otherwise display.
   const planName = plan
     ? plan.name
-    : requestType === "restaurant"
-      ? "レストラン予約代行"
-      : "ツアー手配";
+    : requestType === "tour"
+      ? "ツアー手配"
+      : REQUEST_TYPE_LABEL[requestType];
 
   // --- PayPal path: verify + authorize before saving --------------------
   let paymentFields: {
@@ -279,12 +311,15 @@ export async function POST(request: Request) {
   // saved we go and get the table, and the only moment we could have taken the
   // fee has passed. So the failure has to happen here, before anything is
   // stored and before any work is promised.
-  if (requestType === "restaurant" && !paymentFields.paypalAuthorizationId) {
+  // Arrange (2026-10-19) is held the same way and fails the same way: the $25
+  // is captured from this hold when the first report goes out, and there is no
+  // other moment to take it.
+  if (isPaidRequest(requestType) && !paymentFields.paypalAuthorizationId) {
     if (!isPaypalConfigured()) {
       // Not the guest's fault — say so, and do not imply their card failed.
       return Response.json(
         {
-          error: `ただいまレストランのご予約代行を受け付けられません。お手数ですが ${CONTACT_EMAIL} までご連絡ください。`,
+          error: `ただいま${REQUEST_TYPE_LABEL[requestType]}を受け付けられません。お手数ですが ${CONTACT_EMAIL} までご連絡ください。`,
         },
         { status: 503 },
       );
@@ -355,14 +390,20 @@ export async function POST(request: Request) {
     ``,
     `お名前:   ${name}`,
     `連絡先:   ${email} / ${phone}`,
-    `種類:     ${requestType === "restaurant" ? "レストラン予約代行" : "ツアー手配"}`,
+    `種類:     ${requestType === "tour" ? "ツアー手配" : REQUEST_TYPE_LABEL[requestType]}`,
     // Only when an actual charter plan was chosen. Without the guard this
     // repeats the line above word for word on every post-pivot request, since
     // planName falls back to the name of the request type.
     ...(plan ? [`プラン:   ${planName}`] : []),
     ...(partnerName
       ? [
-          `${requestType === "restaurant" ? "第1希望の店" : "提携先・ツアー"}: ${partnerName}`,
+          `${
+            requestType === "restaurant"
+              ? "第1希望の店"
+              : requestType === "arrange"
+                ? "問い合わせ先・ツアー（提携外）"
+                : "提携先・ツアー"
+          }: ${partnerName}`,
         ]
       : []),
     // 🔴 The owner acts on this the moment the restaurant says no, so it has to
@@ -395,8 +436,23 @@ export async function POST(request: Request) {
     notes?.trim() || "（なし）",
     ``,
     authorized
-      ? `お支払い: PayPalで $${amountStr} を仮押さえ済み（確定時に自動決済／お断り時に自動解除）`
+      ? requestType === "arrange"
+        ? `お支払い: PayPalで ${amountStr} を仮押さえ済み（1回目の報告を送ったら管理画面の「1回目の報告を送った」で確定／お断り時に自動解除）`
+        : `お支払い: PayPalで ${amountStr} を仮押さえ済み（確定時に自動決済／お断り時に自動解除）`
       : `お支払い: 未設定（リクエストのみ）`,
+    // 🔴 The owner's working rules for this kind, in the mail that starts the
+    // work, so they are in front of whoever picks it up.
+    ...(requestType === "arrange"
+      ? [
+          ``,
+          `▼ 提携外ツアー代行の進め方`,
+          `・実施会社へは英語で、tour@ の Gmail から問い合わせる（送信履歴が「回数」の根拠）`,
+          `・最大${ARRANGE_MAX_EXCHANGES}回＝問い合わせ→返事→お客様へ報告 で1回。返事が来ない分・お客様とのメールは数えない`,
+          `・1回目の報告に必ず入れる：ツアー代金と支払い方法（現地払いか事前カードか）／実施会社のキャンセル規定`,
+          `・提携先で叶う内容なら、まず提携先をご提案（提携先の手配は無料）`,
+          `・1回目の報告を送ったら、管理画面で「1回目の報告を送った」を押す＝${amountStr} 確定`,
+        ]
+      : []),
     `受付番号: ${refLabel(saved)}`,
     `— Mokaru Guam サイトのリクエストフォームより`,
   ].join("\n");
@@ -421,11 +477,23 @@ export async function POST(request: Request) {
   // answers on its own schedule and we must not promise theirs.
   const cancel = cancelUrl(saved.id, SITE_URL);
   const isRestaurant = requestType === "restaurant";
-  const custSubject = isRestaurant
+  const isArrange = requestType === "arrange";
+  const custSubject = isPaidRequest(requestType)
     ? `【Mokaru Guam】ご依頼を受け付けました（まだ請求されていません）`
     : `【Mokaru Guam】ご依頼を受け付けました`;
 
-  const flow = isRestaurant
+  // 🔴 Arrange is the one kind that is charged when it fails. Step 2 and 3
+  // say so in plain words, because the guest's other two experiences of this
+  // site (restaurant, partner tour) both taught them the opposite.
+  const flow = isArrange
+    ? [
+        `1. これから実施会社へ英語でお問い合わせします。48時間以内に状況をご連絡します。`,
+        `2. 1回目のご報告をお送りした時点で、代行料 ${amountStr} のお支払いが確定します。それより前に取りやめる場合は、料金はいただきません。`,
+        `3. 代行料は、実施会社とのやりとり最大${ARRANGE_MAX_EXCHANGES}回分の料金です。ご予約が取れなかった場合も、ご返金はいたしかねます。`,
+        `4. ツアー代金は代行料とは別です。お支払い方法と実施会社のキャンセル規定は、1回目のご報告で必ずお知らせします。`,
+        `5. 事前のカード決済が必要なツアーは、当社はカード情報をお預かりしないため、確認結果のご報告までとなります（ご予約はお客様ご自身でお願いします）。`,
+      ]
+    : isRestaurant
     ? [
         `1. これからお店にお席の空きを確認します。48時間以内に状況をご連絡します。`,
         `2. お席が取れた時点で手配料 $${amountStr} のお支払いが確定します。`,
@@ -441,7 +509,14 @@ export async function POST(request: Request) {
   // The cancellation line differs by what was bought, for the same reason the
   // cancel page and the Admin buttons now differ: the arrangement fee buys the
   // act of getting the table, and that work cannot be resold once it is done.
-  const cancelLines = isRestaurant
+  const cancelLines = isArrange
+    ? [
+        `▼ キャンセルについて`,
+        `下記リンクからキャンセルいただけます：`,
+        cancel,
+        `1回目のご報告をお送りする前のキャンセルは、料金はいただきません（カードのお預かりを解除します）。1回目のご報告のあとは、代行料のご返金はいたしかねます。ツアーそのもののキャンセルは、実施会社の規定に従います。`,
+      ]
+    : isRestaurant
     ? [
         `▼ キャンセルについて`,
         `下記リンクからキャンセルいただけます：`,
@@ -460,18 +535,20 @@ export async function POST(request: Request) {
     ``,
     `この度はご依頼をありがとうございます。内容を受け付けました。`,
     authorized
-      ? `現時点では手配料のお預かり（仮押さえ）のみで、まだ請求されていません。`
+      ? `現時点では${isArrange ? "代行料" : "手配料"}のお預かり（仮押さえ）のみで、まだ請求されていません。`
       : `この時点では料金は発生していません。`,
     ``,
     `▼ ご依頼の内容`,
-    `種類:     ${isRestaurant ? "レストランの予約代行" : "アクティビティ・ツアーの手配"}`,
+    `種類:     ${isArrange ? "ツアーのお問い合わせ・予約代行（提携外）" : isRestaurant ? "レストランの予約代行" : "アクティビティ・ツアーの手配"}`,
     ...(partnerName
-      ? [`${isRestaurant ? "お店:     " : "お手配先: "}${partnerName}`]
+      ? [`${isRestaurant ? "お店:     " : isArrange ? "お問い合わせ先: " : "お手配先: "}${partnerName}`]
       : []),
     `ご希望日時: ${preferredDate}`,
     `ご滞在先: ${hotel.trim()}`,
     `人数:     ${guests}名${guestBreakdown ? `（${guestBreakdown}）` : ""}`,
-    ...(authorized ? [`手配料:   $${amountStr}（お預かり中・未請求）`] : []),
+    ...(authorized
+      ? [`${isArrange ? "代行料" : "手配料"}:   ${amountStr}（お預かり中・未請求）`]
+      : []),
     ``,
     `▼ このあとの流れ`,
     ...flow,

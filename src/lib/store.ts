@@ -19,6 +19,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { getSupabase } from "./supabase";
 import { amountForBooking } from "./pricing";
+import { isRequestType, type RequestType } from "./request-types";
 
 export type BookingStatus = "pending" | "confirmed" | "declined" | "cancelled";
 export type PaymentStatus =
@@ -40,7 +41,8 @@ export type PaymentStatus =
 // Read them with requestTypeOf() below, never with a bare `?? "tour"` scattered
 // through the code, so there is exactly one place that decides what a missing
 // value means.
-export type RequestType = "tour" | "restaurant";
+// The list itself lives in lib/request-types.ts (tour / restaurant / arrange).
+export type { RequestType };
 
 // What to do when the first-choice restaurant turns out to be full. Asked on
 // the form and required there, because the alternative is emailing the guest in
@@ -71,8 +73,10 @@ export interface BookingRequest {
   // null = taken before the pivot. See requestTypeOf().
   requestType: RequestType | null;
   // Who we are arranging with: the partner operator for a tour, the restaurant
-  // (first choice) for a table. Empty on pre-pivot charters, which we ran
-  // ourselves and so had nobody to name.
+  // (first choice) for a table, and for arrange the tour or company the guest
+  // named — or, when they have none in mind, what they want us to look for.
+  // Empty on pre-pivot charters, which we ran ourselves and so had nobody to
+  // name.
   partnerName: string;
   // Restaurant only. See FallbackChoice — null means the question was never
   // asked (a tour, or a booking taken before the pivot).
@@ -135,10 +139,7 @@ function rowToBooking(row: Record<string, unknown>): BookingRequest {
     // exist yet on rows taken before 2026-10-01, and "we never asked" has to
     // stay distinguishable from "they answered" — the refund branch turns on
     // exactly that distinction.
-    requestType:
-      row.request_type === "tour" || row.request_type === "restaurant"
-        ? row.request_type
-        : null,
+    requestType: isRequestType(row.request_type) ? row.request_type : null,
     partnerName: String(row.partner_name ?? ""),
     fallbackChoice:
       row.fallback_choice === "cancel" || row.fallback_choice === "suggest"

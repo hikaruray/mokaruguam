@@ -17,7 +17,7 @@ export default function Pricing() {
       <Eyebrow>What we do</Eyebrow>
       <SectionHeading>できること・料金</SectionHeading>
       <Sub>
-        ふたつだけです。レストランのご予約と、アクティビティ・ツアーのお手配。
+        レストランのご予約と、アクティビティ・ツアーのお手配。掲載のないツアーのお問い合わせも承ります。
       </Sub>
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2">
