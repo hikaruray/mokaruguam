@@ -12,6 +12,7 @@ import {
   isLegacySlug,
 } from "@/lib/legacy-articles";
 import { ctaFor, topNoteFor } from "@/lib/legacy-cta";
+import { articleSummaryFor, summaryDescription } from "@/lib/ai-search";
 
 // Restored legacy blog articles. See src/lib/legacy-articles.ts for why these
 // exist and how the URLs line up with the old site.
@@ -45,7 +46,9 @@ export async function generateMetadata({
   const article = getLegacyArticle(slug);
   if (!article) return { title: "記事が見つかりません" };
 
-  const desc = excerpt(article.html);
+  // An article with a summary answers its own question in the description;
+  // the rest keep the cut from their first paragraph.
+  const desc = summaryDescription(slug) ?? excerpt(article.html);
   return {
     title: article.title,
     description: desc,
@@ -78,6 +81,7 @@ export default async function LegacyArticlePage({
 
   const cta = ctaFor(slug);
   const topNote = topNoteFor(slug);
+  const summary = articleSummaryFor(slug);
 
   return (
     <PageShell>
@@ -112,6 +116,20 @@ export default async function LegacyArticlePage({
               {topNote.link.label} →
             </Link>
           </p>
+        )}
+
+        {/* The article's own まとめ, moved to the top so the answer is the
+            first thing a reader — or an AI quoting the page — reaches. The
+            lines are verbatim from the article (check:articles). */}
+        {summary && (
+          <section className="mt-6 rounded-xl border border-line bg-white px-5 py-4">
+            <h2 className="text-sm font-bold">{summary.heading}</h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed">
+              {summary.lines.map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {/* Body comes from our own WordPress export (no user input), and is

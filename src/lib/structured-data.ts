@@ -73,6 +73,16 @@ export function breadcrumbLd(trail: { name: string; path: string }[]): Json {
   };
 }
 
+// The WordPress snapshot's dates carry no zone (e.g. "2025-08-24T00:01:08"),
+// and Google's Rich Results Test flagged that on /tipping (2026-10-19).
+// 🔴 They are UTC, NOT Guam time: all 91 match the `date_gmt` / `modified_gmt`
+// fields in legacy-archive/ exactly (checked 2026-10-19). Appending +10:00
+// would move every article 10 hours. A date with no time (the rewrites'
+// "2026-09-12") is already valid and is left alone.
+function withZone(d: string): string {
+  return /T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(d) ? `${d}Z` : d;
+}
+
 export function articleLd(a: {
   title: string;
   path: string;
@@ -80,16 +90,18 @@ export function articleLd(a: {
   dateModified: string;
   image: string;
 }): Json {
+  // `url` too, which the same test flagged as missing on author/publisher.
+  const org = { "@id": ORG_ID, "@type": "Organization", name: SITE_NAME, url: SITE_URL };
   return {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: a.title,
     mainEntityOfPage: `${SITE_URL}${a.path}`,
-    datePublished: a.datePublished,
-    dateModified: a.dateModified,
+    datePublished: withZone(a.datePublished),
+    dateModified: withZone(a.dateModified),
     image: a.image.startsWith("http") ? a.image : `${SITE_URL}${a.image}`,
-    author: { "@id": ORG_ID, "@type": "Organization", name: SITE_NAME },
-    publisher: { "@id": ORG_ID, "@type": "Organization", name: SITE_NAME },
+    author: org,
+    publisher: org,
     inLanguage: "ja",
   };
 }
